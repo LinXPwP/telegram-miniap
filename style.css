@@ -3,7 +3,7 @@
   --bg-elevated: #0b0b12;
   --bg-elevated-2: #111119;
   --border-subtle: rgba(255, 255, 255, 0.04);
-  --accent: #e11d48; /* roșu – roz */
+  --accent: #e11d48;
   --accent-soft: rgba(225, 29, 72, 0.12);
   --accent-border: rgba(225, 29, 72, 0.6);
   --text-main: #f9fafb;
@@ -20,7 +20,7 @@
   --transition-med: 0.2s ease-in-out;
 }
 
-/* Reset simplu */
+/* Reset */
 *,
 *::before,
 *::after {
@@ -45,6 +45,77 @@ body {
   justify-content: stretch;
 }
 
+/* Ascundere simplă */
+.hidden {
+  display: none !important;
+}
+
+/* ERROR SCREEN */
+.error-screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at top, rgba(15, 23, 42, 0.95), #020617);
+  padding: 16px;
+}
+
+.error-card {
+  max-width: 420px;
+  width: 100%;
+  background: rgba(15, 23, 42, 0.98);
+  border-radius: 18px;
+  border: 1px solid rgba(148, 27, 53, 0.9);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.85);
+  padding: 20px 18px 18px;
+}
+
+.error-logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 16px;
+  background: radial-gradient(circle at 30% 0, #f97316 0, #b91c1c 45%, #020617 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  font-size: 14px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.error-card h1 {
+  margin: 0 0 6px;
+  font-size: 20px;
+}
+
+.error-card p {
+  margin: 0 0 10px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.error-card ol {
+  margin: 0 0 8px 18px;
+  font-size: 14px;
+  color: var(--text-main);
+}
+
+.error-card code {
+  background: rgba(15, 23, 42, 0.9);
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid rgba(55, 65, 81, 0.9);
+}
+
+.error-foot {
+  font-size: 12px;
+  color: var(--text-softer);
+}
+
+/* APP ROOT */
 #app-root {
   flex: 1;
   display: flex;
@@ -209,12 +280,12 @@ body {
   color: var(--text-muted);
 }
 
-/* Layout principal */
+/* LAYOUT principal: stânga canale, mijloc chat, dreapta online */
 .layout {
   margin-top: 10px;
   flex: 1;
   display: grid;
-  grid-template-columns: 210px 230px minmax(0, 1fr);
+  grid-template-columns: 220px minmax(0, 1.6fr) 220px;
   gap: 10px;
   min-height: 0;
 }
@@ -233,7 +304,7 @@ body {
   min-height: 0;
 }
 
-/* Sidebar */
+/* Sidebar (online) */
 .sidebar-section {
   margin-bottom: 14px;
 }
@@ -262,7 +333,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-height: 240px;
+  max-height: 100%;
   overflow-y: auto;
   padding-right: 3px;
 }
@@ -275,6 +346,7 @@ body {
   border-radius: var(--radius-md);
   background: rgba(15, 23, 42, 0.7);
   border: 1px solid rgba(31, 41, 55, 0.9);
+  animation: fadeIn 0.18s ease-out;
 }
 
 .online-dot {
@@ -298,6 +370,7 @@ body {
 .admin-section {
   border-top: 1px dashed rgba(55, 65, 81, 0.8);
   padding-top: 8px;
+  margin-top: 6px;
 }
 
 .admin-controls {
@@ -357,6 +430,7 @@ body {
   border-radius: 12px;
   background: rgba(15, 23, 42, 0.85);
   border: 1px solid rgba(31, 41, 55, 0.9);
+  animation: fadeIn 0.18s ease-out;
 }
 
 .category-header {
@@ -475,6 +549,7 @@ body {
   display: flex;
   align-items: flex-start;
   gap: 8px;
+  animation: fadeInUp 0.18s ease-out;
 }
 
 .message-avatar {
@@ -580,28 +655,6 @@ body {
 
 /* Responsive */
 @media (max-width: 900px) {
-  .layout {
-    grid-template-columns: 180px minmax(0, 1fr);
-    grid-template-rows: auto auto;
-    grid-template-areas:
-      "sidebar channels"
-      "sidebar chat";
-  }
-
-  .sidebar {
-    grid-area: sidebar;
-  }
-
-  .channels-panel {
-    grid-area: channels;
-  }
-
-  .chat-panel {
-    grid-area: chat;
-  }
-}
-
-@media (max-width: 720px) {
   #app-root {
     padding: 6px;
   }
@@ -612,18 +665,6 @@ body {
     gap: 6px;
   }
 
-  .layout {
-    margin-top: 8px;
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto auto auto;
-  }
-
-  .sidebar,
-  .channels-panel,
-  .chat-panel {
-    padding: 9px;
-  }
-
   .top-right {
     width: 100%;
     justify-content: space-between;
@@ -632,7 +673,43 @@ body {
   .user-pill {
     margin-left: auto;
   }
+
+  /* layout coloană: canale -> chat -> online */
+  .layout {
+    margin-top: 8px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+  }
+
+  .channels-panel,
+  .chat-panel,
+  .sidebar {
+    padding: 9px;
+  }
 }
 
-/* Ascunde butonul de open-full implicit; în JS îl arătăm doar unde vrem */
+/* Butonul de „Versiune completă” e controlat din JS; default hidden */
 #open-full-btn {
+  display: none;
+}
+
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
