@@ -1,12 +1,13 @@
 // app.js
 
-console.log("Miniapp version: 0.2.0");
+console.log("Miniapp version: 0.3.0");
 
 // ID admin – are voie să creeze categorii & canale
 const ADMIN_ID = 7672256597;
 
 // Cheie pentru localStorage (istoric + structura de canale la nivel de device)
 const STORAGE_KEY = "tg-miniapp-discord-state-v1";
+const SESSION_COOKIE = "tg_session_token";
 
 let tg = null;
 let currentUser = {
@@ -20,14 +21,14 @@ let currentUser = {
 // State local (demo, doar în browserul fiecăruia)
 let appState = {
   categories: [],
-  channels: {},      // channelId -> {id, name, categoryId}
-  messages: {},      // channelId -> [ {id, text, ts, username, displayName, ...} ]
+  channels: {}, // channelId -> {id, name, categoryId}
+  messages: {}, // channelId -> [ {id, text, ts, username, displayName, ...} ]
   activeChannelId: null,
-  onlineUsers: [],   // [ {id, username, displayName, lastSeen} ]
+  onlineUsers: [], // [ {id, username, displayName, lastSeen} ]
 };
 
 // -------------------------------------------------------------
-// Utils
+// Utils: localStorage
 // -------------------------------------------------------------
 function loadState() {
   try {
@@ -72,8 +73,69 @@ function randomId(prefix = "id") {
 }
 
 // -------------------------------------------------------------
-// Extrage "user" din initData string, dacă Telegram nu a populat initDataUnsafe
-// initData e ceva gen: "query_id=...&user=%7B...json...%7D&auth_date=...&hash=..."
+// Utils: cookies & session token
+// -------------------------------------------------------------
+function getCookie(name) {
+  const value = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith(name + "="));
+  return value ? decodeURIComponent(value.split("=")[1]) : null;
+}
+
+function setCookie(name, value, days) {
+  let expires = "";
+  if (days) {
+    const d = new Date();
+    d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000);
+    expires = "; expires=" + d.toUTCString();
+  }
+  document.cookie =
+    name +
+    "=" +
+    encodeURIComponent(value) +
+    expires +
+    "; path=/; SameSite=Lax";
+}
+
+function getSessionToken() {
+  return getCookie(SESSION_COOKIE);
+}
+
+function setSessionTokenCookie(token) {
+  setCookie(SESSION_COOKIE, token, 7); // 7 zile demo
+}
+
+function getOrCreateSessionToken() {
+  let token = getSessionToken();
+  if (!token) {
+    token = randomId("sess") + Date.now().toString(36);
+    setSessionTokenCookie(token);
+  }
+  return token;
+}
+
+// 1) dacă URL are ?token=..., îl punem în cookie și îl scoatem din URL
+//    returnează true dacă avem sesiune (cookie) după asta
+function syncSessionFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get("token");
+
+  if (token) {
+    setSessionTokenCookie(token);
+    params.delete("token");
+    const newSearch = params.toString();
+    const newUrl =
+      window.location.pathname +
+      (newSearch ? "?" + newSearch : "") +
+      window.location.hash;
+    window.history.replaceState(null, "", newUrl);
+  }
+
+  return !!getSessionToken();
+}
+
+// -------------------------------------------------------------
+// Telegram helpers
 // -------------------------------------------------------------
 function tryParseUserFromInitData(initDataString) {
   if (!initDataString) return null;
@@ -88,37 +150,24 @@ function tryParseUserFromInitData(initDataString) {
   }
 }
 
-// -------------------------------------------------------------
-// Detectăm dacă TREBUIE să rulăm ca miniapp Telegram
-// 1. dacă URL are ?tg=1 -> considerăm Telegram
-// 2. sau dacă Telegram.WebApp.initData nu e gol (caz ideal, WebApp real)
-// -------------------------------------------------------------
-function shouldTreatAsTelegram() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const fromParam = urlParams.get("tg") === "1";
-
-  if (fromParam) {
-    console.log("Detectat tg=1 în URL -> tratăm ca Telegram WebApp");
-    return true;
-  }
+// WebApp sau nu?
+// - /miniapp din bot: URL are ?tg=1
+// - caz ideal: window.Telegram.WebApp.initData nu e gol
+function shouldTreatAsTelegramWebApp() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("tg") === "1") return true;
 
   if (window.Telegram && window.Telegram.WebApp) {
     const initData = window.Telegram.WebApp.initData;
-    if (typeof initData === "string" && initData.length > 0) {
-      console.log("initData WebApp nu e gol -> tratăm ca Telegram");
-      return true;
-    }
+    if (typeof initData === "string" && initData.length > 0) return true;
   }
-
-  console.log("Nici tg=1, nici initData -> NU tratăm ca Telegram");
   return false;
 }
 
-// -------------------------------------------------------------
-// Telegram init – noua metodă
-// -------------------------------------------------------------
-function initTelegramStrict() {
-  if (!shouldTreatAsTelegram()) {
+// Încearcă să ia user-ul din Telegram dacă suntem în context WebApp
+// returnează true dacă a considerat că suntem în Telegram (chiar dacă fără user)
+function initFromTelegramIfAvailable() {
+  if (!shouldTreatAsTelegramWebApp()) {
     return false;
   }
 
@@ -135,12 +184,10 @@ function initTelegramStrict() {
     const unsafe = tg.initDataUnsafe || {};
     let user = unsafe.user;
 
-    // fallback: încercăm să extragem manual din initData, dacă unsafe.user e gol
+    // fallback: parsam manual initData
     if (!user && typeof tg.initData === "string" && tg.initData.length > 0) {
       const parsed = tryParseUserFromInitData(tg.initData);
-      if (parsed) {
-        user = parsed;
-      }
+      if (parsed) user = parsed;
     }
 
     if (user) {
@@ -152,7 +199,6 @@ function initTelegramStrict() {
       currentUser.avatarUrl = null;
       console.log("User din Telegram:", currentUser);
     } else {
-      // chiar dacă nu avem user complet, TOT îl tratăm ca Telegram (nu Guest)
       currentUser.id = null;
       currentUser.username = null;
       currentUser.displayName = "Telegram user";
@@ -161,9 +207,8 @@ function initTelegramStrict() {
       console.log("WebApp fără user în initData/initDataUnsafe");
     }
   } else {
-    // Nu există obiectul WebApp, dar avem ?tg=1 → rulăm tot ca Telegram,
-    // doar că fără info complet despre user.
-    console.log("tg=1 dar window.Telegram.WebApp lipsește (rar).");
+    // tg=1 dar obiectul WebApp lipsește (rareori)
+    console.log("tg=1 dar window.Telegram.WebApp lipsește.");
     currentUser.id = null;
     currentUser.username = null;
     currentUser.displayName = "Telegram user";
@@ -198,7 +243,9 @@ function showErrorOnly() {
 // -------------------------------------------------------------
 function touchCurrentUserOnline() {
   const now = Date.now();
-  const existingIndex = appState.onlineUsers.findIndex((u) => u.id === currentUser.id);
+  const existingIndex = appState.onlineUsers.findIndex(
+    (u) => u.id === currentUser.id
+  );
 
   const userObj = {
     id: currentUser.id,
@@ -214,7 +261,9 @@ function touchCurrentUserOnline() {
   }
 
   const cutoff = now - 5 * 60 * 1000;
-  appState.onlineUsers = appState.onlineUsers.filter((u) => u.lastSeen >= cutoff);
+  appState.onlineUsers = appState.onlineUsers.filter(
+    (u) => u.lastSeen >= cutoff
+  );
 
   saveState();
 }
@@ -275,7 +324,9 @@ function renderCurrentUser() {
     if (currentUser.username) {
       label = `@${currentUser.username}`;
     } else if (currentUser.displayName) {
-      label = currentUser.displayName + (currentUser.id ? ` · #${currentUser.id}` : "");
+      label =
+        currentUser.displayName +
+        (currentUser.id ? ` · #${currentUser.id}` : "");
     } else {
       label = "User";
     }
@@ -291,7 +342,8 @@ function renderCurrentUser() {
     if (currentUser.avatarUrl) {
       const img = document.createElement("img");
       img.src = currentUser.avatarUrl;
-      img.alt = currentUser.username || currentUser.displayName || "avatar";
+      img.alt =
+        currentUser.username || currentUser.displayName || "avatar";
       avatarEl.appendChild(img);
     } else {
       const initials = (currentUser.displayName || currentUser.username || "U")
@@ -576,14 +628,15 @@ function setupAdminControls() {
 }
 
 // -------------------------------------------------------------
-// Buton „Versiune completă” – redirect
+// Buton „Versiune completă” – redirect cu token
 // -------------------------------------------------------------
 function setupOpenFullButton() {
   const btn = document.getElementById("open-full-btn");
   if (!btn) return;
 
   const isMobile =
-    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) && window.innerWidth < 900;
+    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) &&
+    window.innerWidth < 900;
 
   if (isMobile) {
     btn.style.display = "none";
@@ -598,17 +651,21 @@ function setupOpenFullButton() {
 }
 
 function openFullVersionWithSession() {
-  if (!tg) {
-    window.open("https://linxpwp.github.io/telegram-miniap", "_blank");
-    return;
-  }
+  const token = getOrCreateSessionToken();
 
-  // TODO: logică cu backend + cookie securizat
-  tg.openLink("https://linxpwp.github.io/telegram-miniap", { try_browser: true });
+  const fullUrl =
+    "https://linxpwp.github.io/telegram-miniap/?token=" +
+    encodeURIComponent(token);
+
+  if (tg) {
+    tg.openLink(fullUrl, { try_browser: true });
+  } else {
+    window.open(fullUrl, "_blank");
+  }
 }
 
 // -------------------------------------------------------------
-// Mobile tabs: Canale / Chat / Online
+// Mobile tabs: Canale / Chat / Online (din CSS existent)
 // -------------------------------------------------------------
 function setupMobileTabs() {
   const tabs = document.querySelectorAll(".mobile-tab-btn");
@@ -627,16 +684,19 @@ function setupMobileTabs() {
       return;
     }
 
-    const activeTab = document.querySelector(".mobile-tab-btn.active") || tabs[0];
+    const activeTab =
+      document.querySelector(".mobile-tab-btn.active") || tabs[0];
     const target = activeTab.getAttribute("data-panel");
 
     [channelsPanel, chatPanel, onlinePanel].forEach((panel) => {
       panel.classList.add("mobile-hidden");
     });
 
-    if (target === "channels-panel") channelsPanel.classList.remove("mobile-hidden");
+    if (target === "channels-panel")
+      channelsPanel.classList.remove("mobile-hidden");
     if (target === "chat-panel") chatPanel.classList.remove("mobile-hidden");
-    if (target === "online-panel") onlinePanel.classList.remove("mobile-hidden");
+    if (target === "online-panel")
+      onlinePanel.classList.remove("mobile-hidden");
   }
 
   tabs.forEach((tab) => {
@@ -665,13 +725,19 @@ function renderAll() {
 // Init general
 // -------------------------------------------------------------
 document.addEventListener("DOMContentLoaded", () => {
-  const ok = initTelegramStrict();
+  // 1) sincronzăm token-ul din URL -> cookie
+  const hasSession = syncSessionFromUrl();
 
-  if (!ok) {
-    showErrorOnly(); // website normal -> doar mesaj eroare
+  // 2) încercăm să luăm user din Telegram WebApp (dacă suntem cu tg=1 sau initData)
+  const hasTelegram = initFromTelegramIfAvailable();
+
+  // 3) dacă nu suntem nici Telegram, nici nu avem sesiune => eroare
+  if (!hasTelegram && !hasSession) {
+    showErrorOnly();
     return;
   }
 
+  // avem drept de acces (Telegram sau sesiune web)
   showApp();
   loadState();
   touchCurrentUserOnline();
