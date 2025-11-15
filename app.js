@@ -1,7 +1,7 @@
 // app.js
 
 // Versiune pentru debug
-console.log("Miniapp version: 0.0.5");
+console.log("Miniapp version: 0.1.0");
 
 // ID admin – are voie să creeze categorii & canale
 const ADMIN_ID = 7672256597;
@@ -73,37 +73,28 @@ function randomId(prefix = "id") {
 }
 
 // -------------------------------------------------------------
-// Detectăm dacă suntem în Telegram (mai „relaxat”)
-//   - verificăm userAgent (Telegram / TGWebApp)
-//   - sau existența window.Telegram.WebApp
+// Detectăm dacă suntem în Telegram sau pe website
+//   IMPORTANT: scriptul telegram-web-app.js creează window.Telegram și
+//   în browser normal -> deci ne bazăm pe userAgent, nu pe existența obiectului.
 // -------------------------------------------------------------
 function isTelegramEnvironment() {
-  const ua = navigator.userAgent || "";
-  const hasUA =
-    ua.toLowerCase().includes("telegram") ||
-    ua.toLowerCase().includes("tgwebapp");
-
-  const hasObject =
-    typeof window !== "undefined" &&
-    window.Telegram &&
-    window.Telegram.WebApp;
-
-  return hasUA || hasObject;
+  const ua = (navigator.userAgent || "").toLowerCase();
+  // Cautăm "telegram" sau "tgwebapp" în userAgent
+  const isTG = ua.includes("telegram") || ua.includes("tgwebapp");
+  return isTG;
 }
 
 // -------------------------------------------------------------
-// Telegram init – versiune simplificată
-//   - dacă pare Telegram -> încercăm să folosim WebApp, dar nu blocăm dacă lipsesc unele câmpuri
-//   - dacă NU pare Telegram -> revenim false și arătăm ecranul de eroare
+// Telegram init – versiune strictă:
+//   - dacă userAgent NU conține "telegram" => website normal => eroare
+//   - dacă e Telegram => încercăm să citim initDataUnsafe.user
 // -------------------------------------------------------------
 function initTelegramStrict() {
   if (!isTelegramEnvironment()) {
-    // chiar nu pare Telegram -> blocăm
-    console.log("Nu pare Telegram (userAgent / obiect) -> error screen");
+    console.log("Nu pare Telegram (userAgent) -> error screen");
     return false;
   }
 
-  // Dacă există obiectul Telegram.WebApp, îl folosim
   if (window.Telegram && window.Telegram.WebApp) {
     tg = window.Telegram.WebApp;
 
@@ -126,7 +117,6 @@ function initTelegramStrict() {
       currentUser.avatarUrl = null;
       console.log("User din Telegram:", currentUser);
     } else {
-      // Avem Telegram, dar nu avem user – foarte rar, fallback generic
       currentUser.id = null;
       currentUser.username = null;
       currentUser.displayName = "Telegram user";
@@ -135,9 +125,9 @@ function initTelegramStrict() {
       console.log("Telegram WebApp fără user în initDataUnsafe");
     }
   } else {
-    // Pare Telegram din userAgent, dar nu avem obiectul (Telegram.WebApp) încă.
-    // Totuși, îl tratăm ca Telegram: nu vrem să aruncăm utilizatorul pe ecranul de eroare.
-    console.log("UserAgent spune Telegram, dar obiectul Telegram.WebApp lipsește.");
+    // userAgent spune Telegram, dar obiectul WebApp nu e încă definit.
+    // Nu blocăm, dar nu avem info complet.
+    console.log("UserAgent Telegram, dar window.Telegram.WebApp lipsește.");
     currentUser.id = null;
     currentUser.username = null;
     currentUser.displayName = "Telegram user";
@@ -214,7 +204,10 @@ function renderOnlineUsers() {
     const textWrap = document.createElement("div");
     const main = document.createElement("div");
     main.className = "online-user-main";
-    main.textContent = u.displayName || u.username || "User";
+    const label =
+      (u.username ? "@" + u.username : u.displayName || "User") +
+      (u.id ? " · #" + u.id : "");
+    main.textContent = label;
 
     const sub = document.createElement("div");
     sub.className = "online-user-sub";
@@ -242,10 +235,14 @@ function renderCurrentUser() {
   const avatarEl = document.getElementById("current-user-avatar");
 
   if (nameEl) {
-    const label =
-      currentUser.username != null
-        ? `@${currentUser.username}`
-        : currentUser.displayName || "User";
+    let label;
+    if (currentUser.username) {
+      label = `@${currentUser.username}`;
+    } else if (currentUser.displayName) {
+      label = currentUser.displayName + (currentUser.id ? ` · #${currentUser.id}` : "");
+    } else {
+      label = "User";
+    }
     nameEl.textContent = label;
   }
 
@@ -422,12 +419,15 @@ function renderChat() {
 
     const uname = document.createElement("div");
     uname.className = "message-username";
-    uname.textContent = msg.displayName || msg.username || "User";
+    const label =
+      (msg.username ? "@" + msg.username : msg.displayName || "User") +
+      (msg.isAdmin ? " · Admin" : "");
+    uname.textContent = label;
 
     const meta = document.createElement("div");
     meta.className = "message-meta";
     const timeStr = formatTime(msg.ts);
-    meta.textContent = timeStr + (msg.isAdmin ? " · Admin" : "");
+    meta.textContent = timeStr;
 
     header.appendChild(uname);
     header.appendChild(meta);
@@ -572,6 +572,52 @@ function openFullVersionWithSession() {
 }
 
 // -------------------------------------------------------------
+// Mobile tabs: Canale / Chat / Online
+// -------------------------------------------------------------
+function setupMobileTabs() {
+  const tabs = document.querySelectorAll(".mobile-tab-btn");
+  const channelsPanel = document.getElementById("channels-panel");
+  const chatPanel = document.getElementById("chat-panel");
+  const onlinePanel = document.getElementById("online-panel");
+
+  if (!tabs.length || !channelsPanel || !chatPanel || !onlinePanel) return;
+
+  function applyMobileState() {
+    const isMobile = window.innerWidth <= 900;
+    if (!isMobile) {
+      // pe desktop – toate panourile vizibile
+      channelsPanel.classList.remove("mobile-hidden");
+      chatPanel.classList.remove("mobile-hidden");
+      onlinePanel.classList.remove("mobile-hidden");
+      return;
+    }
+
+    // pe mobil – afișăm doar panoul tab-ului activ
+    const activeTab = document.querySelector(".mobile-tab-btn.active") || tabs[0];
+    const target = activeTab.getAttribute("data-panel");
+
+    [channelsPanel, chatPanel, onlinePanel].forEach((panel) => {
+      panel.classList.add("mobile-hidden");
+    });
+
+    if (target === "channels-panel") channelsPanel.classList.remove("mobile-hidden");
+    if (target === "chat-panel") chatPanel.classList.remove("mobile-hidden");
+    if (target === "online-panel") onlinePanel.classList.remove("mobile-hidden");
+  }
+
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      tabs.forEach((t) => t.classList.remove("active"));
+      tab.classList.add("active");
+      applyMobileState();
+    });
+  });
+
+  window.addEventListener("resize", applyMobileState);
+  applyMobileState();
+}
+
+// -------------------------------------------------------------
 // Render principal
 // -------------------------------------------------------------
 function renderAll() {
@@ -593,7 +639,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
-  // Context Telegram valid (sau „pare Telegram”)
+  // Context Telegram valid (sau "pare Telegram")
   showApp();
   loadState();
   touchCurrentUserOnline();
@@ -601,6 +647,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setupChatInput();
   setupAdminControls();
   setupOpenFullButton();
+  setupMobileTabs();
 
   setInterval(() => {
     touchCurrentUserOnline();
