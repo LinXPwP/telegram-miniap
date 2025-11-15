@@ -1,4 +1,5 @@
 // app.js
+console.log("Miniapp version: 0.0.3");
 
 // ID admin – are voie să creeze categorii & canale
 const ADMIN_ID = 7672256597;
