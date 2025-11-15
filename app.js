@@ -1,6 +1,6 @@
 // app.js
 
-console.log("Miniapp version: 0.5.1");
+console.log("Miniapp version: 0.5.2");
 
 // -------------------------------------------------------------
 // CONFIG
