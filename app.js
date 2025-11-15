@@ -1,6 +1,9 @@
 // app.js
 
-const ADMIN_ID = 7672256597; // user id admin
+// ID admin – are voie să creeze categorii & canale
+const ADMIN_ID = 7672256597;
+
+// Cheie pentru localStorage (istoric + structura de canale la nivel de device)
 const STORAGE_KEY = "tg-miniapp-discord-state-v1";
 
 let tg = null;
@@ -12,16 +15,17 @@ let currentUser = {
   isAdmin: false,
 };
 
+// State local (demo)
 let appState = {
   categories: [],
-  channels: {},
-  messages: {},
+  channels: {},      // channelId -> {id, name, categoryId}
+  messages: {},      // channelId -> [ {id, text, ts, username, displayName, ...} ]
   activeChannelId: null,
-  onlineUsers: [],
+  onlineUsers: [],   // [ {id, username, displayName, lastSeen} ]
 };
 
 // -------------------------------------------------------------
-// State local
+// Utils
 // -------------------------------------------------------------
 function loadState() {
   try {
@@ -66,14 +70,13 @@ function randomId(prefix = "id") {
 }
 
 // -------------------------------------------------------------
-// Init Telegram – fără guest
+// Telegram init – STRICT: doar WebApp real, fără Guest
 // -------------------------------------------------------------
 function initTelegramStrict() {
   tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
 
   if (!tg) {
-    // Nu există WebApp => probabil deschis în browser direct
-    // Nu permitem acces; doar error-screen.
+    // Nu există Telegram.WebApp => e browser direct => blocăm
     return false;
   }
 
@@ -81,24 +84,37 @@ function initTelegramStrict() {
   tg.expand();
 
   const unsafe = tg.initDataUnsafe || {};
-  const user = unsafe.user;
+  const hasInitData = typeof tg.initData === "string" && tg.initData.length > 0;
 
-  if (!user) {
-    // Fără user în initData => mai bine blocăm
+  // Dacă nu există initData, nu e lansat ca WebApp cu semnătură => blocăm
+  if (!hasInitData) {
     return false;
   }
 
-  currentUser.id = user.id;
-  currentUser.username = user.username || null;
-  currentUser.displayName = user.first_name + (user.last_name ? " " + user.last_name : "");
-  currentUser.isAdmin = user.id === ADMIN_ID;
-  currentUser.avatarUrl = null; // poți pune URL din backend dacă vrei
+  const user = unsafe.user;
+
+  if (user) {
+    currentUser.id = user.id;
+    currentUser.username = user.username || null;
+    currentUser.displayName =
+      user.first_name + (user.last_name ? " " + user.last_name : "");
+    currentUser.isAdmin = user.id === ADMIN_ID;
+    currentUser.avatarUrl = null; // poți pune URL din backend mai târziu
+  } else {
+    // Caz rar: initData există, dar user nu e trimis (ex. WebApp în alt context)
+    // NU folosim Guest – dar lăsăm un fallback generic
+    currentUser.id = null;
+    currentUser.username = null;
+    currentUser.displayName = "Telegram user";
+    currentUser.isAdmin = false;
+    currentUser.avatarUrl = null;
+  }
 
   return true;
 }
 
 // -------------------------------------------------------------
-// Ecran error vs app
+// Error screen vs app
 // -------------------------------------------------------------
 function showApp() {
   const errorScreen = document.getElementById("error-screen");
@@ -117,9 +133,11 @@ function showErrorOnly() {
 }
 
 // -------------------------------------------------------------
-// Online users – demo local
+// Online users – demo local (pe device)
 // -------------------------------------------------------------
 function touchCurrentUserOnline() {
+  if (!currentUser) return;
+
   const now = Date.now();
   const existingIndex = appState.onlineUsers.findIndex((u) => u.id === currentUser.id);
 
@@ -177,7 +195,9 @@ function renderOnlineUsers() {
     container.appendChild(row);
   });
 
-  countSpan.textContent = online.length.toString();
+  if (countSpan) {
+    countSpan.textContent = online.length.toString();
+  }
 }
 
 // -------------------------------------------------------------
@@ -487,7 +507,7 @@ function setupAdminControls() {
 }
 
 // -------------------------------------------------------------
-// Redirect la versiune completă cu token + cookie (backend)
+// Buton „Versiune completă” – redirect + hook pentru token/cookie
 // -------------------------------------------------------------
 function setupOpenFullButton() {
   const btn = document.getElementById("open-full-btn");
@@ -496,7 +516,7 @@ function setupOpenFullButton() {
   const isMobile =
     /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) && window.innerWidth < 900;
 
-  // Pe mobile în Telegram, miniapp e deja fullscreen => nu afișăm butonul
+  // Pe mobil în Telegram, miniapp este deja fullscreen => ascundem butonul
   if (isMobile) {
     btn.style.display = "none";
     return;
@@ -516,10 +536,12 @@ function openFullVersionWithSession() {
     return;
   }
 
-  // Ideea secură:
-  // 1) Trimitem initData la backend, backend validează cu bot token
-  // 2) Backend setează cookie HttpOnly + returnează un URL safe (fără token în query)
-  // 3) Deschidem URL-ul primit
+  // Aici intră partea de securitate cu token + cookie:
+  //
+  // 1) Trimitem initData la backend, backend validează cu bot-token (HMAC)
+  // 2) Backend setează cookie HttpOnly, Secure, SameSite=Strict pentru domeniul site-ului
+  // 3) Backend întoarce un URL sigur (fără token în query), gen /app
+  // 4) Deschidem acel URL în browser
   //
   // Pseudocod:
   //
@@ -531,12 +553,12 @@ function openFullVersionWithSession() {
   // })
   //   .then(r => r.json())
   //   .then(data => {
-  //      if (data.ok && data.redirectUrl) {
-  //        tg.openLink(data.redirectUrl, { try_browser: true });
-  //      }
+  //     if (data.ok && data.redirectUrl) {
+  //       tg.openLink(data.redirectUrl, { try_browser: true });
+  //     }
   //   });
-
-  // Deocamdată, fără backend, doar deschidem site-ul tău:
+  //
+  // Deocamdată, doar deschidem site-ul tău GitHub Pages:
   tg.openLink("https://linxpwp.github.io/telegram-miniap", { try_browser: true });
 }
 
@@ -557,7 +579,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const ok = initTelegramStrict();
 
   if (!ok) {
-    // Nu e context Telegram valid => doar mesaj de eroare
+    // Nu e context Telegram WebApp valid => doar mesaj de eroare
     showErrorOnly();
     return;
   }
@@ -571,7 +593,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setupAdminControls();
   setupOpenFullButton();
 
-  // ping "online" la 30 sec
+  // ping "online" la fiecare 30 secunde (demo)
   setInterval(() => {
     touchCurrentUserOnline();
     renderOnlineUsers();
