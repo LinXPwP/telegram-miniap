@@ -107,4 +107,425 @@ function initTelegram() {
 }
 
 function setupOpenFullButton() {
-  const btn = document.getElementById("open-ful
+  const btn = document.getElementById("open-full-btn");
+  if (!btn) return;
+
+  const isTelegramEnv = !!tg;
+  const isMobile =
+    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) && window.innerWidth < 900;
+
+  // LOGICA:
+  // - dacă e Telegram pe mobil: ASCUNDEM butonul (miniapp full screen)
+  // - dacă e Desktop (browser normal sau Telegram desktop): arătăm butonul
+  if (isTelegramEnv && isMobile) {
+    btn.style.display = "none";
+  } else {
+    btn.style.display = "inline-flex";
+  }
+
+  btn.addEventListener("click", () => {
+    // deschide versiunea completă în browser
+    window.open("https://linxpwp.github.io/telegram-miniap", "_blank");
+  });
+}
+
+// -------------------------------------------------------------
+// Online users – demo local
+// -------------------------------------------------------------
+function touchCurrentUserOnline() {
+  const now = Date.now();
+  const existingIndex = appState.onlineUsers.findIndex((u) => u.id === currentUser.id);
+
+  const userObj = {
+    id: currentUser.id,
+    username: currentUser.username,
+    displayName: currentUser.displayName,
+    lastSeen: now,
+  };
+
+  if (existingIndex === -1) {
+    appState.onlineUsers.push(userObj);
+  } else {
+    appState.onlineUsers[existingIndex] = userObj;
+  }
+
+  // Curățăm userii inactivi mai mult de 5 minute (demo local)
+  const cutoff = now - 5 * 60 * 1000;
+  appState.onlineUsers = appState.onlineUsers.filter((u) => u.lastSeen >= cutoff);
+
+  saveState();
+}
+
+function renderOnlineUsers() {
+  const container = document.getElementById("online-list");
+  const countSpan = document.getElementById("online-count");
+  if (!container) return;
+
+  const now = Date.now();
+  const cutoff = now - 5 * 60 * 1000;
+  const online = appState.onlineUsers.filter((u) => u.lastSeen >= cutoff);
+
+  container.innerHTML = "";
+
+  online.forEach((u) => {
+    const row = document.createElement("div");
+    row.className = "online-user";
+
+    const dot = document.createElement("div");
+    dot.className = "online-dot";
+
+    const textWrap = document.createElement("div");
+    const main = document.createElement("div");
+    main.className = "online-user-main";
+    main.textContent = u.displayName || u.username;
+
+    const sub = document.createElement("div");
+    sub.className = "online-user-sub";
+    sub.textContent = "online";
+
+    textWrap.appendChild(main);
+    textWrap.appendChild(sub);
+
+    row.appendChild(dot);
+    row.appendChild(textWrap);
+    container.appendChild(row);
+  });
+
+  countSpan.textContent = online.length.toString();
+}
+
+// -------------------------------------------------------------
+// UI – current user
+// -------------------------------------------------------------
+function renderCurrentUser() {
+  const nameEl = document.getElementById("current-user-name");
+  const tagEl = document.getElementById("current-user-tag");
+  const avatarEl = document.getElementById("current-user-avatar");
+
+  if (nameEl) {
+    nameEl.textContent =
+      currentUser.username != null ? `@${currentUser.username}` : currentUser.displayName;
+  }
+
+  if (tagEl) {
+    tagEl.textContent = currentUser.isAdmin ? "Admin" : "Utilizator";
+  }
+
+  if (avatarEl) {
+    avatarEl.innerHTML = "";
+    if (currentUser.avatarUrl) {
+      const img = document.createElement("img");
+      img.src = currentUser.avatarUrl;
+      img.alt = currentUser.username;
+      avatarEl.appendChild(img);
+    } else {
+      // inițiale
+      const initials = (currentUser.displayName || currentUser.username || "U")
+        .split(" ")
+        .map((p) => p[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase();
+      avatarEl.textContent = initials;
+    }
+  }
+
+  // Admin panel vizibil doar pentru admin
+  const adminPanel = document.getElementById("admin-panel");
+  if (adminPanel) {
+    adminPanel.style.display = currentUser.isAdmin ? "block" : "none";
+  }
+}
+
+// -------------------------------------------------------------
+// UI – categories & channels
+// -------------------------------------------------------------
+function renderCategoriesAndChannels() {
+  const container = document.getElementById("category-list");
+  const categorySelect = document.getElementById("category-select");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  // Dropdown pentru admin – categoriile existente
+  if (categorySelect) {
+    categorySelect.innerHTML = "";
+    appState.categories.forEach((cat) => {
+      const opt = document.createElement("option");
+      opt.value = cat.id;
+      opt.textContent = cat.name;
+      categorySelect.appendChild(opt);
+    });
+  }
+
+  appState.categories.forEach((cat) => {
+    const block = document.createElement("div");
+    block.className = "category-block";
+
+    const header = document.createElement("div");
+    header.className = "category-header";
+
+    const left = document.createElement("span");
+    const dot = document.createElement("span");
+    dot.className = "category-dot";
+    const name = document.createElement("span");
+    name.textContent = cat.name.toUpperCase();
+
+    left.appendChild(dot);
+    left.appendChild(name);
+
+    const count = document.createElement("span");
+    const catChannels = Object.values(appState.channels).filter(
+      (ch) => ch.categoryId === cat.id
+    );
+    count.textContent = catChannels.length.toString();
+
+    header.appendChild(left);
+    header.appendChild(count);
+
+    const channelsWrap = document.createElement("div");
+    channelsWrap.className = "category-channels";
+
+    catChannels.forEach((ch) => {
+      const item = document.createElement("div");
+      item.className = "channel-item";
+      if (appState.activeChannelId === ch.id) {
+        item.classList.add("active");
+      }
+
+      const leftPart = document.createElement("div");
+      leftPart.className = "channel-left";
+
+      const hash = document.createElement("span");
+      hash.className = "channel-hash";
+      hash.textContent = "#";
+
+      const label = document.createElement("span");
+      label.textContent = ch.name.replace(/^#/, "");
+
+      leftPart.appendChild(hash);
+      leftPart.appendChild(label);
+
+      const rightPart = document.createElement("span");
+      rightPart.style.fontSize = "10px";
+      rightPart.style.color = "var(--text-softer)";
+      rightPart.textContent = ">";
+
+      item.appendChild(leftPart);
+      item.appendChild(rightPart);
+
+      item.addEventListener("click", () => {
+        appState.activeChannelId = ch.id;
+        saveState();
+        renderAll();
+      });
+
+      channelsWrap.appendChild(item);
+    });
+
+    block.appendChild(header);
+    block.appendChild(channelsWrap);
+    container.appendChild(block);
+  });
+}
+
+// -------------------------------------------------------------
+// UI – chat
+// -------------------------------------------------------------
+function renderChat() {
+  const channelId = appState.activeChannelId;
+  const active = appState.channels[channelId];
+  const historyEl = document.getElementById("chat-history");
+  const nameEl = document.getElementById("active-channel-name");
+  const catEl = document.getElementById("active-channel-category");
+  if (!historyEl || !active) return;
+
+  const category = appState.categories.find((c) => c.id === active.categoryId);
+
+  if (nameEl) {
+    nameEl.textContent = active.name;
+  }
+
+  if (catEl) {
+    catEl.textContent = category ? category.name : "Fără categorie";
+  }
+
+  historyEl.innerHTML = "";
+
+  const msgs = appState.messages[channelId] || [];
+  msgs.forEach((msg) => {
+    const row = document.createElement("div");
+    row.className = "message-row";
+
+    const avatar = document.createElement("div");
+    avatar.className = "message-avatar";
+
+    if (msg.avatarUrl) {
+      const img = document.createElement("img");
+      img.src = msg.avatarUrl;
+      img.alt = msg.username;
+      avatar.appendChild(img);
+    } else {
+      const initials = (msg.displayName || msg.username || "U")
+        .split(" ")
+        .map((p) => p[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase();
+      avatar.textContent = initials;
+    }
+
+    const body = document.createElement("div");
+    body.className = "message-body";
+
+    const header = document.createElement("div");
+    header.className = "message-header";
+
+    const uname = document.createElement("div");
+    uname.className = "message-username";
+    uname.textContent = msg.displayName || msg.username;
+
+    const meta = document.createElement("div");
+    meta.className = "message-meta";
+    const timeStr = formatTime(msg.ts);
+    meta.textContent = timeStr + (msg.isAdmin ? " · Admin" : "");
+
+    header.appendChild(uname);
+    header.appendChild(meta);
+
+    const content = document.createElement("div");
+    content.className = "message-content";
+    content.textContent = msg.text;
+
+    body.appendChild(header);
+    body.appendChild(content);
+
+    row.appendChild(avatar);
+    row.appendChild(body);
+
+    historyEl.appendChild(row);
+  });
+
+  // scroll la final
+  historyEl.scrollTop = historyEl.scrollHeight;
+}
+
+// -------------------------------------------------------------
+// Mesaje – send
+// -------------------------------------------------------------
+function setupChatInput() {
+  const input = document.getElementById("chat-input");
+  const sendBtn = document.getElementById("send-btn");
+  if (!input || !sendBtn) return;
+
+  function sendMessage() {
+    const text = input.value.trim();
+    if (!text) return;
+    const channelId = appState.activeChannelId;
+    if (!channelId) return;
+
+    const msg = {
+      id: randomId("m"),
+      text,
+      ts: Date.now(),
+      username: currentUser.username,
+      displayName: currentUser.displayName,
+      avatarUrl: currentUser.avatarUrl,
+      isAdmin: currentUser.isAdmin,
+    };
+
+    if (!appState.messages[channelId]) {
+      appState.messages[channelId] = [];
+    }
+    appState.messages[channelId].push(msg);
+    saveState();
+
+    input.value = "";
+    renderChat();
+    touchCurrentUserOnline();
+    renderOnlineUsers();
+  }
+
+  sendBtn.addEventListener("click", sendMessage);
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+}
+
+// -------------------------------------------------------------
+// Admin – category + channel create
+// -------------------------------------------------------------
+function setupAdminControls() {
+  if (!currentUser.isAdmin) return;
+
+  const catInput = document.getElementById("new-category-name");
+  const catBtn = document.getElementById("create-category-btn");
+  const chInput = document.getElementById("new-channel-name");
+  const chBtn = document.getElementById("create-channel-btn");
+  const catSelect = document.getElementById("category-select");
+
+  if (catBtn && catInput) {
+    catBtn.addEventListener("click", () => {
+      const name = catInput.value.trim();
+      if (!name) return;
+      const id = randomId("cat");
+      appState.categories.push({ id, name });
+      catInput.value = "";
+      saveState();
+      renderCategoriesAndChannels();
+    });
+  }
+
+  if (chBtn && chInput && catSelect) {
+    chBtn.addEventListener("click", () => {
+      const nameRaw = chInput.value.trim();
+      const catId = catSelect.value;
+      if (!nameRaw || !catId) return;
+
+      const name = nameRaw.startsWith("#") ? nameRaw : "#" + nameRaw;
+      const id = randomId("ch");
+      const ch = { id, name, categoryId: catId };
+      appState.channels[id] = ch;
+      appState.messages[id] = [];
+      appState.activeChannelId = id;
+
+      chInput.value = "";
+      saveState();
+      renderCategoriesAndChannels();
+      renderChat();
+    });
+  }
+}
+
+// -------------------------------------------------------------
+// Render principal
+// -------------------------------------------------------------
+function renderAll() {
+  renderCurrentUser();
+  renderCategoriesAndChannels();
+  renderChat();
+  renderOnlineUsers();
+}
+
+// -------------------------------------------------------------
+// Init general
+// -------------------------------------------------------------
+document.addEventListener("DOMContentLoaded", () => {
+  initTelegram();
+  setupOpenFullButton();
+  loadState();
+  touchCurrentUserOnline();
+  renderAll();
+  setupChatInput();
+  setupAdminControls();
+
+  // ping online la fiecare 30s (demo)
+  setInterval(() => {
+    touchCurrentUserOnline();
+    renderOnlineUsers();
+  }, 30000);
+});
