@@ -1,6 +1,6 @@
 // app.js
 
-console.log("Miniapp version: 0.4.1");
+console.log("Miniapp version: 0.5.0");
 
 // ID admin – are voie să creeze categorii & canale
 const ADMIN_ID = 7672256597;
@@ -9,10 +9,6 @@ const ADMIN_ID = 7672256597;
 const STORAGE_KEY = "tg-miniapp-discord-state-v1";
 const SESSION_COOKIE = "tg_session_token";
 
-// cheie pentru user info per token
-const USER_INFO_PREFIX = "tg_userinfo_";
-
-let tg = null;
 let currentUser = {
   id: null,
   username: null,
@@ -21,7 +17,9 @@ let currentUser = {
   isAdmin: false,
 };
 
-// State local (demo, doar în browserul fiecăruia)
+let tg = null; // doar pentru tg.openLink (opțional)
+
+// State local
 let appState = {
   categories: [],
   channels: {},
@@ -31,7 +29,7 @@ let appState = {
 };
 
 // -------------------------------------------------------------
-// Utils: localStorage
+// LocalStorage – chat state
 // -------------------------------------------------------------
 function loadState() {
   try {
@@ -76,7 +74,7 @@ function randomId(prefix = "id") {
 }
 
 // -------------------------------------------------------------
-// Cookies & token
+// Cookies + token
 // -------------------------------------------------------------
 function getCookie(name) {
   const value = document.cookie
@@ -108,7 +106,7 @@ function setSessionTokenCookie(token) {
   setCookie(SESSION_COOKIE, token, 365 * 10); // practic "nu expiră"
 }
 
-// dacă în URL există ?token=..., îl punem în cookie și curățăm URL-ul
+// 1) ia tokenul din URL, dacă există, îl pune în cookie, apoi curăță URL-ul
 function syncSessionFromUrl() {
   const params = new URLSearchParams(window.location.search);
   const token = params.get("token");
@@ -123,134 +121,29 @@ function syncSessionFromUrl() {
       window.location.hash;
     window.history.replaceState(null, "", newUrl);
   }
-
-  return !!getSessionToken();
-}
-
-function getOrCreateSessionToken() {
-  let token = getSessionToken();
-  if (!token) {
-    // normal, nu ar trebui să se întâmple, Bot-ul tot timpul pune token în URL
-    token = randomId("fallback") + Date.now().toString(36);
-    setSessionTokenCookie(token);
-  }
-  return token;
 }
 
 // -------------------------------------------------------------
-// User info per token (salvat local, ca să îl știm și în website)
+// Decode user din token (Base64 URL-safe -> JSON {uid, uname, name})
 // -------------------------------------------------------------
-function userInfoKeyForToken(token) {
-  return USER_INFO_PREFIX + token;
-}
-
-function saveUserInfoForToken(token, info) {
-  if (!token || !info) return;
-  try {
-    const safe = {
-      id: info.id ?? null,
-      username: info.username ?? null,
-      displayName: info.displayName ?? null,
-      isAdmin: info.isAdmin ?? false,
-      avatarUrl: info.avatarUrl ?? null,
-    };
-    localStorage.setItem(userInfoKeyForToken(token), JSON.stringify(safe));
-  } catch (e) {
-    console.warn("Nu pot salva user info pentru token:", e);
-  }
-}
-
-function loadUserInfoForToken(token) {
+function decodeUserFromToken(token) {
   if (!token) return null;
   try {
-    const raw = localStorage.getItem(userInfoKeyForToken(token));
-    if (!raw) return null;
-    return JSON.parse(raw);
+    let b64 = token.replace(/-/g, "+").replace(/_/g, "/");
+    while (b64.length % 4 !== 0) b64 += "=";
+    const json = atob(b64);
+    const data = JSON.parse(json);
+    if (!data || typeof data.uid === "undefined") return null;
+    return {
+      id: data.uid,
+      username: data.uname || null,
+      displayName: data.name || null,
+      isAdmin: data.uid === ADMIN_ID,
+      avatarUrl: null,
+    };
   } catch (e) {
-    console.warn("Nu pot citi user info pentru token:", e);
+    console.warn("Token invalid, nu pot decoda user:", e);
     return null;
-  }
-}
-
-// -------------------------------------------------------------
-// Telegram helpers – doar pentru EXTRAS username + id
-// (nu mai folosim asta la gating, gating-ul se face DOAR pe token)
-// -------------------------------------------------------------
-function tryParseUserFromInitData(initDataString) {
-  if (!initDataString) return null;
-  try {
-    const params = new URLSearchParams(initDataString);
-    const userParam = params.get("user");
-    if (!userParam) return null;
-    return JSON.parse(userParam);
-  } catch (e) {
-    console.warn("Nu pot parsa user din initData:", e);
-    return null;
-  }
-}
-
-function initTelegramUserIfAvailable(sessionToken) {
-  let info = null;
-
-  if (window.Telegram && window.Telegram.WebApp) {
-    tg = window.Telegram.WebApp;
-
-    try {
-      tg.ready();
-      tg.expand();
-    } catch (e) {
-      console.warn("Eroare la tg.ready()/expand():", e);
-    }
-
-    const unsafe = tg.initDataUnsafe || {};
-    let user = unsafe.user;
-
-    if (!user && typeof tg.initData === "string" && tg.initData.length > 0) {
-      const parsed = tryParseUserFromInitData(tg.initData);
-      if (parsed) user = parsed;
-    }
-
-    if (user) {
-      info = {
-        id: user.id,
-        username: user.username || null,
-        displayName:
-          user.first_name + (user.last_name ? " " + user.last_name : ""),
-        isAdmin: user.id === ADMIN_ID,
-        avatarUrl: null,
-      };
-      console.log("User din Telegram WebApp:", info);
-    }
-  }
-
-  // dacă am reușit să citim user-ul acum, îl salvăm pentru token
-  if (info && sessionToken) {
-    saveUserInfoForToken(sessionToken, info);
-  }
-
-  // dacă NU am reușit din Telegram, încercăm să încărcăm din localStorage
-  if (!info && sessionToken) {
-    const stored = loadUserInfoForToken(sessionToken);
-    if (stored) {
-      info = stored;
-      console.log("User încărcat din localStorage pentru token:", stored);
-    }
-  }
-
-  // aplicăm info pe currentUser
-  if (info) {
-    currentUser.id = info.id;
-    currentUser.username = info.username;
-    currentUser.displayName = info.displayName;
-    currentUser.isAdmin = info.isAdmin;
-    currentUser.avatarUrl = info.avatarUrl;
-  } else {
-    // fallback complet
-    currentUser.displayName = "User anonim";
-    currentUser.username = null;
-    currentUser.id = null;
-    currentUser.isAdmin = false;
-    currentUser.avatarUrl = null;
   }
 }
 
@@ -389,11 +282,6 @@ function renderCurrentUser() {
         .toUpperCase();
       avatarEl.textContent = initials;
     }
-  }
-
-  const adminPanel = document.getElementById("admin-panel");
-  if (adminPanel) {
-    adminPanel.style.display = currentUser.isAdmin ? "block" : "none";
   }
 }
 
@@ -572,7 +460,7 @@ function renderChat() {
 }
 
 // -------------------------------------------------------------
-// Mesaje – send
+// Chat input
 // -------------------------------------------------------------
 function setupChatInput() {
   const input = document.getElementById("chat-input");
@@ -618,7 +506,7 @@ function setupChatInput() {
 }
 
 // -------------------------------------------------------------
-// Admin – create category + channel
+// Admin controls
 // -------------------------------------------------------------
 function setupAdminControls() {
   if (!currentUser.isAdmin) return;
@@ -663,7 +551,7 @@ function setupAdminControls() {
 }
 
 // -------------------------------------------------------------
-// Buton „Versiune completă” – redirect cu token în URL
+// Versiune completă – păstrăm același token
 // -------------------------------------------------------------
 const FULL_SITE_URL = "https://linxpwp.github.io/telegram-miniap/";
 
@@ -688,12 +576,18 @@ function setupOpenFullButton() {
 }
 
 function openFullVersionWithSession() {
-  const token = getOrCreateSessionToken();
+  const token = getSessionToken();
+  if (!token) {
+    alert("Nu există token de sesiune. Deschide mini-app-ul din /start.");
+    return;
+  }
+
   const url =
     FULL_SITE_URL + (FULL_SITE_URL.includes("?") ? "&" : "?") + "token=" +
     encodeURIComponent(token);
 
-  if (tg) {
+  if (window.Telegram && window.Telegram.WebApp) {
+    tg = window.Telegram.WebApp;
     tg.openLink(url, { try_browser: true });
   } else {
     window.open(url, "_blank");
@@ -701,7 +595,7 @@ function openFullVersionWithSession() {
 }
 
 // -------------------------------------------------------------
-// Mobile tabs (Canale / Chat / Online) – deja ai CSS pentru asta
+// Mobile tabs (Canale / Chat / Online)
 // -------------------------------------------------------------
 function setupMobileTabs() {
   const tabs = document.querySelectorAll(".mobile-tab-btn");
@@ -758,25 +652,30 @@ function renderAll() {
 }
 
 // -------------------------------------------------------------
-// Init general
+// Init
 // -------------------------------------------------------------
 document.addEventListener("DOMContentLoaded", () => {
-  // 1) token din URL -> cookie + curățăm URL-ul
-  const syncOk = syncSessionFromUrl();
+  // 1) token din URL -> cookie
+  syncSessionFromUrl();
   const token = getSessionToken();
 
-  // 2) gating: dacă nu avem token nici în URL, nici în cookie => eroare
   if (!token) {
     console.warn("Nu există token în URL/cookie -> acces blocat");
     showErrorOnly();
     return;
   }
 
-  // 3) extragem username/id din Telegram dacă suntem în WebApp,
-  //    sau din localStorage dacă suntem pe website simplu
-  initTelegramUserIfAvailable(token);
+  // 2) decodăm user-ul din token
+  const userInfo = decodeUserFromToken(token);
+  if (!userInfo) {
+    console.warn("Token invalid -> acces blocat");
+    showErrorOnly();
+    return;
+  }
 
-  // 4) pornim aplicația
+  currentUser = userInfo;
+
+  // 3) pornim app
   showApp();
   loadState();
   touchCurrentUserOnline();
