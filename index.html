@@ -1,42 +1,126 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ro">
 <head>
   <meta charset="UTF-8" />
-  <title>Telegram Mini App</title>
+  <title>Telegram MiniApp – Discord Style Chat</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <!-- SDK-ul oficial Telegram WebApp -->
+
+  <!-- Telegram WebApp JS (în Telegram va fi injectat automat, dar linkul ajută în browser clasic) -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <style>
-    body {
-      font-family: sans-serif;
-      background: #111;
-      color: #fff;
-      margin: 0;
-      padding: 16px;
-    }
-    button {
-      padding: 10px 16px;
-      border: none;
-      border-radius: 8px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-  </style>
+
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h2>Salut din Mini APP 👋</h2>
-  <p>Apasă butonul ca să trimit ceva la bot.</p>
+  <div id="app-root">
+    <!-- Bara de sus -->
+    <header class="top-bar">
+      <div class="top-left">
+        <div class="logo-circle">TX</div>
+        <div class="top-title">
+          <span class="top-title-main">Telegram MiniApp</span>
+          <span class="top-title-sub">Discord Style • Black/Red • 2025</span>
+        </div>
+      </div>
 
-  <button id="send">Trimite date la bot</button>
+      <div class="top-right">
+        <button id="open-full-btn" class="ghost-btn">
+          🔗 Deschide versiunea completă
+        </button>
 
-  <script>
-    const tg = window.Telegram.WebApp;
-    tg.expand(); // face fereastra mai mare
+        <div id="current-user" class="user-pill">
+          <div id="current-user-avatar" class="user-avatar user-avatar-sm"></div>
+          <div class="user-info">
+            <span id="current-user-name" class="user-name">@guest</span>
+            <span id="current-user-tag" class="user-tag">Utilizator</span>
+          </div>
+        </div>
+      </div>
+    </header>
 
-    document.getElementById("send").addEventListener("click", () => {
-      const data = JSON.stringify({ action: "hello", value: 123 });
-      tg.sendData(data); // asta ajunge la botul tău
-    });
-  </script>
+    <!-- Layout principal -->
+    <main class="layout">
+      <!-- Col stânga: online users -->
+      <aside class="sidebar">
+        <div class="sidebar-section">
+          <div class="sidebar-title">
+            <span>Online</span>
+            <span id="online-count" class="badge">0</span>
+          </div>
+          <div id="online-list" class="online-list">
+            <!-- populat din JS -->
+          </div>
+        </div>
+
+        <div class="sidebar-section admin-section" id="admin-panel">
+          <div class="sidebar-title">
+            Admin Panel
+          </div>
+          <div class="admin-controls">
+            <input
+              type="text"
+              id="new-category-name"
+              class="input"
+              placeholder="Nume categorie"
+            />
+            <button id="create-category-btn" class="primary-btn">
+              + Categorie
+            </button>
+
+            <input
+              type="text"
+              id="new-channel-name"
+              class="input"
+              placeholder="Nume canal (#general)"
+            />
+            <select id="category-select" class="input"></select>
+            <button id="create-channel-btn" class="primary-btn">
+              + Canal
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Col mijloc: server / categorii / canale -->
+      <section class="channels-panel">
+        <div class="panel-header">
+          <h2>Server</h2>
+        </div>
+        <div id="category-list" class="category-list">
+          <!-- Populat din JS -->
+        </div>
+      </section>
+
+      <!-- Col dreapta: chat -->
+      <section class="chat-panel">
+        <div class="panel-header chat-header">
+          <div class="chat-header-main">
+            <span id="active-channel-name">#general</span>
+            <span id="active-channel-category" class="chip">Default</span>
+          </div>
+          <div class="chat-header-sub">
+            Istoric salvat local (demo) • Stil Discord
+          </div>
+        </div>
+
+        <div id="chat-history" class="chat-history">
+          <!-- Mesaje -->
+        </div>
+
+        <div class="chat-input-bar">
+          <textarea
+            id="chat-input"
+            class="chat-input"
+            rows="1"
+            placeholder="Scrie un mesaj..."
+          ></textarea>
+          <button id="send-btn" class="primary-btn">
+            Trimite
+          </button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
 </body>
 </html>
