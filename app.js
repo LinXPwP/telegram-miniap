@@ -1,5 +1,7 @@
 // app.js
-console.log("Miniapp version: 0.0.3");
+
+// Versiune pentru debug
+console.log("Miniapp version: 0.0.5");
 
 // ID admin – are voie să creeze categorii & canale
 const ADMIN_ID = 7672256597;
@@ -71,37 +73,71 @@ function randomId(prefix = "id") {
 }
 
 // -------------------------------------------------------------
-// Telegram init – versiune FIXATĂ
-//   - dacă există window.Telegram.WebApp => considerăm context valid Telegram
-//   - nu mai verificăm tg.initData.length
+// Detectăm dacă suntem în Telegram (mai „relaxat”)
+//   - verificăm userAgent (Telegram / TGWebApp)
+//   - sau existența window.Telegram.WebApp
+// -------------------------------------------------------------
+function isTelegramEnvironment() {
+  const ua = navigator.userAgent || "";
+  const hasUA =
+    ua.toLowerCase().includes("telegram") ||
+    ua.toLowerCase().includes("tgwebapp");
+
+  const hasObject =
+    typeof window !== "undefined" &&
+    window.Telegram &&
+    window.Telegram.WebApp;
+
+  return hasUA || hasObject;
+}
+
+// -------------------------------------------------------------
+// Telegram init – versiune simplificată
+//   - dacă pare Telegram -> încercăm să folosim WebApp, dar nu blocăm dacă lipsesc unele câmpuri
+//   - dacă NU pare Telegram -> revenim false și arătăm ecranul de eroare
 // -------------------------------------------------------------
 function initTelegramStrict() {
-  if (!window.Telegram || !window.Telegram.WebApp) {
-    // Nu există Telegram.WebApp => e browser obișnuit => arătăm eroarea
+  if (!isTelegramEnvironment()) {
+    // chiar nu pare Telegram -> blocăm
+    console.log("Nu pare Telegram (userAgent / obiect) -> error screen");
     return false;
   }
 
-  tg = window.Telegram.WebApp;
+  // Dacă există obiectul Telegram.WebApp, îl folosim
+  if (window.Telegram && window.Telegram.WebApp) {
+    tg = window.Telegram.WebApp;
 
-  try {
-    tg.ready();
-    tg.expand();
-  } catch (e) {
-    console.warn("Eroare la tg.ready()/expand():", e);
-  }
+    try {
+      tg.ready();
+      tg.expand();
+    } catch (e) {
+      console.warn("Eroare la tg.ready()/expand():", e);
+    }
 
-  const unsafe = tg.initDataUnsafe || {};
-  const user = unsafe.user;
+    const unsafe = tg.initDataUnsafe || {};
+    const user = unsafe.user;
 
-  if (user) {
-    currentUser.id = user.id;
-    currentUser.username = user.username || null;
-    currentUser.displayName =
-      user.first_name + (user.last_name ? " " + user.last_name : "");
-    currentUser.isAdmin = user.id === ADMIN_ID;
-    currentUser.avatarUrl = null; // poți pune URL real din backend
+    if (user) {
+      currentUser.id = user.id;
+      currentUser.username = user.username || null;
+      currentUser.displayName =
+        user.first_name + (user.last_name ? " " + user.last_name : "");
+      currentUser.isAdmin = user.id === ADMIN_ID;
+      currentUser.avatarUrl = null;
+      console.log("User din Telegram:", currentUser);
+    } else {
+      // Avem Telegram, dar nu avem user – foarte rar, fallback generic
+      currentUser.id = null;
+      currentUser.username = null;
+      currentUser.displayName = "Telegram user";
+      currentUser.isAdmin = false;
+      currentUser.avatarUrl = null;
+      console.log("Telegram WebApp fără user în initDataUnsafe");
+    }
   } else {
-    // WebApp există, dar nu avem user -> caz rar; nu punem „Guest”, doar generic
+    // Pare Telegram din userAgent, dar nu avem obiectul (Telegram.WebApp) încă.
+    // Totuși, îl tratăm ca Telegram: nu vrem să aruncăm utilizatorul pe ecranul de eroare.
+    console.log("UserAgent spune Telegram, dar obiectul Telegram.WebApp lipsește.");
     currentUser.id = null;
     currentUser.username = null;
     currentUser.displayName = "Telegram user";
@@ -552,12 +588,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const ok = initTelegramStrict();
 
   if (!ok) {
-    // Nu e context Telegram WebApp valid => doar mesaj de eroare
+    // Nu pare Telegram (Chrome normal, etc) -> doar mesaj de eroare
     showErrorOnly();
     return;
   }
 
-  // Context Telegram valid
+  // Context Telegram valid (sau „pare Telegram”)
   showApp();
   loadState();
   touchCurrentUserOnline();
