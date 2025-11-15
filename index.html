@@ -59,10 +59,23 @@
       </div>
     </header>
 
+    <!-- TABBAR pentru MOBILE (ascuns pe desktop din CSS) -->
+    <div class="mobile-tabbar">
+      <button class="mobile-tab-btn active" data-panel="channels-panel">
+        # Canale
+      </button>
+      <button class="mobile-tab-btn" data-panel="chat-panel">
+        💬 Chat
+      </button>
+      <button class="mobile-tab-btn" data-panel="online-panel">
+        👥 Online
+      </button>
+    </div>
+
     <!-- Layout stil Discord: canale (stânga), chat (mijloc), online (dreapta) -->
     <main class="layout">
       <!-- STÂNGA – CATEGORII + CANALE + PANOU ADMIN -->
-      <section class="channels-panel">
+      <section class="channels-panel" id="channels-panel">
         <div class="panel-header">
           <h2>Server</h2>
         </div>
@@ -102,7 +115,7 @@
       </section>
 
       <!-- MIJLOC – CHAT -->
-      <section class="chat-panel">
+      <section class="chat-panel" id="chat-panel">
         <div class="panel-header chat-header">
           <div class="chat-header-main">
             <span id="active-channel-name">#general</span>
@@ -131,7 +144,7 @@
       </section>
 
       <!-- DREAPTA – ONLINE -->
-      <aside class="sidebar">
+      <aside class="sidebar" id="online-panel">
         <div class="sidebar-section">
           <div class="sidebar-title">
             <span>Online</span>
@@ -145,6 +158,7 @@
     </main>
   </div>
 
-  <script src="app.js?v=5"></script>
+  <!-- mare atenție la v=… pentru a forța Telegram să ia versiunea nouă -->
+  <script src="app.js?v=10"></script>
 </body>
 </html>
