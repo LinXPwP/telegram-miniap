@@ -1,7 +1,6 @@
 // app.js
 
-// Versiune pentru debug
-console.log("Miniapp version: 0.1.0");
+console.log("Miniapp version: 0.2.0");
 
 // ID admin – are voie să creeze categorii & canale
 const ADMIN_ID = 7672256597;
@@ -73,25 +72,53 @@ function randomId(prefix = "id") {
 }
 
 // -------------------------------------------------------------
-// Detectăm dacă suntem în Telegram sau pe website
-//   IMPORTANT: scriptul telegram-web-app.js creează window.Telegram și
-//   în browser normal -> deci ne bazăm pe userAgent, nu pe existența obiectului.
+// Extrage "user" din initData string, dacă Telegram nu a populat initDataUnsafe
+// initData e ceva gen: "query_id=...&user=%7B...json...%7D&auth_date=...&hash=..."
 // -------------------------------------------------------------
-function isTelegramEnvironment() {
-  const ua = (navigator.userAgent || "").toLowerCase();
-  // Cautăm "telegram" sau "tgwebapp" în userAgent
-  const isTG = ua.includes("telegram") || ua.includes("tgwebapp");
-  return isTG;
+function tryParseUserFromInitData(initDataString) {
+  if (!initDataString) return null;
+  try {
+    const params = new URLSearchParams(initDataString);
+    const userParam = params.get("user");
+    if (!userParam) return null;
+    return JSON.parse(userParam);
+  } catch (e) {
+    console.warn("Nu pot parsa user din initData:", e);
+    return null;
+  }
 }
 
 // -------------------------------------------------------------
-// Telegram init – versiune strictă:
-//   - dacă userAgent NU conține "telegram" => website normal => eroare
-//   - dacă e Telegram => încercăm să citim initDataUnsafe.user
+// Detectăm dacă TREBUIE să rulăm ca miniapp Telegram
+// 1. dacă URL are ?tg=1 -> considerăm Telegram
+// 2. sau dacă Telegram.WebApp.initData nu e gol (caz ideal, WebApp real)
+// -------------------------------------------------------------
+function shouldTreatAsTelegram() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const fromParam = urlParams.get("tg") === "1";
+
+  if (fromParam) {
+    console.log("Detectat tg=1 în URL -> tratăm ca Telegram WebApp");
+    return true;
+  }
+
+  if (window.Telegram && window.Telegram.WebApp) {
+    const initData = window.Telegram.WebApp.initData;
+    if (typeof initData === "string" && initData.length > 0) {
+      console.log("initData WebApp nu e gol -> tratăm ca Telegram");
+      return true;
+    }
+  }
+
+  console.log("Nici tg=1, nici initData -> NU tratăm ca Telegram");
+  return false;
+}
+
+// -------------------------------------------------------------
+// Telegram init – noua metodă
 // -------------------------------------------------------------
 function initTelegramStrict() {
-  if (!isTelegramEnvironment()) {
-    console.log("Nu pare Telegram (userAgent) -> error screen");
+  if (!shouldTreatAsTelegram()) {
     return false;
   }
 
@@ -106,7 +133,15 @@ function initTelegramStrict() {
     }
 
     const unsafe = tg.initDataUnsafe || {};
-    const user = unsafe.user;
+    let user = unsafe.user;
+
+    // fallback: încercăm să extragem manual din initData, dacă unsafe.user e gol
+    if (!user && typeof tg.initData === "string" && tg.initData.length > 0) {
+      const parsed = tryParseUserFromInitData(tg.initData);
+      if (parsed) {
+        user = parsed;
+      }
+    }
 
     if (user) {
       currentUser.id = user.id;
@@ -117,17 +152,18 @@ function initTelegramStrict() {
       currentUser.avatarUrl = null;
       console.log("User din Telegram:", currentUser);
     } else {
+      // chiar dacă nu avem user complet, TOT îl tratăm ca Telegram (nu Guest)
       currentUser.id = null;
       currentUser.username = null;
       currentUser.displayName = "Telegram user";
       currentUser.isAdmin = false;
       currentUser.avatarUrl = null;
-      console.log("Telegram WebApp fără user în initDataUnsafe");
+      console.log("WebApp fără user în initData/initDataUnsafe");
     }
   } else {
-    // userAgent spune Telegram, dar obiectul WebApp nu e încă definit.
-    // Nu blocăm, dar nu avem info complet.
-    console.log("UserAgent Telegram, dar window.Telegram.WebApp lipsește.");
+    // Nu există obiectul WebApp, dar avem ?tg=1 → rulăm tot ca Telegram,
+    // doar că fără info complet despre user.
+    console.log("tg=1 dar window.Telegram.WebApp lipsește (rar).");
     currentUser.id = null;
     currentUser.username = null;
     currentUser.displayName = "Telegram user";
@@ -567,7 +603,7 @@ function openFullVersionWithSession() {
     return;
   }
 
-  // TODO: aici pui logica ta cu backend + cookie securizat
+  // TODO: logică cu backend + cookie securizat
   tg.openLink("https://linxpwp.github.io/telegram-miniap", { try_browser: true });
 }
 
@@ -585,14 +621,12 @@ function setupMobileTabs() {
   function applyMobileState() {
     const isMobile = window.innerWidth <= 900;
     if (!isMobile) {
-      // pe desktop – toate panourile vizibile
       channelsPanel.classList.remove("mobile-hidden");
       chatPanel.classList.remove("mobile-hidden");
       onlinePanel.classList.remove("mobile-hidden");
       return;
     }
 
-    // pe mobil – afișăm doar panoul tab-ului activ
     const activeTab = document.querySelector(".mobile-tab-btn.active") || tabs[0];
     const target = activeTab.getAttribute("data-panel");
 
@@ -634,12 +668,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const ok = initTelegramStrict();
 
   if (!ok) {
-    // Nu pare Telegram (Chrome normal, etc) -> doar mesaj de eroare
-    showErrorOnly();
+    showErrorOnly(); // website normal -> doar mesaj eroare
     return;
   }
 
-  // Context Telegram valid (sau "pare Telegram")
   showApp();
   loadState();
   touchCurrentUserOnline();
