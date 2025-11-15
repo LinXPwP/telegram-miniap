@@ -1,39 +1,32 @@
 // app.js
 
-// -------------------------------------------------------------
-// Constante
-// -------------------------------------------------------------
 const ADMIN_ID = 7672256597; // user id admin
 const STORAGE_KEY = "tg-miniapp-discord-state-v1";
 
-// -------------------------------------------------------------
-// State local
-// -------------------------------------------------------------
 let tg = null;
 let currentUser = {
   id: null,
-  username: "guest",
-  displayName: "Guest",
+  username: null,
+  displayName: null,
   avatarUrl: null,
   isAdmin: false,
 };
 
 let appState = {
   categories: [],
-  channels: {}, // channelId -> {id, name, categoryId}
-  messages: {}, // channelId -> [{id, author, text, ts}]
+  channels: {},
+  messages: {},
   activeChannelId: null,
   onlineUsers: [],
 };
 
 // -------------------------------------------------------------
-// Utilitare
+// State local
 // -------------------------------------------------------------
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) {
-      // state default cu o categorie și canal
       const defaultCategory = { id: "cat-default", name: "General" };
       const defaultChannel = {
         id: "ch-general",
@@ -73,60 +66,54 @@ function randomId(prefix = "id") {
 }
 
 // -------------------------------------------------------------
-// Init Telegram WebApp / Environment
+// Init Telegram – fără guest
 // -------------------------------------------------------------
-function initTelegram() {
+function initTelegramStrict() {
   tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
 
-  if (tg) {
-    tg.ready();
-    tg.expand();
-
-    const user = tg.initDataUnsafe && tg.initDataUnsafe.user;
-    if (user) {
-      currentUser.id = user.id;
-      currentUser.username = user.username || `user${user.id}`;
-      currentUser.displayName = user.first_name + (user.last_name ? " " + user.last_name : "");
-      currentUser.isAdmin = user.id === ADMIN_ID;
-
-      // Avatar: Telegram nu dă direct url aici, dar îl vom reprezenta ca inițiale,
-      // sau, dacă ai un backend, poți genera avatar URL.
-      currentUser.avatarUrl = null;
-    }
-  } else {
-    // rulăm în browser normal – mod debug
-    const params = new URLSearchParams(window.location.search);
-    const mockAdmin = params.get("admin") === "1";
-
-    currentUser.id = mockAdmin ? ADMIN_ID : 12345;
-    currentUser.username = mockAdmin ? "admin_user" : "web_user";
-    currentUser.displayName = mockAdmin ? "Admin User" : "Web User";
-    currentUser.isAdmin = mockAdmin;
-    currentUser.avatarUrl = null;
+  if (!tg) {
+    // Nu există WebApp => probabil deschis în browser direct
+    // Nu permitem acces; doar error-screen.
+    return false;
   }
+
+  tg.ready();
+  tg.expand();
+
+  const unsafe = tg.initDataUnsafe || {};
+  const user = unsafe.user;
+
+  if (!user) {
+    // Fără user în initData => mai bine blocăm
+    return false;
+  }
+
+  currentUser.id = user.id;
+  currentUser.username = user.username || null;
+  currentUser.displayName = user.first_name + (user.last_name ? " " + user.last_name : "");
+  currentUser.isAdmin = user.id === ADMIN_ID;
+  currentUser.avatarUrl = null; // poți pune URL din backend dacă vrei
+
+  return true;
 }
 
-function setupOpenFullButton() {
-  const btn = document.getElementById("open-full-btn");
-  if (!btn) return;
+// -------------------------------------------------------------
+// Ecran error vs app
+// -------------------------------------------------------------
+function showApp() {
+  const errorScreen = document.getElementById("error-screen");
+  const appRoot = document.getElementById("app-root");
 
-  const isTelegramEnv = !!tg;
-  const isMobile =
-    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) && window.innerWidth < 900;
+  if (errorScreen) errorScreen.classList.add("hidden");
+  if (appRoot) appRoot.classList.remove("hidden");
+}
 
-  // LOGICA:
-  // - dacă e Telegram pe mobil: ASCUNDEM butonul (miniapp full screen)
-  // - dacă e Desktop (browser normal sau Telegram desktop): arătăm butonul
-  if (isTelegramEnv && isMobile) {
-    btn.style.display = "none";
-  } else {
-    btn.style.display = "inline-flex";
-  }
+function showErrorOnly() {
+  const errorScreen = document.getElementById("error-screen");
+  const appRoot = document.getElementById("app-root");
 
-  btn.addEventListener("click", () => {
-    // deschide versiunea completă în browser
-    window.open("https://linxpwp.github.io/telegram-miniap", "_blank");
-  });
+  if (appRoot) appRoot.classList.add("hidden");
+  if (errorScreen) errorScreen.classList.remove("hidden");
 }
 
 // -------------------------------------------------------------
@@ -149,7 +136,6 @@ function touchCurrentUserOnline() {
     appState.onlineUsers[existingIndex] = userObj;
   }
 
-  // Curățăm userii inactivi mai mult de 5 minute (demo local)
   const cutoff = now - 5 * 60 * 1000;
   appState.onlineUsers = appState.onlineUsers.filter((u) => u.lastSeen >= cutoff);
 
@@ -177,7 +163,7 @@ function renderOnlineUsers() {
     const textWrap = document.createElement("div");
     const main = document.createElement("div");
     main.className = "online-user-main";
-    main.textContent = u.displayName || u.username;
+    main.textContent = u.displayName || u.username || "User";
 
     const sub = document.createElement("div");
     sub.className = "online-user-sub";
@@ -195,7 +181,7 @@ function renderOnlineUsers() {
 }
 
 // -------------------------------------------------------------
-// UI – current user
+// Current user UI
 // -------------------------------------------------------------
 function renderCurrentUser() {
   const nameEl = document.getElementById("current-user-name");
@@ -203,8 +189,11 @@ function renderCurrentUser() {
   const avatarEl = document.getElementById("current-user-avatar");
 
   if (nameEl) {
-    nameEl.textContent =
-      currentUser.username != null ? `@${currentUser.username}` : currentUser.displayName;
+    const label =
+      currentUser.username != null
+        ? `@${currentUser.username}`
+        : currentUser.displayName || "User";
+    nameEl.textContent = label;
   }
 
   if (tagEl) {
@@ -216,10 +205,9 @@ function renderCurrentUser() {
     if (currentUser.avatarUrl) {
       const img = document.createElement("img");
       img.src = currentUser.avatarUrl;
-      img.alt = currentUser.username;
+      img.alt = currentUser.username || currentUser.displayName || "avatar";
       avatarEl.appendChild(img);
     } else {
-      // inițiale
       const initials = (currentUser.displayName || currentUser.username || "U")
         .split(" ")
         .map((p) => p[0])
@@ -230,7 +218,6 @@ function renderCurrentUser() {
     }
   }
 
-  // Admin panel vizibil doar pentru admin
   const adminPanel = document.getElementById("admin-panel");
   if (adminPanel) {
     adminPanel.style.display = currentUser.isAdmin ? "block" : "none";
@@ -238,7 +225,7 @@ function renderCurrentUser() {
 }
 
 // -------------------------------------------------------------
-// UI – categories & channels
+// Categories + channels
 // -------------------------------------------------------------
 function renderCategoriesAndChannels() {
   const container = document.getElementById("category-list");
@@ -247,7 +234,6 @@ function renderCategoriesAndChannels() {
 
   container.innerHTML = "";
 
-  // Dropdown pentru admin – categoriile existente
   if (categorySelect) {
     categorySelect.innerHTML = "";
     appState.categories.forEach((cat) => {
@@ -330,7 +316,7 @@ function renderCategoriesAndChannels() {
 }
 
 // -------------------------------------------------------------
-// UI – chat
+// Chat
 // -------------------------------------------------------------
 function renderChat() {
   const channelId = appState.activeChannelId;
@@ -363,7 +349,7 @@ function renderChat() {
     if (msg.avatarUrl) {
       const img = document.createElement("img");
       img.src = msg.avatarUrl;
-      img.alt = msg.username;
+      img.alt = msg.username || msg.displayName || "avatar";
       avatar.appendChild(img);
     } else {
       const initials = (msg.displayName || msg.username || "U")
@@ -383,7 +369,7 @@ function renderChat() {
 
     const uname = document.createElement("div");
     uname.className = "message-username";
-    uname.textContent = msg.displayName || msg.username;
+    uname.textContent = msg.displayName || msg.username || "User";
 
     const meta = document.createElement("div");
     meta.className = "message-meta";
@@ -406,7 +392,6 @@ function renderChat() {
     historyEl.appendChild(row);
   });
 
-  // scroll la final
   historyEl.scrollTop = historyEl.scrollHeight;
 }
 
@@ -457,7 +442,7 @@ function setupChatInput() {
 }
 
 // -------------------------------------------------------------
-// Admin – category + channel create
+// Admin – create category + channel
 // -------------------------------------------------------------
 function setupAdminControls() {
   if (!currentUser.isAdmin) return;
@@ -502,6 +487,60 @@ function setupAdminControls() {
 }
 
 // -------------------------------------------------------------
+// Redirect la versiune completă cu token + cookie (backend)
+// -------------------------------------------------------------
+function setupOpenFullButton() {
+  const btn = document.getElementById("open-full-btn");
+  if (!btn) return;
+
+  const isMobile =
+    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) && window.innerWidth < 900;
+
+  // Pe mobile în Telegram, miniapp e deja fullscreen => nu afișăm butonul
+  if (isMobile) {
+    btn.style.display = "none";
+    return;
+  }
+
+  btn.style.display = "inline-flex";
+
+  btn.addEventListener("click", () => {
+    openFullVersionWithSession();
+  });
+}
+
+function openFullVersionWithSession() {
+  if (!tg) {
+    // fallback: doar redirect simplu
+    window.open("https://linxpwp.github.io/telegram-miniap", "_blank");
+    return;
+  }
+
+  // Ideea secură:
+  // 1) Trimitem initData la backend, backend validează cu bot token
+  // 2) Backend setează cookie HttpOnly + returnează un URL safe (fără token în query)
+  // 3) Deschidem URL-ul primit
+  //
+  // Pseudocod:
+  //
+  // fetch("https://backend.tau/api/auth/from-webapp", {
+  //   method: "POST",
+  //   headers: { "Content-Type": "application/json" },
+  //   body: JSON.stringify({ initData: tg.initData }),
+  //   credentials: "include"
+  // })
+  //   .then(r => r.json())
+  //   .then(data => {
+  //      if (data.ok && data.redirectUrl) {
+  //        tg.openLink(data.redirectUrl, { try_browser: true });
+  //      }
+  //   });
+
+  // Deocamdată, fără backend, doar deschidem site-ul tău:
+  tg.openLink("https://linxpwp.github.io/telegram-miniap", { try_browser: true });
+}
+
+// -------------------------------------------------------------
 // Render principal
 // -------------------------------------------------------------
 function renderAll() {
@@ -515,15 +554,24 @@ function renderAll() {
 // Init general
 // -------------------------------------------------------------
 document.addEventListener("DOMContentLoaded", () => {
-  initTelegram();
-  setupOpenFullButton();
+  const ok = initTelegramStrict();
+
+  if (!ok) {
+    // Nu e context Telegram valid => doar mesaj de eroare
+    showErrorOnly();
+    return;
+  }
+
+  // Context Telegram valid
+  showApp();
   loadState();
   touchCurrentUserOnline();
   renderAll();
   setupChatInput();
   setupAdminControls();
+  setupOpenFullButton();
 
-  // ping online la fiecare 30s (demo)
+  // ping "online" la 30 sec
   setInterval(() => {
     touchCurrentUserOnline();
     renderOnlineUsers();
