@@ -1,6 +1,6 @@
 // app.js
 
-console.log("Miniapp version: 0.5.0");
+console.log("Miniapp version: 0.5.1");
 
 // -------------------------------------------------------------
 // CONFIG
@@ -15,7 +15,7 @@ const SESSION_COOKIE = "tg_session_token";
 
 // URL-UL API-ULUI TĂU DE SESIUNE (Flask)
 // EX: const SESSION_API_BASE = "https://api.linx.ro/session";
-const SESSION_API_BASE = "https://EXEMPLU-DOMENIU.RO/session"; // <-- SCHIMBĂ AICI
+const SESSION_API_BASE = "http://185.206.148.140:8140"; // <-- SCHIMBĂ AICI
 
 // URL-ul site-ului (full version / redirect)
 const FULL_SITE_URL = "https://linxpwp.github.io/telegram-miniap/";
