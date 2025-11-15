@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <!-- ECRAN EROARE – afișat dacă nu e pornit din Telegram corect -->
+  <!-- ECRAN EROARE – afișat dacă NU e context Telegram WebApp valid -->
   <div id="error-screen" class="error-screen">
     <div class="error-card">
       <div class="error-logo">TX</div>
@@ -26,12 +26,12 @@
         <li>Apasă pe butonul „Deschide mini-app”.</li>
       </ol>
       <p class="error-foot">
-        Dacă vezi asta în browser simplu, nu este permis accesul direct.
+        Dacă vezi asta în browser simplu, accesul direct nu este permis.
       </p>
     </div>
   </div>
 
-  <!-- APP ROOT – dacă totul e ok în Telegram, ascundem error-screen și arătăm asta -->
+  <!-- APP ROOT – se afișează doar când contextul Telegram este valid -->
   <div id="app-root" class="hidden">
     <!-- Bara de sus -->
     <header class="top-bar">
@@ -44,6 +44,7 @@
       </div>
 
       <div class="top-right">
+        <!-- Desktop only – controlat din JS -->
         <button id="open-full-btn" class="ghost-btn">
           🔗 Versiune completă
         </button>
@@ -58,7 +59,7 @@
       </div>
     </header>
 
-    <!-- Layout principal: Canale (stânga), Chat (mijloc), Online (dreapta) -->
+    <!-- Layout stil Discord: canale (stânga), chat (mijloc), online (dreapta) -->
     <main class="layout">
       <!-- STÂNGA – CATEGORII + CANALE + PANOU ADMIN -->
       <section class="channels-panel">
@@ -70,7 +71,7 @@
           <!-- Populat din JS -->
         </div>
 
-        <!-- Admin panel (vizibil doar la admin) -->
+        <!-- Admin panel (vizibil doar pentru ADMIN_ID) -->
         <div class="admin-section" id="admin-panel">
           <div class="sidebar-title">
             Admin Panel
