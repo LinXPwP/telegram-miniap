@@ -15,7 +15,7 @@ let currentUser = {
   isAdmin: false,
 };
 
-// State local (demo)
+// State local (demo, doar în browserul fiecăruia)
 let appState = {
   categories: [],
   channels: {},      // channelId -> {id, name, categoryId}
@@ -70,27 +70,26 @@ function randomId(prefix = "id") {
 }
 
 // -------------------------------------------------------------
-// Telegram init – STRICT: doar WebApp real, fără Guest
+// Telegram init – versiune FIXATĂ
+//   - dacă există window.Telegram.WebApp => considerăm context valid Telegram
+//   - nu mai verificăm tg.initData.length
 // -------------------------------------------------------------
 function initTelegramStrict() {
-  tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
-
-  if (!tg) {
-    // Nu există Telegram.WebApp => e browser direct => blocăm
+  if (!window.Telegram || !window.Telegram.WebApp) {
+    // Nu există Telegram.WebApp => e browser obișnuit => arătăm eroarea
     return false;
   }
 
-  tg.ready();
-  tg.expand();
+  tg = window.Telegram.WebApp;
+
+  try {
+    tg.ready();
+    tg.expand();
+  } catch (e) {
+    console.warn("Eroare la tg.ready()/expand():", e);
+  }
 
   const unsafe = tg.initDataUnsafe || {};
-  const hasInitData = typeof tg.initData === "string" && tg.initData.length > 0;
-
-  // Dacă nu există initData, nu e lansat ca WebApp cu semnătură => blocăm
-  if (!hasInitData) {
-    return false;
-  }
-
   const user = unsafe.user;
 
   if (user) {
@@ -99,10 +98,9 @@ function initTelegramStrict() {
     currentUser.displayName =
       user.first_name + (user.last_name ? " " + user.last_name : "");
     currentUser.isAdmin = user.id === ADMIN_ID;
-    currentUser.avatarUrl = null; // poți pune URL din backend mai târziu
+    currentUser.avatarUrl = null; // poți pune URL real din backend
   } else {
-    // Caz rar: initData există, dar user nu e trimis (ex. WebApp în alt context)
-    // NU folosim Guest – dar lăsăm un fallback generic
+    // WebApp există, dar nu avem user -> caz rar; nu punem „Guest”, doar generic
     currentUser.id = null;
     currentUser.username = null;
     currentUser.displayName = "Telegram user";
@@ -136,8 +134,6 @@ function showErrorOnly() {
 // Online users – demo local (pe device)
 // -------------------------------------------------------------
 function touchCurrentUserOnline() {
-  if (!currentUser) return;
-
   const now = Date.now();
   const existingIndex = appState.onlineUsers.findIndex((u) => u.id === currentUser.id);
 
@@ -507,7 +503,7 @@ function setupAdminControls() {
 }
 
 // -------------------------------------------------------------
-// Buton „Versiune completă” – redirect + hook pentru token/cookie
+// Buton „Versiune completă” – redirect
 // -------------------------------------------------------------
 function setupOpenFullButton() {
   const btn = document.getElementById("open-full-btn");
@@ -516,7 +512,6 @@ function setupOpenFullButton() {
   const isMobile =
     /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) && window.innerWidth < 900;
 
-  // Pe mobil în Telegram, miniapp este deja fullscreen => ascundem butonul
   if (isMobile) {
     btn.style.display = "none";
     return;
@@ -531,34 +526,11 @@ function setupOpenFullButton() {
 
 function openFullVersionWithSession() {
   if (!tg) {
-    // fallback: doar redirect simplu
     window.open("https://linxpwp.github.io/telegram-miniap", "_blank");
     return;
   }
 
-  // Aici intră partea de securitate cu token + cookie:
-  //
-  // 1) Trimitem initData la backend, backend validează cu bot-token (HMAC)
-  // 2) Backend setează cookie HttpOnly, Secure, SameSite=Strict pentru domeniul site-ului
-  // 3) Backend întoarce un URL sigur (fără token în query), gen /app
-  // 4) Deschidem acel URL în browser
-  //
-  // Pseudocod:
-  //
-  // fetch("https://backend.tau/api/auth/from-webapp", {
-  //   method: "POST",
-  //   headers: { "Content-Type": "application/json" },
-  //   body: JSON.stringify({ initData: tg.initData }),
-  //   credentials: "include"
-  // })
-  //   .then(r => r.json())
-  //   .then(data => {
-  //     if (data.ok && data.redirectUrl) {
-  //       tg.openLink(data.redirectUrl, { try_browser: true });
-  //     }
-  //   });
-  //
-  // Deocamdată, doar deschidem site-ul tău GitHub Pages:
+  // TODO: aici pui logica ta cu backend + cookie securizat
   tg.openLink("https://linxpwp.github.io/telegram-miniap", { try_browser: true });
 }
 
@@ -593,7 +565,6 @@ document.addEventListener("DOMContentLoaded", () => {
   setupAdminControls();
   setupOpenFullButton();
 
-  // ping "online" la fiecare 30 secunde (demo)
   setInterval(() => {
     touchCurrentUserOnline();
     renderOnlineUsers();
