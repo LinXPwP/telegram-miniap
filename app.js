@@ -1,6 +1,6 @@
 // app.js
 
-console.log("Miniapp version: 0.6.0");
+console.log("Miniapp version: 0.7.0");
 
 // -------------------------------------------------------------
 // CONFIG
@@ -13,8 +13,12 @@ const STORAGE_KEY = "tg-miniapp-discord-state-v1";
 // cookie: token-ul de sesiune (nu expiră practic)
 const SESSION_COOKIE = "tg_session_token";
 
-// URL-ul site-ului (full version / redirect) – ține-l sincron cu settings.json
+// URL-ul site-ului (full version / redirect)
 const FULL_SITE_URL = "https://linxpwp.github.io/telegram-miniap/";
+
+// URL-ul API-ului de sesiune pe Render (HTTPS)
+// SCHIMBĂ cu URL-ul tău real, ex: "https://miniapp-session.onrender.com/session"
+const SESSION_API_URL = "https://miniapp-session.onrender.com/session";
 
 // -------------------------------------------------------------
 // STATE
@@ -31,10 +35,10 @@ let currentUser = {
 
 let appState = {
   categories: [],
-  channels: {}, // channelId -> {id, name, categoryId}
-  messages: {}, // channelId -> [ {id, text, ts, username, displayName, ...} ]
+  channels: {},
+  messages: {},
   activeChannelId: null,
-  onlineUsers: [], // [ {id, username, displayName, lastSeen} ]
+  onlineUsers: [],
 };
 
 // -------------------------------------------------------------
@@ -112,7 +116,7 @@ function getSessionToken() {
 }
 
 function setSessionTokenCookie(token) {
-  // 10 ani demo – practic „nu expiră”
+  // 10 ani – practic "nu expiră"
   setCookie(SESSION_COOKIE, token, 365 * 10);
 }
 
@@ -136,29 +140,6 @@ function syncSessionFromUrl() {
 }
 
 // -------------------------------------------------------------
-// TOKEN → USER INFO (decode base64 JSON din bot.py)
-// -------------------------------------------------------------
-function parseUserFromToken(token) {
-  try {
-    // completăm padding-ul de base64
-    const pad = "=".repeat((4 - (token.length % 4)) % 4);
-    const base64 = token.replace(/-/g, "+").replace(/_/g, "/") + pad;
-    const jsonStr = atob(base64);
-    const data = JSON.parse(jsonStr);
-
-    return {
-      id: data.uid ?? null,
-      username: data.uname ?? null,
-      displayName: data.name ?? null,
-      isAdmin: !!data.admin,
-    };
-  } catch (e) {
-    console.error("Nu pot decoda token-ul:", e);
-    return null;
-  }
-}
-
-// -------------------------------------------------------------
 // TELEGRAM – doar pentru openLink + look & feel (nu pentru gating)
 // -------------------------------------------------------------
 function initTelegramObjectIfAny() {
@@ -170,6 +151,33 @@ function initTelegramObjectIfAny() {
     } catch (e) {
       console.warn("Eroare la tg.ready()/expand():", e);
     }
+  }
+}
+
+// -------------------------------------------------------------
+// BACKEND – fetch user info din Render API
+// -------------------------------------------------------------
+async function fetchUserInfoByToken(token) {
+  try {
+    const url = `${SESSION_API_URL}?token=${encodeURIComponent(token)}`;
+    const res = await fetch(url, { credentials: "omit" });
+
+    if (!res.ok) {
+      console.warn("Token invalid sau API error:", res.status);
+      return null;
+    }
+
+    const data = await res.json();
+    return {
+      id: data.user_id ?? null,
+      username: data.username ?? null,
+      displayName: data.full_name ?? null,
+      isAdmin: !!data.is_admin,
+      avatarUrl: null,
+    };
+  } catch (e) {
+    console.error("Eroare la fetchUserInfoByToken:", e);
+    return null;
   }
 }
 
@@ -606,7 +614,6 @@ function setupOpenFullButton() {
 function openFullVersionWithSession() {
   const token = getSessionToken();
   if (!token) {
-    // ca fallback, deschidem versiunea simplă (va arăta ecranul de eroare)
     window.open(FULL_SITE_URL, "_blank");
     return;
   }
@@ -684,7 +691,7 @@ function renderAll() {
 // -------------------------------------------------------------
 // INIT
 // -------------------------------------------------------------
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   // 1) Telegram object (doar pentru openLink + expand)
   initTelegramObjectIfAny();
 
@@ -698,10 +705,10 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
-  // 3) decodăm token-ul -> info user
-  const info = parseUserFromToken(token);
+  // 3) luăm user info din backend Render
+  const info = await fetchUserInfoByToken(token);
   if (!info) {
-    console.warn("Token invalid sau corupt -> blocare acces");
+    console.warn("Token invalid sau backend down -> blocare acces");
     showErrorOnly();
     return;
   }
@@ -711,7 +718,7 @@ document.addEventListener("DOMContentLoaded", () => {
   currentUser.username = info.username;
   currentUser.displayName = info.displayName || "User";
   currentUser.isAdmin = info.isAdmin;
-  currentUser.avatarUrl = null; // deocamdată nu avem avatar din Telegram
+  currentUser.avatarUrl = info.avatarUrl;
 
   // 5) pornim aplicația
   showApp();
