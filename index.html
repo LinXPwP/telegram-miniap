@@ -5,13 +5,34 @@
   <title>Telegram MiniApp – Discord Style Chat</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Telegram WebApp JS (în Telegram va fi injectat automat, dar linkul ajută în browser clasic) -->
+  <!-- Telegram WebApp JS -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div id="app-root">
+  <!-- ECRAN EROARE – afișat dacă nu e pornit din Telegram corect -->
+  <div id="error-screen" class="error-screen">
+    <div class="error-card">
+      <div class="error-logo">TX</div>
+      <h1>Acces mini-app</h1>
+      <p>
+        Această aplicație trebuie deschisă din Telegram folosind
+        comanda <strong>/start</strong> în bot și apoi butonul de mini-app.
+      </p>
+      <ol>
+        <li>Deschide Telegram.</li>
+        <li>Intră pe bot și scrie <code>/start</code>.</li>
+        <li>Apasă pe butonul „Deschide mini-app”.</li>
+      </ol>
+      <p class="error-foot">
+        Dacă vezi asta în browser simplu, nu este permis accesul direct.
+      </p>
+    </div>
+  </div>
+
+  <!-- APP ROOT – dacă totul e ok în Telegram, ascundem error-screen și arătăm asta -->
+  <div id="app-root" class="hidden">
     <!-- Bara de sus -->
     <header class="top-bar">
       <div class="top-left">
@@ -24,34 +45,33 @@
 
       <div class="top-right">
         <button id="open-full-btn" class="ghost-btn">
-          🔗 Deschide versiunea completă
+          🔗 Versiune completă
         </button>
 
         <div id="current-user" class="user-pill">
           <div id="current-user-avatar" class="user-avatar user-avatar-sm"></div>
           <div class="user-info">
-            <span id="current-user-name" class="user-name">@guest</span>
+            <span id="current-user-name" class="user-name">@…</span>
             <span id="current-user-tag" class="user-tag">Utilizator</span>
           </div>
         </div>
       </div>
     </header>
 
-    <!-- Layout principal -->
+    <!-- Layout principal: Canale (stânga), Chat (mijloc), Online (dreapta) -->
     <main class="layout">
-      <!-- Col stânga: online users -->
-      <aside class="sidebar">
-        <div class="sidebar-section">
-          <div class="sidebar-title">
-            <span>Online</span>
-            <span id="online-count" class="badge">0</span>
-          </div>
-          <div id="online-list" class="online-list">
-            <!-- populat din JS -->
-          </div>
+      <!-- STÂNGA – CATEGORII + CANALE + PANOU ADMIN -->
+      <section class="channels-panel">
+        <div class="panel-header">
+          <h2>Server</h2>
         </div>
 
-        <div class="sidebar-section admin-section" id="admin-panel">
+        <div id="category-list" class="category-list">
+          <!-- Populat din JS -->
+        </div>
+
+        <!-- Admin panel (vizibil doar la admin) -->
+        <div class="admin-section" id="admin-panel">
           <div class="sidebar-title">
             Admin Panel
           </div>
@@ -78,19 +98,9 @@
             </button>
           </div>
         </div>
-      </aside>
-
-      <!-- Col mijloc: server / categorii / canale -->
-      <section class="channels-panel">
-        <div class="panel-header">
-          <h2>Server</h2>
-        </div>
-        <div id="category-list" class="category-list">
-          <!-- Populat din JS -->
-        </div>
       </section>
 
-      <!-- Col dreapta: chat -->
+      <!-- MIJLOC – CHAT -->
       <section class="chat-panel">
         <div class="panel-header chat-header">
           <div class="chat-header-main">
@@ -118,6 +128,19 @@
           </button>
         </div>
       </section>
+
+      <!-- DREAPTA – ONLINE -->
+      <aside class="sidebar">
+        <div class="sidebar-section">
+          <div class="sidebar-title">
+            <span>Online</span>
+            <span id="online-count" class="badge">0</span>
+          </div>
+          <div id="online-list" class="online-list">
+            <!-- populat din JS -->
+          </div>
+        </div>
+      </aside>
     </main>
   </div>
 
