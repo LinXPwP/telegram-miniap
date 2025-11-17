@@ -2,163 +2,390 @@
 <html lang="ro">
 <head>
   <meta charset="UTF-8" />
-  <title>Telegram MiniApp – Discord Style Chat</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <!-- Telegram WebApp JS -->
+  <title>Shop cu Credite</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
-  <link rel="stylesheet" href="style.css" />
+  <style>
+    :root {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+        "Roboto", sans-serif;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at top, #4f46e5, #020617);
+      color: #e5e7eb;
+    }
+    .app {
+      width: 100%;
+      max-width: 900px;
+      padding: 24px 16px 40px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .title-block {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+    }
+    .subtitle {
+      font-size: 0.9rem;
+      color: #9ca3af;
+    }
+    .badge {
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      backdrop-filter: blur(10px);
+    }
+    .badge-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: #22c55e;
+      box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.3);
+    }
+    .credits-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(15,23,42,0.95), rgba(30,64,175,0.8));
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      margin-bottom: 20px;
+      box-shadow: 0 18px 45px rgba(15,23,42,0.9);
+    }
+    .credits-main {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .credits-label {
+      font-size: 0.8rem;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: 0.11em;
+    }
+    .credits-value {
+      font-size: 1.3rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .credits-chip {
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(15,23,42, 0.9);
+      font-size: 0.75rem;
+      color: #a5b4fc;
+      border: 1px solid rgba(129, 140, 248, 0.5);
+    }
+    .credits-demo {
+      font-size: 0.8rem;
+      color: #9ca3af;
+      text-align: right;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      position: relative;
+      padding: 16px 14px 14px;
+      border-radius: 20px;
+      background: radial-gradient(circle at top left, rgba(129, 140, 248, 0.25), rgba(15, 23, 42, 0.98));
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.8);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow: hidden;
+    }
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 120% 0%, rgba(56,189,248,0.12), transparent 55%);
+      opacity: 0.9;
+      pointer-events: none;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+      z-index: 1;
+    }
+    .card-title {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+    .card-chip {
+      font-size: 0.7rem;
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      background: rgba(15, 23, 42, 0.9);
+      color: #e5e7eb;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+    .card-desc {
+      font-size: 0.86rem;
+      color: #d1d5db;
+      z-index: 1;
+    }
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 4px;
+      z-index: 1;
+    }
+    .price {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .price-main {
+      font-weight: 600;
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .price-main span:last-child {
+      font-size: 0.8rem;
+      color: #9ca3af;
+      font-weight: 400;
+    }
+    .price-note {
+      font-size: 0.75rem;
+      color: #9ca3af;
+    }
+    .btn {
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.86rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: #f9fafb;
+      box-shadow: 0 10px 25px rgba(34, 197, 94, 0.65);
+      transform: translateY(0);
+      transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;
+    }
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 14px 30px rgba(34, 197, 94, 0.7);
+      opacity: 0.96;
+    }
+    .btn:active {
+      transform: translateY(1px);
+      box-shadow: 0 5px 15px rgba(34, 197, 94, 0.55);
+      opacity: 0.9;
+    }
+    .toast {
+      position: fixed;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(52, 211, 153, 0.6);
+      color: #a7f3d0;
+      font-size: 0.8rem;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      backdrop-filter: blur(16px);
+      z-index: 50;
+      box-shadow: 0 16px 40px rgba(15,23,42,0.9);
+    }
+    .toast-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: #22c55e;
+    }
+    @media (max-width: 600px) {
+      .header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .credits-bar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+      }
+      .credits-demo {
+        text-align: left;
+      }
+    }
+  </style>
 </head>
 <body>
-  <!-- ECRAN EROARE – afișat dacă NU e context Telegram WebApp valid -->
-  <div id="error-screen" class="error-screen">
-    <div class="error-card">
-      <div class="error-logo">TX</div>
-      <h1>Acces mini-app</h1>
-      <p>
-        Această aplicație trebuie deschisă din Telegram folosind
-        comanda <strong>/start</strong> în bot și apoi butonul de mini-app.
-      </p>
-      <ol>
-        <li>Deschide Telegram.</li>
-        <li>Intră pe bot și scrie <code>/start</code>.</li>
-        <li>Apasă pe butonul „Deschide mini-app”.</li>
-      </ol>
-      <p class="error-foot">
-        Dacă vezi asta în browser simplu, accesul direct nu este permis.
-      </p>
+  <div class="app">
+    <div class="header">
+      <div class="title-block">
+        <div class="title">Shop cu Credite</div>
+        <div class="subtitle">Mini-app Telegram · UI 2025 · powered by GitHub Pages</div>
+      </div>
+      <div class="badge">
+        <div class="badge-dot"></div>
+        live demo · credits system
+      </div>
+    </div>
+
+    <div class="credits-bar">
+      <div class="credits-main">
+        <div class="credits-label">Balance demo</div>
+        <div class="credits-value">
+          <span id="demoCredits">120</span>
+          <span>💳</span>
+          <span class="credits-chip">Demo only · sold by bot</span>
+        </div>
+      </div>
+      <div class="credits-demo">
+        Creditele reale sunt verificate și scăzute de botul Python când confirmi o
+        cumpărare.
+      </div>
+    </div>
+
+    <div class="grid" id="productsGrid">
+      <!-- Cardurile de produse vin din JS -->
     </div>
   </div>
 
-  <!-- APP ROOT – se afișează doar când contextul Telegram este valid -->
-  <div id="app-root" class="hidden">
-    <!-- Bara de sus -->
-    <header class="top-bar">
-      <div class="top-left">
-        <div class="logo-circle">TX</div>
-        <div class="top-title">
-          <span class="top-title-main">Telegram MiniApp</span>
-          <span class="top-title-sub">Discord Style • Black/Red • 2025</span>
-        </div>
-      </div>
-
-      <div class="top-right">
-        <!-- Desktop only – controlat din JS -->
-        <button id="open-full-btn" class="ghost-btn">
-          🔗 Versiune completă
-        </button>
-
-        <div id="current-user" class="user-pill">
-          <div id="current-user-avatar" class="user-avatar user-avatar-sm"></div>
-          <div class="user-info">
-            <span id="current-user-name" class="user-name">@…</span>
-            <span id="current-user-tag" class="user-tag">Utilizator</span>
-          </div>
-        </div>
-      </div>
-    </header>
-
-    <!-- TABBAR pentru MOBILE (ascuns pe desktop din CSS) -->
-    <div class="mobile-tabbar">
-      <button class="mobile-tab-btn active" data-panel="channels-panel">
-        # Canale
-      </button>
-      <button class="mobile-tab-btn" data-panel="chat-panel">
-        💬 Chat
-      </button>
-      <button class="mobile-tab-btn" data-panel="online-panel">
-        👥 Online
-      </button>
-    </div>
-
-    <!-- Layout stil Discord: canale (stânga), chat (mijloc), online (dreapta) -->
-    <main class="layout">
-      <!-- STÂNGA – CATEGORII + CANALE + PANOU ADMIN -->
-      <section class="channels-panel" id="channels-panel">
-        <div class="panel-header">
-          <h2>Server</h2>
-        </div>
-
-        <div id="category-list" class="category-list">
-          <!-- Populat din JS -->
-        </div>
-
-        <!-- Admin panel (vizibil doar pentru ADMIN_ID) -->
-        <div class="admin-section" id="admin-panel">
-          <div class="sidebar-title">
-            Admin Panel
-          </div>
-          <div class="admin-controls">
-            <input
-              type="text"
-              id="new-category-name"
-              class="input"
-              placeholder="Nume categorie"
-            />
-            <button id="create-category-btn" class="primary-btn">
-              + Categorie
-            </button>
-
-            <input
-              type="text"
-              id="new-channel-name"
-              class="input"
-              placeholder="Nume canal (#general)"
-            />
-            <select id="category-select" class="input"></select>
-            <button id="create-channel-btn" class="primary-btn">
-              + Canal
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <!-- MIJLOC – CHAT -->
-      <section class="chat-panel" id="chat-panel">
-        <div class="panel-header chat-header">
-          <div class="chat-header-main">
-            <span id="active-channel-name">#general</span>
-            <span id="active-channel-category" class="chip">Default</span>
-          </div>
-          <div class="chat-header-sub">
-            Istoric salvat local (demo) • Stil Discord
-          </div>
-        </div>
-
-        <div id="chat-history" class="chat-history">
-          <!-- Mesaje -->
-        </div>
-
-        <div class="chat-input-bar">
-          <textarea
-            id="chat-input"
-            class="chat-input"
-            rows="1"
-            placeholder="Scrie un mesaj..."
-          ></textarea>
-          <button id="send-btn" class="primary-btn">
-            Trimite
-          </button>
-        </div>
-      </section>
-
-      <!-- DREAPTA – ONLINE -->
-      <aside class="sidebar" id="online-panel">
-        <div class="sidebar-section">
-          <div class="sidebar-title">
-            <span>Online</span>
-            <span id="online-count" class="badge">0</span>
-          </div>
-          <div id="online-list" class="online-list">
-            <!-- populat din JS -->
-          </div>
-        </div>
-      </aside>
-    </main>
+  <div class="toast" id="toast">
+    <div class="toast-dot"></div>
+    <span id="toastText">Produs trimis către bot...</span>
   </div>
 
-  <!-- mare atenție la v=… pentru a forța Telegram să ia versiunea nouă -->
-  <script src="app.js?v=20"></script>
+  <script>
+    const tg = window.Telegram.WebApp || null;
+
+    const products = [
+      {
+        id: "1",
+        name: "Premium Access",
+        description: "Acces complet la funcțiile premium, suport prioritar și update-uri.",
+        price: 50,
+        tag: "Popular"
+      },
+      {
+        id: "2",
+        name: "Credit Pack 100",
+        description: "Pachet suplimentar de 100 de credite pentru contul tău.",
+        price: 100,
+        tag: "Top-up"
+      },
+      {
+        id: "3",
+        name: "Support Ticket VIP",
+        description: "Ticket dedicat pentru asistență rapidă și personalizată.",
+        price: 25,
+        tag: "Support"
+      }
+    ];
+
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      const text = document.getElementById("toastText");
+      text.textContent = message;
+      toast.style.display = "flex";
+      setTimeout(() => {
+        toast.style.display = "none";
+      }, 2200);
+    }
+
+    function sendBuy(productId) {
+      const payload = {
+        action: "buy",
+        productId
+      };
+
+      if (tg) {
+        tg.HapticFeedback.selectionChanged && tg.HapticFeedback.selectionChanged();
+        tg.sendData(JSON.stringify(payload));
+        showToast("Cerere de cumpărare trimisă către bot...");
+        setTimeout(() => {
+          tg.close();
+        }, 500);
+      } else {
+        showToast("Demo only: botul nu este conectat în browser.");
+      }
+    }
+
+    function renderProducts() {
+      const grid = document.getElementById("productsGrid");
+      grid.innerHTML = "";
+      products.forEach((p) => {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+          <div class="card-header">
+            <div class="card-title">${p.name}</div>
+            <div class="card-chip">${p.tag}</div>
+          </div>
+          <div class="card-desc">
+            ${p.description}
+          </div>
+          <div class="card-footer">
+            <div class="price">
+              <div class="price-main">
+                <span>${p.price} credite</span>
+                <span>·</span>
+                <span>💳</span>
+              </div>
+              <div class="price-note">Plata se face prin bot.</div>
+            </div>
+            <button class="btn" onclick="sendBuy('${p.id}')">
+              <span>✔ Cumpără</span>
+            </button>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    // Inițializare WebApp
+    if (tg) {
+      tg.expand && tg.expand();
+      tg.setHeaderColor && tg.setHeaderColor("#020617");
+      tg.setBackgroundColor && tg.setBackgroundColor("#020617");
+    }
+
+    renderProducts();
+  </script>
 </body>
 </html>
