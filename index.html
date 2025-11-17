@@ -421,7 +421,7 @@
       </div>
     </div>
 
-    <!-- VIEW: ADMIN (doar pentru administrator) -->
+    <!-- VIEW: ADMIN -->
     <div id="adminView">
       <div class="grid">
         <!-- Card sumar -->
@@ -644,7 +644,7 @@
       });
     }
 
-    // ---------- ADMIN ACTIONS (prin miniapp) ----------
+    // ---------- ADMIN ACTIONS ----------
 
     function sendAdminSummary() {
       sendToBot({ action: "admin_summary" });
@@ -754,7 +754,7 @@
       document.getElementById("tabAdminBtn").classList.add("active");
     }
 
-    // ---------- INIT USER & WEBAPP ----------
+    // ---------- INIT ----------
 
     function initUser() {
       if (!tg) return;
@@ -783,11 +783,9 @@
           badgeText.textContent = "User standard · Admin ID: " + ADMIN_ID;
         }
 
-        // spunem botului că userul a deschis miniapp-ul
         sendToBot({ action: "init" });
       }
 
-      // tab listeners
       document.getElementById("tabShopBtn").onclick = showShop;
       document.getElementById("tabAdminBtn").onclick = showAdmin;
     }
