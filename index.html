@@ -416,9 +416,7 @@
 
     <!-- VIEW: SHOP -->
     <div id="shopView">
-      <div class="grid" id="productsGrid">
-        <!-- Cardurile de produse vin din JS -->
-      </div>
+      <div class="grid" id="productsGrid"></div>
     </div>
 
     <!-- VIEW: ADMIN -->
@@ -523,7 +521,7 @@
         <div class="card">
           <div class="card-header">
             <div class="card-title">Tickete</div>
-            <div class="card-chip">Status</div>
+            <div the="card-chip">Status</div>
           </div>
           <div class="card-desc admin-subtitle">
             Schimbă statusul unui ticket existent (deschis / închis). Detaliile le vezi în chatul de admin.
@@ -796,7 +794,7 @@
       if (user) {
         nameEl.textContent = user.first_name || "Utilizator";
 
-        // aici e "100% working": dacă nu există username, afișăm măcar ID-ul
+        // dacă nu există username, afișăm ID-ul ca fallback
         if (user.username) {
           userEl.textContent = "@" + user.username;
         } else {
@@ -813,6 +811,9 @@
         } else {
           badgeText.textContent = "User standard · Admin ID: " + ADMIN_ID;
         }
+
+        // dacă vrei să vezi EXACT ce trimite Telegram, poți decomenta:
+        // alert(JSON.stringify(user, null, 2));
 
         sendToBot({ action: "init" });
       } else {
