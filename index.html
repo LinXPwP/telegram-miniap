@@ -510,6 +510,30 @@
       }, 2200);
     }
 
+    // funcție robustă pentru user
+    function getTelegramUser() {
+      if (!window.Telegram || !Telegram.WebApp) return null;
+      const tgLocal = Telegram.WebApp;
+
+      if (tgLocal.initDataUnsafe && tgLocal.initDataUnsafe.user) {
+        return tgLocal.initDataUnsafe.user;
+      }
+
+      if (tgLocal.initData) {
+        try {
+          const params = new URLSearchParams(tgLocal.initData);
+          const userStr = params.get("user");
+          if (userStr) {
+            return JSON.parse(userStr);
+          }
+        } catch (e) {
+          console.log("Eroare parse initData:", e);
+        }
+      }
+
+      return null;
+    }
+
     function sendToBot(payload) {
       if (!tg) {
         showToast("Deschide miniapp-ul din Telegram, nu din browser.");
@@ -678,7 +702,7 @@
     function initUser() {
       if (!tg) return;
 
-      const user = tg.initDataUnsafe && tg.initDataUnsafe.user;
+      const user = getTelegramUser();
       console.log("USER FROM TELEGRAM:", user);
 
       const nameEl = document.getElementById("userName");
@@ -689,12 +713,13 @@
       const tabAdminBtn = document.getElementById("tabAdminBtn");
 
       if (user) {
-        nameEl.textContent = user.first_name || "Utilizator";
+        const firstName = user.first_name || "Utilizator";
+        nameEl.textContent = firstName;
 
         if (user.username) {
           userEl.textContent = "@" + user.username;
         } else {
-          userEl.textContent = "(fără username)";
+          userEl.textContent = `(ID: ${user.id})`;
         }
 
         idEl.textContent = user.id;
@@ -710,8 +735,9 @@
 
         sendToBot({ action: "init" });
       } else {
-        nameEl.textContent = "Anonim";
+        nameEl.textContent = "Utilizator necunoscut";
         userEl.textContent = "(fără date Telegram)";
+        idEl.textContent = "-";
       }
 
       document.getElementById("tabShopBtn").onclick = showShop;
