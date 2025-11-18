@@ -186,10 +186,7 @@
       gap: 8px;
       z-index: 1;
     }
-    .card-title {
-      font-size: 1rem;
-      font-weight: 600;
-    }
+    .card-title { font-size: 1rem; font-weight: 600; }
     .card-chip {
       font-size: 0.7rem;
       padding: 3px 8px;
@@ -200,11 +197,7 @@
       text-transform: uppercase;
       letter-spacing: 0.12em;
     }
-    .card-desc {
-      font-size: 0.86rem;
-      color: #e5e7eb;
-      z-index: 1;
-    }
+    .card-desc { font-size: 0.86rem; color: #e5e7eb; z-index: 1; }
     .card-footer {
       display: flex;
       justify-content: space-between;
@@ -220,15 +213,7 @@
       align-items: center;
       gap: 4px;
     }
-    .price-main span:last-child {
-      font-size: 0.8rem;
-      color: #fecaca;
-      font-weight: 400;
-    }
-    .price-note {
-      font-size: 0.75rem;
-      color: #fee2e2;
-    }
+    .price-note { font-size: 0.75rem; color: #fee2e2; }
     .btn {
       padding: 8px 14px;
       border-radius: 999px;
@@ -245,6 +230,7 @@
       transform: translateY(0);
       transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;
     }
+    .btn-sm { padding: 6px 10px; font-size: 0.8rem; box-shadow: none; }
     .btn:hover {
       transform: translateY(-1px);
       box-shadow: 0 14px 30px rgba(220, 38, 38, 0.9);
@@ -254,11 +240,6 @@
       transform: translateY(1px);
       box-shadow: 0 5px 15px rgba(127, 29, 29, 0.85);
       opacity: 0.9;
-    }
-    .btn-sm {
-      padding: 6px 10px;
-      font-size: 0.8rem;
-      box-shadow: none;
     }
     .admin-form { display: grid; gap: 8px; margin-top: 8px; }
     .field-row { display: flex; gap: 6px; }
@@ -309,20 +290,11 @@
   </style>
 </head>
 <body>
-  <!-- BUTON TEST pentru debug sendData -->
-  <button id="testBtn" onclick="sendRawTest()" style="
-    position:fixed;top:8px;right:8px;z-index:9999;
-    padding:6px 10px;border-radius:999px;border:none;
-    background:#22c55e;color:#020617;font-size:11px;
-    box-shadow:0 4px 10px rgba(22,163,74,0.5);">
-    TEST spre bot
-  </button>
-
   <div class="app">
     <div class="header">
       <div class="title-block">
         <div class="title">Shop cu Credite</div>
-        <div class="subtitle">Mini-app Telegram · UI 2025 · tema roșie</div>
+        <div class="subtitle">Mini-app Telegram · UI 2025 · tema negru-roșu</div>
       </div>
       <div class="badge" id="adminBadge">
         <div class="badge-dot"></div>
@@ -363,12 +335,12 @@
       </div>
     </div>
 
-    <!-- VIEW: SHOP -->
+    <!-- SHOP -->
     <div id="shopView">
       <div class="grid" id="productsGrid"></div>
     </div>
 
-    <!-- VIEW: ADMIN -->
+    <!-- ADMIN -->
     <div id="adminView">
       <div class="grid">
         <!-- Card sumar -->
@@ -378,7 +350,7 @@
             <div class="card-chip">Overview</div>
           </div>
           <div class="card-desc admin-subtitle">
-            Trimite o cerere de sumar la bot (useri, produse, tickete, istoric). Detaliile apar în chatul tău de admin.
+            Sumar sistem (useri, produse, tickete, istoric). Detaliile apar în chatul de admin.
           </div>
           <div class="card-footer">
             <button class="btn btn-sm" onclick="sendAdminSummary()">
@@ -394,11 +366,11 @@
             <div class="card-chip">Add / Edit / Delete</div>
           </div>
           <div class="card-desc admin-subtitle">
-            Gestionarea produselor se face prin acțiunile de mai jos. Lista reală de produse este în backend.
+            Gestionarea produselor din magazin.
           </div>
 
           <div class="admin-form">
-            <!-- Add product -->
+            <!-- Add -->
             <div class="field-row">
               <input id="addName" class="field" placeholder="Nume produs nou" />
             </div>
@@ -410,13 +382,13 @@
             </div>
             <button class="btn btn-sm" onclick="adminAddProduct()">➕ Adaugă produs</button>
 
-            <!-- Edit product -->
+            <!-- Edit -->
             <hr style="border:none;border-top:1px solid rgba(248,113,113,0.5);margin:6px 0;">
             <div class="field-row">
               <input id="editId" class="field" placeholder="ID produs de editat" />
             </div>
             <div class="field-row">
-              <input id="editName" class="field" placeholder="Nume nou (sau același)" />
+              <input id="editName" class="field" placeholder="Nume nou" />
             </div>
             <div class="field-row">
               <input id="editDesc" class="field" placeholder="Descriere nouă" />
@@ -426,7 +398,7 @@
             </div>
             <button class="btn btn-sm" onclick="adminEditProduct()">✏️ Editează produs</button>
 
-            <!-- Delete product -->
+            <!-- Delete -->
             <hr style="border:none;border-top:1px solid rgba(248,113,113,0.5);margin:6px 0;">
             <div class="field-row">
               <input id="delId" class="field" placeholder="ID produs de șters" />
@@ -442,7 +414,7 @@
             <div class="card-chip">Balance</div>
           </div>
           <div class="card-desc admin-subtitle">
-            Modifică soldul de credite al unui user după ID (ID Telegram numeric).
+            Modifică soldul de credite al unui user după ID Telegram.
           </div>
           <div class="admin-form">
             <div class="field-row">
@@ -473,7 +445,7 @@
             <div class="card-chip">Status</div>
           </div>
           <div class="card-desc admin-subtitle">
-            Schimbă statusul unui ticket existent (deschis / închis). Detaliile le vezi în chatul de admin.
+            Schimbă statusul unui ticket (deschis / închis).
           </div>
           <div class="admin-form">
             <div class="field-row">
@@ -538,19 +510,9 @@
       }, 2200);
     }
 
-    // BUTON TEST – trimite un string simplu la bot
-    function sendRawTest() {
-      if (!tg) {
-        showToast("Nu e deschis ca Telegram WebApp.");
-        return;
-      }
-      tg.sendData("HELLO_FROM_WEBAPP");
-      showToast("TEST trimis către bot (HELLO_FROM_WEBAPP)");
-    }
-
     function sendToBot(payload) {
       if (!tg) {
-        showToast("Demo only: deschide din Telegram pentru bot real.");
+        showToast("Deschide miniapp-ul din Telegram, nu din browser.");
         return;
       }
       tg.HapticFeedback &&
@@ -740,6 +702,7 @@
           badgeText.textContent = "User standard · Admin ID: " + ADMIN_ID;
         }
 
+        // trimite spre bot că a intrat în miniapp (pt istoric)
         sendToBot({ action: "init" });
       }
 
