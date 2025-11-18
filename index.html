@@ -294,7 +294,7 @@
     <div class="header">
       <div class="title-block">
         <div class="title">Shop cu Credite</div>
-        <div class="subtitle">Mini-app Telegram · UI 2025 · tema negru-roșu</div>
+        <div class="subtitle">Mini-app Telegram · UI 2025 · negru-roșu</div>
       </div>
       <div class="badge" id="adminBadge">
         <div class="badge-dot"></div>
@@ -679,7 +679,7 @@
       if (!tg) return;
 
       const user = tg.initDataUnsafe && tg.initDataUnsafe.user;
-      console.log("USER FROM TELEGRAM:", user); // debug
+      console.log("USER FROM TELEGRAM:", user);
 
       const nameEl = document.getElementById("userName");
       const userEl = document.getElementById("userUsername");
@@ -690,11 +690,13 @@
 
       if (user) {
         nameEl.textContent = user.first_name || "Utilizator";
+
         if (user.username) {
           userEl.textContent = "@" + user.username;
         } else {
           userEl.textContent = "(fără username)";
         }
+
         idEl.textContent = user.id;
 
         if (user.id === ADMIN_ID) {
@@ -706,8 +708,10 @@
           badgeText.textContent = "User standard · Admin ID: " + ADMIN_ID;
         }
 
-        // trimite spre bot că a intrat în miniapp (pt istoric)
         sendToBot({ action: "init" });
+      } else {
+        nameEl.textContent = "Anonim";
+        userEl.textContent = "(fără date Telegram)";
       }
 
       document.getElementById("tabShopBtn").onclick = showShop;
