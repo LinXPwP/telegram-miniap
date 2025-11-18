@@ -679,6 +679,8 @@
       if (!tg) return;
 
       const user = tg.initDataUnsafe && tg.initDataUnsafe.user;
+      console.log("USER FROM TELEGRAM:", user); // debug
+
       const nameEl = document.getElementById("userName");
       const userEl = document.getElementById("userUsername");
       const idEl = document.getElementById("userId");
@@ -690,6 +692,8 @@
         nameEl.textContent = user.first_name || "Utilizator";
         if (user.username) {
           userEl.textContent = "@" + user.username;
+        } else {
+          userEl.textContent = "(fără username)";
         }
         idEl.textContent = user.id;
 
