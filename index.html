@@ -2,669 +2,726 @@
 <html lang="ro">
 <head>
   <meta charset="UTF-8" />
-  <title>Telegram MiniApp – Credite & Shop</title>
+  <title>Shop cu Credite</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     :root {
-      --bg: #050509;
-      --bg-card: #101018;
-      --accent: #ff1b3b;
-      --accent-soft: rgba(255, 27, 59, 0.14);
-      --text: #f7f7f7;
-      --muted: #aaaaaa;
-      --border: #1f1f2b;
-      --radius-xl: 18px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+        "Roboto", sans-serif;
     }
     * { box-sizing: border-box; }
-
     body {
       margin: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
-      background: radial-gradient(circle at top, #1b0c10 0, #050509 60%);
-      color: var(--text);
-    }
-
-    .app {
       min-height: 100vh;
-      padding: 16px;
       display: flex;
-      flex-direction: column;
-      gap: 16px;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at top, #b91c1c, #020617);
+      color: #f9fafb;
     }
-
+    .app {
+      width: 100%;
+      max-width: 900px;
+      padding: 24px 16px 40px;
+    }
     .header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 12px;
+      gap: 16px;
+      margin-bottom: 16px;
     }
-
+    .title-block { display: flex; flex-direction: column; gap: 4px; }
     .title {
-      font-size: 20px;
+      font-size: 1.5rem;
       font-weight: 700;
       letter-spacing: 0.03em;
-      text-transform: uppercase;
     }
-
-    .pill {
-      padding: 4px 10px;
+    .subtitle { font-size: 0.9rem; color: #fca5a5; }
+    .badge {
+      padding: 6px 12px;
       border-radius: 999px;
-      background: var(--accent-soft);
-      color: var(--accent);
-      font-size: 11px;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(248, 113, 113, 0.7);
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      backdrop-filter: blur(10px);
     }
-
-    .card {
-      background: rgba(8, 8, 16, 0.9);
-      border-radius: var(--radius-xl);
-      border: 1px solid var(--border);
-      padding: 14px 16px;
-      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.7);
+    .badge-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: #22c55e;
+      box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.3);
     }
-
-    .user-row {
+    .user-bar {
       display: flex;
       justify-content: space-between;
       align-items: center;
       gap: 12px;
+      padding: 10px 14px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(15,23,42,0.95), rgba(185,28,28,0.9));
+      border: 1px solid rgba(248, 113, 113, 0.7);
+      margin-bottom: 12px;
+      box-shadow: 0 18px 45px rgba(127, 29, 29, 0.9);
     }
-
-    .user-main {
+    .user-main { display: flex; flex-direction: column; gap: 2px; }
+    .user-label {
+      font-size: 0.78rem;
+      color: #fecaca;
+      text-transform: uppercase;
+      letter-spacing: 0.11em;
+    }
+    .user-name {
+      font-size: 1.05rem;
+      font-weight: 600;
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 6px;
     }
-
-    .avatar {
-      width: 38px;
-      height: 38px;
-      border-radius: 50%;
-      background: radial-gradient(circle at 30% 20%, #ff4f6b, #550010);
+    .user-chip {
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(15,23,42,0.9);
+      border: 1px solid rgba(248, 113, 113, 0.8);
+      color: #fecaca;
+    }
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(248, 113, 113, 0.7);
+      background: rgba(15,23,42,0.8);
+      color: #fecaca;
+      font-size: 0.86rem;
+      cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
+      gap: 6px;
+    }
+    .tab-btn.active {
+      background: linear-gradient(135deg, #f97316, #dc2626);
+      color: #f9fafb;
+      border-color: rgba(248, 250, 252, 0.8);
+      box-shadow: 0 10px 24px rgba(220, 38, 38, 0.85);
+    }
+    .credits-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(127,29,29,0.95), rgba(220,38,38,0.85));
+      border: 1px solid rgba(252,165,165,0.6);
+      margin-bottom: 20px;
+      box-shadow: 0 18px 45px rgba(127, 29, 29, 0.9);
+    }
+    .credits-main { display: flex; flex-direction: column; gap: 4px; }
+    .credits-label {
+      font-size: 0.8rem;
+      color: #fee2e2;
+      text-transform: uppercase;
+      letter-spacing: 0.11em;
+    }
+    .credits-value {
+      font-size: 1.3rem;
       font-weight: 700;
-      font-size: 17px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
-
-    .user-text-main {
-      font-weight: 600;
-      font-size: 15px;
+    .credits-chip {
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(15,23,42, 0.9);
+      font-size: 0.75rem;
+      color: #fecaca;
+      border: 1px solid rgba(252, 165, 165, 0.8);
     }
-
-    .user-text-sub {
-      font-size: 12px;
-      color: var(--muted);
-    }
-
-    .credits {
+    .credits-demo {
+      font-size: 0.8rem;
+      color: #fee2e2;
       text-align: right;
     }
-
-    .credits-label {
-      font-size: 11px;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
     }
-
-    .credits-value {
-      font-weight: 700;
-      font-size: 20px;
-    }
-
-    .credits-value span {
-      font-size: 11px;
-      color: var(--muted);
-      margin-left: 4px;
-    }
-
-    .tabs {
-      display: flex;
-      gap: 6px;
-      margin-top: 6px;
-      border-radius: 999px;
-      padding: 3px;
-      background: rgba(10, 10, 18, 0.9);
-      border: 1px solid var(--border);
-    }
-
-    .tab {
-      flex: 1;
-      border-radius: 999px;
-      padding: 6px 0;
-      font-size: 12px;
-      text-align: center;
-      cursor: pointer;
-      color: var(--muted);
-      user-select: none;
-    }
-
-    .tab.active {
-      background: linear-gradient(135deg, #ff1b3b, #ff6b3b);
-      color: #fff;
-      font-weight: 600;
-      box-shadow: 0 0 18px rgba(255, 27, 59, .65);
-    }
-
-    .section-title {
-      font-size: 14px;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      color: var(--muted);
-      margin: 4px 2px 4px;
-    }
-
-    .products {
+    .card {
+      position: relative;
+      padding: 16px 14px 14px;
+      border-radius: 20px;
+      background: radial-gradient(circle at top left, rgba(248, 113, 113, 0.32), rgba(15, 23, 42, 0.98));
+      border: 1px solid rgba(248, 113, 113, 0.6);
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.9);
       display: flex;
       flex-direction: column;
       gap: 10px;
+      overflow: hidden;
     }
-
-    .product-card {
-      border-radius: 16px;
-      border: 1px solid var(--border);
-      background: radial-gradient(circle at top left, rgba(255, 27, 59, 0.18), rgba(5,5,9,.9));
-      padding: 10px 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 120% 0%, rgba(248, 250, 252,0.06), transparent 55%);
+      opacity: 0.9;
+      pointer-events: none;
     }
-
-    .product-header {
+    .card-header {
       display: flex;
       justify-content: space-between;
-      align-items: baseline;
+      align-items: flex-start;
       gap: 8px;
+      z-index: 1;
     }
-
-    .product-title {
-      font-weight: 600;
-      font-size: 14px;
+    .card-title { font-size: 1rem; font-weight: 600; }
+    .card-chip {
+      font-size: 0.7rem;
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(254, 202, 202, 0.9);
+      background: rgba(127,29,29, 0.9);
+      color: #fee2e2;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
     }
-
-    .product-price {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--accent);
-    }
-
-    .product-desc {
-      font-size: 12px;
-      color: var(--muted);
-    }
-
-    .product-footer {
+    .card-desc { font-size: 0.86rem; color: #e5e7eb; z-index: 1; }
+    .card-footer {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-top: 6px;
-      gap: 8px;
+      margin-top: 4px;
+      z-index: 1;
     }
-
-    .btn {
-      border: none;
-      border-radius: 999px;
-      font-size: 13px;
-      padding: 6px 12px;
-      cursor: pointer;
+    .price { display: flex; flex-direction: column; gap: 2px; }
+    .price-main {
       font-weight: 600;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-    }
-
-    .btn-primary {
-      background: linear-gradient(135deg, #ff1b3b, #ff6b3b);
-      color: #fff;
-      box-shadow: 0 0 16px rgba(255, 27, 59, 0.5);
-    }
-
-    .btn-outline {
-      background: transparent;
-      color: var(--muted);
-      border: 1px solid var(--border);
-    }
-
-    .badge-demo {
-      border-radius: 999px;
-      padding: 2px 8px;
-      background: rgba(255, 255, 255, 0.04);
-      font-size: 10px;
-      text-transform: uppercase;
-      letter-spacing: 0.14em;
-      color: var(--muted);
-    }
-
-    .history {
-      font-size: 12px;
-      color: var(--muted);
+      font-size: 0.95rem;
       display: flex;
-      flex-direction: column;
+      align-items: center;
       gap: 4px;
     }
-
-    .history-item {
+    .price-note { font-size: 0.75rem; color: #fee2e2; }
+    .btn {
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.86rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: linear-gradient(135deg, #f97316, #dc2626);
+      color: #f9fafb;
+      box-shadow: 0 10px 25px rgba(220, 38, 38, 0.8);
+      transform: translateY(0);
+      transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;
+    }
+    .btn-sm { padding: 6px 10px; font-size: 0.8rem; box-shadow: none; }
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 14px 30px rgba(220, 38, 38, 0.9);
+      opacity: 0.96;
+    }
+    .btn:active {
+      transform: translateY(1px);
+      box-shadow: 0 5px 15px rgba(127, 29, 29, 0.85);
+      opacity: 0.9;
+    }
+    .admin-form { display: grid; gap: 8px; margin-top: 8px; }
+    .field-row { display: flex; gap: 6px; }
+    .field {
+      flex: 1;
       padding: 6px 8px;
-      border-radius: 999px;
-      background: rgba(15, 15, 24, 0.95);
-      border: 1px solid var(--border);
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      gap: 6px;
-    }
-
-    .history-title {
-      font-weight: 500;
-      color: #f1f1f1;
-    }
-
-    .history-extra {
-      font-size: 11px;
-      color: var(--muted);
-    }
-
-    .history-price {
-      font-size: 11px;
-      color: var(--accent);
-    }
-
-    .hint {
-      font-size: 11px;
-      color: var(--muted);
-      margin-top: 4px;
-    }
-
-    .admin-banner {
-      font-size: 11px;
-      color: var(--accent);
-      text-transform: uppercase;
-      letter-spacing: 0.18em;
-      margin-bottom: 4px;
-    }
-
-    .admin-form {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      margin-top: 4px;
-    }
-
-    .input {
-      width: 100%;
-      padding: 7px 9px;
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      background: rgba(13, 13, 20, 0.9);
-      color: var(--text);
-      font-size: 13px;
+      border-radius: 10px;
+      border: 1px solid rgba(248, 113, 113, 0.6);
+      background: rgba(15, 23, 42, 0.9);
+      color: #f9fafb;
+      font-size: 0.8rem;
       outline: none;
     }
-
-    .input::placeholder {
-      color: var(--muted);
+    .field::placeholder { color: #fca5a5; opacity: 0.6; }
+    .field-select { appearance: none; }
+    .admin-subtitle { font-size: 0.8rem; color: #fecaca; }
+    .toast {
+      position: fixed;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(252, 165, 165, 0.8);
+      color: #fee2e2;
+      font-size: 0.8rem;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      backdrop-filter: blur(16px);
+      z-index: 50;
+      box-shadow: 0 16px 40px rgba(15,23,42,0.9);
     }
-
-    .admin-row {
-      display: flex;
-      gap: 6px;
+    .toast-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: #ef4444;
     }
-
-    .admin-row > * {
-      flex: 1;
-    }
-
-    .footer {
-      font-size: 10px;
-      color: var(--muted);
-      text-align: center;
-      margin-top: 2px;
-      opacity: .8;
-    }
-
-    @media (max-width: 400px) {
-      .title {
-        font-size: 18px;
-      }
+    #adminView { display: none; margin-top: 10px; }
+    @media (max-width: 600px) {
+      .header { flex-direction: column; align-items: flex-start; }
+      .credits-bar { flex-direction: column; align-items: flex-start; gap: 6px; }
+      .credits-demo { text-align: left; }
+      .user-bar { flex-direction: column; align-items: flex-start; gap: 6px; }
     }
   </style>
 </head>
 <body>
-<div class="app">
-  <div class="header">
-    <div>
-      <div class="title">Credits Shop</div>
-      <div class="pill">Telegram MiniApp · 2025</div>
+  <div class="app">
+    <div class="header">
+      <div class="title-block">
+        <div class="title">Shop cu Credite</div>
+        <div class="subtitle">Mini-app Telegram · UI 2025 · tema negru-roșu</div>
+      </div>
+      <div class="badge" id="adminBadge">
+        <div class="badge-dot"></div>
+        <span id="badgeText">User standard</span>
+      </div>
     </div>
-    <div class="badge-demo">demo credits</div>
-  </div>
 
-  <!-- Card user + credits + tab-uri -->
-  <div class="card">
-    <div class="user-row">
+    <div class="user-bar">
       <div class="user-main">
-        <div class="avatar" id="avatar">U</div>
-        <div>
-          <div class="user-text-main" id="user-name">@username</div>
-          <div class="user-text-sub" id="user-id">ID: ?</div>
+        <div class="user-label">Conectat ca</div>
+        <div class="user-name">
+          <span id="userName">Utilizator</span>
+          <span id="userUsername" style="font-size:0.8rem; color:#fecaca;"></span>
         </div>
       </div>
-      <div class="credits">
-        <div class="credits-label">Credite</div>
-        <div class="credits-value" id="credits">0<span>CRED</span></div>
-      </div>
-    </div>
-
-    <div class="tabs" style="margin-top:10px;">
-      <div class="tab active" data-tab="shop">Shop</div>
-      <div class="tab" data-tab="history">Istoric</div>
-      <div class="tab" data-tab="admin">Admin</div>
-    </div>
-  </div>
-
-  <!-- SHOP -->
-  <div id="section-shop" class="card">
-    <div class="section-title">Produse disponibile</div>
-    <div class="products" id="products-list">
-      <!-- Dinamic -->
-    </div>
-    <div class="hint">
-      👉 Pentru date reale, apăsă butonul de mai jos ca mini-app-ul să ceară starea curentă de la bot.
-    </div>
-    <button class="btn btn-outline" style="margin-top:8px;width:100%;" id="btn-sync">
-      Sync cu bot-ul (get_state)
-    </button>
-  </div>
-
-  <!-- HISTORY -->
-  <div id="section-history" class="card" style="display:none;">
-    <div class="section-title">Istoric cumpărări</div>
-    <div class="history" id="history-list">
-      <div class="history-item">
-        <div>
-          <div class="history-title">Nu există tranzacții încă.</div>
-          <div class="history-extra">Când vei cumpăra ceva, apare aici.</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ADMIN -->
-  <div id="section-admin" class="card" style="display:none;">
-    <div class="admin-banner">admin panel</div>
-    <div class="hint">
-      Acest panou funcționează doar dacă user-ul curent este ID: <code>7672256597</code>.
-    </div>
-
-    <div class="section-title">Produs nou</div>
-    <div class="admin-form">
-      <input class="input" id="a-title" placeholder="Titlu produs">
-      <input class="input" id="a-desc" placeholder="Descriere scurtă">
-      <input class="input" id="a-price" placeholder="Preț în credite" type="number" min="0">
-      <button class="btn btn-primary" id="btn-add-product">Adaugă produs</button>
-    </div>
-
-    <div class="section-title">Gestionează produse</div>
-    <div class="admin-form">
-      <input class="input" id="e-id" placeholder="ID produs (pentru edit / delete)">
-      <input class="input" id="e-title" placeholder="Titlu nou (opțional)">
-      <input class="input" id="e-desc" placeholder="Descriere nouă (opțional)">
-      <input class="input" id="e-price" placeholder="Preț nou (credite, opțional)" type="number">
-      <div class="admin-row">
-        <button class="btn btn-outline" id="btn-edit-product">Editează</button>
-        <button class="btn btn-outline" id="btn-del-product">Șterge</button>
+      <div class="user-chip">
+        ID Telegram: <span id="userId">-</span>
       </div>
     </div>
 
-    <div class="section-title">Credite user</div>
-    <div class="admin-form">
-      <input class="input" id="u-id" placeholder="User ID">
-      <input class="input" id="u-credits" placeholder="Credite noi" type="number">
-      <button class="btn btn-outline" id="btn-set-credits">Setează credite</button>
+    <div class="tabs" id="tabs">
+      <button class="tab-btn active" id="tabShopBtn">🛒 Magazin</button>
+      <button class="tab-btn" id="tabAdminBtn" style="display:none;">🛠 Admin</button>
     </div>
-  </div>
 
-  <div class="footer">
-    Toate acțiunile sunt trimise botului prin Telegram WebApp (sendData).<br>
-    Datele reale (produse, credite, ordine) sunt salvate în backend (bot.py).
-  </div>
-</div>
-
-<script>
-  const tg = window.Telegram.WebApp;
-  tg.expand();
-
-  const DEFAULT_PRODUCTS = [
-    {
-      id: "demo1",
-      title: "Produs demo 1",
-      description: "Exemplu de item cumpărabil cu credite.",
-      price_credits: 10
-    },
-    {
-      id: "demo2",
-      title: "Produs demo 2",
-      description: "Alt exemplu, pentru prezentare.",
-      price_credits: 25
-    }
-  ];
-
-  let isAdmin = false;
-  const ADMIN_ID = 7672256597;
-
-  function initUser() {
-    const user = tg.initDataUnsafe && tg.initDataUnsafe.user;
-    const nameEl = document.getElementById("user-name");
-    const idEl = document.getElementById("user-id");
-    const avatarEl = document.getElementById("avatar");
-
-    if (user) {
-      const username = user.username ? "@" + user.username : (user.first_name || "User");
-      nameEl.textContent = username;
-      idEl.textContent = "ID: " + user.id;
-      avatarEl.textContent = (user.first_name || "U").charAt(0).toUpperCase();
-
-      isAdmin = (user.id === ADMIN_ID);
-    } else {
-      nameEl.textContent = "@demo";
-      idEl.textContent = "ID: demo";
-      avatarEl.textContent = "D";
-      isAdmin = false;
-    }
-
-    // ascunde complet tab-ul admin dacă nu e admin
-    const adminTab = document.querySelector('.tab[data-tab="admin"]');
-    if (!isAdmin) {
-      adminTab.style.opacity = 0.3;
-    }
-  }
-
-  function setCredits(value) {
-    document.getElementById("credits").innerHTML = value + "<span>CRED</span>";
-  }
-
-  function renderProducts(products) {
-    const container = document.getElementById("products-list");
-    container.innerHTML = "";
-    if (!products || products.length === 0) {
-      container.innerHTML = "<div class='history-extra'>Nu există produse definite încă. Adminul le poate adăuga din panou.</div>";
-      return;
-    }
-
-    products.forEach(p => {
-      const el = document.createElement("div");
-      el.className = "product-card";
-      el.innerHTML = `
-        <div class="product-header">
-          <div class="product-title">${p.title}</div>
-          <div class="product-price">${p.price_credits} CRED</div>
+    <div class="credits-bar" id="shopTopBar">
+      <div class="credits-main">
+        <div class="credits-label">Balance demo</div>
+        <div class="credits-value">
+          <span id="demoCredits">120</span>
+          <span>💳</span>
+          <span class="credits-chip">Demo UI · sold real la bot</span>
         </div>
-        <div class="product-desc">${p.description}</div>
-        <div class="product-footer">
-          <div class="history-extra">ID: ${p.id}</div>
-          <button class="btn btn-primary">Cumpără</button>
-        </div>
-      `;
-      const btn = el.querySelector("button");
-      btn.addEventListener("click", () => buyProduct(p.id));
-      container.appendChild(el);
-    });
-  }
+      </div>
+      <div class="credits-demo">
+        Creditele reale și cumpărările sunt procesate de botul Python.<br/>
+        Mini-app-ul trimite acțiunile spre bot.
+      </div>
+    </div>
 
-  function renderHistory(history) {
-    const container = document.getElementById("history-list");
-    container.innerHTML = "";
-    if (!history || history.length === 0) {
-      container.innerHTML = `
-        <div class="history-item">
-          <div>
-            <div class="history-title">Nu există tranzacții.</div>
-            <div class="history-extra">Cumpără un produs din tab-ul Shop.</div>
+    <!-- SHOP -->
+    <div id="shopView">
+      <div class="grid" id="productsGrid"></div>
+    </div>
+
+    <!-- ADMIN -->
+    <div id="adminView">
+      <div class="grid">
+        <!-- Card sumar -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Panou admin</div>
+            <div class="card-chip">Overview</div>
           </div>
-        </div>`;
-      return;
-    }
-    history.slice().reverse().forEach(entry => {
-      const el = document.createElement("div");
-      el.className = "history-item";
-      el.innerHTML = `
-        <div>
-          <div class="history-title">${entry.product_title || entry.type}</div>
-          <div class="history-extra">${entry.timestamp || ""}</div>
+          <div class="card-desc admin-subtitle">
+            Sumar sistem (useri, produse, tickete, istoric). Detaliile apar în chatul de admin.
+          </div>
+          <div class="card-footer">
+            <button class="btn btn-sm" onclick="sendAdminSummary()">
+              🔄 Actualizează sumar
+            </button>
+          </div>
         </div>
-        <div class="history-price">-${entry.price_credits || ""} CRED</div>
-      `;
-      container.appendChild(el);
-    });
-  }
 
-  function sendToBot(payload) {
-    try {
+        <!-- Card produse -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Produse</div>
+            <div class="card-chip">Add / Edit / Delete</div>
+          </div>
+          <div class="card-desc admin-subtitle">
+            Gestionarea produselor din magazin.
+          </div>
+
+          <div class="admin-form">
+            <!-- Add -->
+            <div class="field-row">
+              <input id="addName" class="field" placeholder="Nume produs nou" />
+            </div>
+            <div class="field-row">
+              <input id="addDesc" class="field" placeholder="Descriere produs nou" />
+            </div>
+            <div class="field-row">
+              <input id="addPrice" class="field" placeholder="Preț (credite)" type="number" />
+            </div>
+            <button class="btn btn-sm" onclick="adminAddProduct()">➕ Adaugă produs</button>
+
+            <!-- Edit -->
+            <hr style="border:none;border-top:1px solid rgba(248,113,113,0.5);margin:6px 0;">
+            <div class="field-row">
+              <input id="editId" class="field" placeholder="ID produs de editat" />
+            </div>
+            <div class="field-row">
+              <input id="editName" class="field" placeholder="Nume nou" />
+            </div>
+            <div class="field-row">
+              <input id="editDesc" class="field" placeholder="Descriere nouă" />
+            </div>
+            <div class="field-row">
+              <input id="editPrice" class="field" placeholder="Preț nou (credite)" type="number" />
+            </div>
+            <button class="btn btn-sm" onclick="adminEditProduct()">✏️ Editează produs</button>
+
+            <!-- Delete -->
+            <hr style="border:none;border-top:1px solid rgba(248,113,113,0.5);margin:6px 0;">
+            <div class="field-row">
+              <input id="delId" class="field" placeholder="ID produs de șters" />
+            </div>
+            <button class="btn btn-sm" onclick="adminDeleteProduct()">🗑 Șterge produs</button>
+          </div>
+        </div>
+
+        <!-- Card credite -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Credite user</div>
+            <div class="card-chip">Balance</div>
+          </div>
+          <div class="card-desc admin-subtitle">
+            Modifică soldul de credite al unui user după ID Telegram.
+          </div>
+          <div class="admin-form">
+            <div class="field-row">
+              <input id="creditsUserId" class="field" placeholder="User ID (Telegram)" />
+            </div>
+            <div class="field-row">
+              <input id="creditsDelta" class="field" placeholder="+/- credite (ex: 50 sau -20)" type="number" />
+            </div>
+            <button class="btn btn-sm" onclick="adminAddCredits()">➕/➖ Adaugă / scade credite</button>
+
+            <hr style="border:none;border-top:1px solid rgba(248,113,113,0.5);margin:6px 0;">
+
+            <div class="field-row">
+              <input id="creditsSet" class="field" placeholder="Setează sold exact (ex: 200)" type="number" />
+            </div>
+            <button class="btn btn-sm" onclick="adminSetCredits()">🎯 Setează sold exact</button>
+
+            <hr style="border:none;border-top:1px solid rgba(248,113,113,0.5);margin:6px 0;">
+
+            <button class="btn btn-sm" onclick="adminClearCredits()">🧹 Resetare sold (0 credite)</button>
+          </div>
+        </div>
+
+        <!-- Card tickete -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Tickete</div>
+            <div class="card-chip">Status</div>
+          </div>
+          <div class="card-desc admin-subtitle">
+            Schimbă statusul unui ticket (deschis / închis).
+          </div>
+          <div class="admin-form">
+            <div class="field-row">
+              <input id="ticketId" class="field" placeholder="ID ticket (număr)" />
+            </div>
+            <div class="field-row">
+              <select id="ticketStatus" class="field field-select">
+                <option value="deschis">deschis</option>
+                <option value="inchis">inchis</option>
+              </select>
+            </div>
+            <button class="btn btn-sm" onclick="adminTicketStatus()">🔁 Actualizează status ticket</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- toast -->
+  <div class="toast" id="toast">
+    <div class="toast-dot"></div>
+    <span id="toastText">Acțiune trimisă către bot...</span>
+  </div>
+
+  <script>
+    const tg = window.Telegram.WebApp || null;
+    const ADMIN_ID = 7672256597;
+
+    const products = [
+      {
+        id: "1",
+        name: "Premium Access",
+        description: "Acces complet la funcții premium, suport prioritar și update-uri.",
+        price: 50,
+        tag: "Popular"
+      },
+      {
+        id: "2",
+        name: "Credit Pack 100",
+        description: "Pachet suplimentar de 100 de credite pentru contul tău.",
+        price: 100,
+        tag: "Top-up"
+      },
+      {
+        id: "3",
+        name: "Support Ticket VIP",
+        description: "Ticket dedicat pentru asistență rapidă și personalizată.",
+        price: 25,
+        tag: "Support"
+      }
+    ];
+
+    let isAdmin = false;
+
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      const text = document.getElementById("toastText");
+      text.textContent = message;
+      toast.style.display = "flex";
+      setTimeout(() => {
+        toast.style.display = "none";
+      }, 2200);
+    }
+
+    function sendToBot(payload) {
+      if (!tg) {
+        showToast("Deschide miniapp-ul din Telegram, nu din browser.");
+        return;
+      }
+      tg.HapticFeedback &&
+        tg.HapticFeedback.selectionChanged &&
+        tg.HapticFeedback.selectionChanged();
       tg.sendData(JSON.stringify(payload));
-      tg.HapticFeedback.impactOccurred("medium");
-    } catch (e) {
-      console.log("sendData error", e);
-      alert("Nu am putut trimite acțiunea către bot. Verifică dacă ești în Telegram.");
     }
-  }
 
-  function buyProduct(productId) {
-    sendToBot({ action: "buy", product_id: productId });
-  }
+    // ---------- USER ACTIONS ----------
 
-  function requestState() {
-    sendToBot({ action: "get_state" });
-  }
+    function sendBuy(productId) {
+      sendToBot({ action: "buy", productId });
+      showToast("Cerere de cumpărare trimisă către bot...");
+      if (tg) {
+        setTimeout(() => tg.close(), 600);
+      }
+    }
 
-  function initTabs() {
-    const tabs = document.querySelectorAll(".tab");
-    const sections = {
-      shop: document.getElementById("section-shop"),
-      history: document.getElementById("section-history"),
-      admin: document.getElementById("section-admin"),
-    };
-
-    function setActive(tabKey) {
-      tabs.forEach(t => t.classList.remove("active"));
-      document.querySelector(`.tab[data-tab="${tabKey}"]`).classList.add("active");
-      Object.keys(sections).forEach(k => {
-        sections[k].style.display = (k === tabKey) ? "block" : "none";
+    function renderProducts() {
+      const grid = document.getElementById("productsGrid");
+      grid.innerHTML = "";
+      products.forEach((p) => {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+          <div class="card-header">
+            <div class="card-title">${p.name}</div>
+            <div class="card-chip">${p.tag}</div>
+          </div>
+          <div class="card-desc">
+            ${p.description}
+          </div>
+          <div class="card-footer">
+            <div class="price">
+              <div class="price-main">
+                <span>${p.price} credite</span>
+                <span>·</span>
+                <span>💳</span>
+              </div>
+              <div class="price-note">Plata reală se face prin bot.</div>
+            </div>
+            <button class="btn" onclick="sendBuy('${p.id}')">
+              <span>✔ Cumpără</span>
+            </button>
+          </div>
+        `;
+        grid.appendChild(card);
       });
     }
 
-    tabs.forEach(tab => {
-      tab.addEventListener("click", () => {
-        const key = tab.getAttribute("data-tab");
-        if (key === "admin" && !isAdmin) {
-          alert("Panoul admin este disponibil doar administratorului.");
-          return;
-        }
-        setActive(key);
-      });
-    });
+    // ---------- ADMIN ACTIONS ----------
 
-    setActive("shop");
-
-    if (window.location.hash === "#admin") {
-      if (isAdmin) setActive("admin");
+    function sendAdminSummary() {
+      sendToBot({ action: "admin_summary" });
+      showToast("Sumar admin cerut de la bot (vezi chat).");
     }
-  }
 
-  function initAdminForm() {
-    document.getElementById("btn-add-product").addEventListener("click", () => {
-      if (!isAdmin) return alert("Doar adminul poate face asta.");
-      const title = document.getElementById("a-title").value.trim();
-      const desc = document.getElementById("a-desc").value.trim();
-      const price = document.getElementById("a-price").value.trim();
-      if (!title || !price) return alert("Titlu și preț sunt obligatorii.");
-      sendToBot({
-        action: "admin_add_product",
-        title,
-        description: desc,
-        price_credits: Number(price)
-      });
-    });
+    function adminAddProduct() {
+      const name = document.getElementById("addName").value.trim();
+      const description = document.getElementById("addDesc").value.trim();
+      const price = document.getElementById("addPrice").value.trim();
+      if (!name || !description || !price) {
+        showToast("Completează nume, descriere și preț.");
+        return;
+      }
+      sendToBot({ action: "admin_add_product", name, description, price });
+      showToast("Produs nou trimis la bot.");
+    }
 
-    document.getElementById("btn-edit-product").addEventListener("click", () => {
-      if (!isAdmin) return alert("Doar adminul poate face asta.");
-      const id = document.getElementById("e-id").value.trim();
-      if (!id) return alert("ID produs necesar.");
-      const title = document.getElementById("e-title").value.trim() || null;
-      const desc = document.getElementById("e-desc").value.trim() || null;
-      const price = document.getElementById("e-price").value.trim();
+    function adminEditProduct() {
+      const productId = document.getElementById("editId").value.trim();
+      const name = document.getElementById("editName").value.trim();
+      const description = document.getElementById("editDesc").value.trim();
+      const price = document.getElementById("editPrice").value.trim();
+      if (!productId || !name || !description || !price) {
+        showToast("Completează ID, nume, descriere și preț.");
+        return;
+      }
       sendToBot({
         action: "admin_edit_product",
-        product_id: id,
-        title,
-        description: desc,
-        price_credits: price ? Number(price) : null
+        productId,
+        name,
+        description,
+        price
       });
-    });
+      showToast("Editare produs trimisă la bot.");
+    }
 
-    document.getElementById("btn-del-product").addEventListener("click", () => {
-      if (!isAdmin) return alert("Doar adminul poate face asta.");
-      const id = document.getElementById("e-id").value.trim();
-      if (!id) return alert("ID produs necesar.");
-      if (!confirm("Sigur vrei să ștergi produsul?")) return;
-      sendToBot({
-        action: "admin_delete_product",
-        product_id: id
-      });
-    });
+    function adminDeleteProduct() {
+      const productId = document.getElementById("delId").value.trim();
+      if (!productId) {
+        showToast("Completează ID produs de șters.");
+        return;
+      }
+      sendToBot({ action: "admin_delete_product", productId });
+      showToast("Ștergere produs trimisă la bot.");
+    }
 
-    document.getElementById("btn-set-credits").addEventListener("click", () => {
-      if (!isAdmin) return alert("Doar adminul poate face asta.");
-      const uid = document.getElementById("u-id").value.trim();
-      const credits = document.getElementById("u-credits").value.trim();
-      if (!uid || credits === "") return alert("User ID și credite necesare.");
-      sendToBot({
-        action: "admin_set_credits",
-        target_user_id: Number(uid),
-        credits: Number(credits)
-      });
-    });
-  }
+    function adminAddCredits() {
+      const userId = document.getElementById("creditsUserId").value.trim();
+      const delta = document.getElementById("creditsDelta").value.trim();
+      if (!userId || !delta) {
+        showToast("Completează user ID și delta credite.");
+        return;
+      }
+      sendToBot({ action: "admin_add_credits", userId, delta });
+      showToast("Modificare credite trimisă la bot.");
+    }
 
-  function initButtons() {
-    document.getElementById("btn-sync").addEventListener("click", () => {
-      requestState();
-    });
-  }
+    function adminSetCredits() {
+      const userId = document.getElementById("creditsUserId").value.trim();
+      const amount = document.getElementById("creditsSet").value.trim();
+      if (!userId || !amount) {
+        showToast("Completează user ID și suma fixă.");
+        return;
+      }
+      sendToBot({ action: "admin_set_credits", userId, amount });
+      showToast("Setare sold trimisă la bot.");
+    }
 
-  function boot() {
+    function adminClearCredits() {
+      const userId = document.getElementById("creditsUserId").value.trim();
+      if (!userId) {
+        showToast("Completează user ID pentru reset.");
+        return;
+      }
+      sendToBot({ action: "admin_clear_credits", userId });
+      showToast("Resetare sold trimisă la bot.");
+    }
+
+    function adminTicketStatus() {
+      const ticketId = document.getElementById("ticketId").value.trim();
+      const status = document.getElementById("ticketStatus").value;
+      if (!ticketId) {
+        showToast("Completează ID-ul ticketului.");
+        return;
+      }
+      sendToBot({ action: "admin_ticket_status", ticketId, status });
+      showToast("Schimbare status ticket trimisă la bot.");
+    }
+
+    // ---------- TABS ----------
+
+    function showShop() {
+      document.getElementById("shopView").style.display = "block";
+      document.getElementById("adminView").style.display = "none";
+      document.getElementById("shopTopBar").style.display = "flex";
+      document.getElementById("tabShopBtn").classList.add("active");
+      document.getElementById("tabAdminBtn").classList.remove("active");
+    }
+
+    function showAdmin() {
+      if (!isAdmin) return;
+      document.getElementById("shopView").style.display = "none";
+      document.getElementById("adminView").style.display = "block";
+      document.getElementById("shopTopBar").style.display = "none";
+      document.getElementById("tabShopBtn").classList.remove("active");
+      document.getElementById("tabAdminBtn").classList.add("active");
+    }
+
+    // ---------- INIT ----------
+
+    function initUser() {
+      if (!tg) return;
+
+      const user = tg.initDataUnsafe && tg.initDataUnsafe.user;
+      console.log("USER FROM TELEGRAM:", user); // debug
+
+      const nameEl = document.getElementById("userName");
+      const userEl = document.getElementById("userUsername");
+      const idEl = document.getElementById("userId");
+      const badgeText = document.getElementById("badgeText");
+      const badge = document.getElementById("adminBadge");
+      const tabAdminBtn = document.getElementById("tabAdminBtn");
+
+      if (user) {
+        nameEl.textContent = user.first_name || "Utilizator";
+        if (user.username) {
+          userEl.textContent = "@" + user.username;
+        } else {
+          userEl.textContent = "(fără username)";
+        }
+        idEl.textContent = user.id;
+
+        if (user.id === ADMIN_ID) {
+          isAdmin = true;
+          badgeText.textContent = "Ești administrator";
+          badge.style.borderColor = "rgba(74, 222, 128, 0.9)";
+          tabAdminBtn.style.display = "flex";
+        } else {
+          badgeText.textContent = "User standard · Admin ID: " + ADMIN_ID;
+        }
+
+        // trimite spre bot că a intrat în miniapp (pt istoric)
+        sendToBot({ action: "init" });
+      }
+
+      document.getElementById("tabShopBtn").onclick = showShop;
+      document.getElementById("tabAdminBtn").onclick = showAdmin;
+    }
+
+    if (tg) {
+      tg.expand && tg.expand();
+      tg.setHeaderColor && tg.setHeaderColor("#020617");
+      tg.setBackgroundColor && tg.setBackgroundColor("#020617");
+    }
+
+    renderProducts();
     initUser();
-    setCredits(0);
-    renderProducts(DEFAULT_PRODUCTS);
-    renderHistory([]);
-    initTabs();
-    initAdminForm();
-    initButtons();
-  }
-
-  boot();
-</script>
+  </script>
 </body>
 </html>
