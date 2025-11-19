@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <title>Detalii produs</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="app-brand">
+        <div class="brand-logo"><span>P</span></div>
+        <div class="brand-text">
+          <h1 id="prod-title">Produs</h1>
+          <p id="prod-subtitle">Se încarcă...</p>
+        </div>
+      </div>
+    </header>
+
+    <section class="card">
+      <div class="info-row">
+        <div class="info-label">Categorie</div>
+        <div id="prod-category" class="info-value">-</div>
+      </div>
+
+      <div class="info-row">
+        <div class="info-label">Preț</div>
+        <div id="prod-price" class="info-value credits">0 cr.</div>
+      </div>
+
+      <div class="info-row">
+        <div class="info-label">Descriere</div>
+        <div id="prod-desc" class="info-value">-</div>
+      </div>
+
+      <div class="info-row">
+        <div class="info-label">Cantitate</div>
+        <div class="info-value">
+          <input id="qty" type="number" min="1" step="1" value="1"
+                 style="width:100%;max-width:140px;border-radius:10px;border:1px solid #2a2a3d;background:#050516;color:#fff;padding:6px 7px;font-size:14px;">
+          <div id="qty-info" class="product-limits" style="margin-top:4px;">-</div>
+        </div>
+      </div>
+
+      <div class="admin-actions-row admin-actions-bottom" style="margin-top:10px;">
+        <button id="btn-back" class="btn btn-secondary" type="button">Înapoi</button>
+        <button id="btn-buy" class="btn btn-primary" type="button">Cumpără</button>
+      </div>
+
+      <div id="error" class="error-text" style="display:none;"></div>
+    </section>
+
+    <div class="footer">
+      După cumpărare se creează un ticket pentru administrator.
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    (function () {
+      const tg = window.Telegram.WebApp;
+      if (tg && tg.expand) tg.expand();
+
+      const API_BASE = "https://melodic-mandazi-7a16dc.netlify.app/.netlify/functions";
+
+      const pTitle = document.getElementById("prod-title");
+      const pSubtitle = document.getElementById("prod-subtitle");
+      const pCategory = document.getElementById("prod-category");
+      const pPrice = document.getElementById("prod-price");
+      const pDesc = document.getElementById("prod-desc");
+      const qtyEl = document.getElementById("qty");
+      const qtyInfo = document.getElementById("qty-info");
+      const errorEl = document.getElementById("error");
+      const btnBack = document.getElementById("btn-back");
+      const btnBuy = document.getElementById("btn-buy");
+      const toastEl = document.getElementById("toast");
+
+      function toast(msg) {
+        toastEl.textContent = msg;
+        toastEl.classList.add("show");
+        setTimeout(() => toastEl.classList.remove("show"), 2200);
+      }
+
+      function safeFetch(url) {
+        return fetch(url).then(res => {
+          if (!res.ok) return res.text().then(t => { throw new Error(t || res.status); });
+          return res.json();
+        });
+      }
+
+      const params = new URLSearchParams(window.location.search);
+      const productId = params.get("id");
+      const productIndex = params.get("idx");
+
+      if (!productId) {
+        errorEl.style.display = "block";
+        errorEl.textContent = "Produs necunoscut.";
+        btnBuy.disabled = true;
+        pSubtitle.textContent = "Eroare produs.";
+        return;
+      }
+
+      let user = null;
+      try {
+        user = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
+      } catch (e) {
+        console.error(e);
+      }
+
+      if (!user) {
+        errorEl.style.display = "block";
+        errorEl.textContent = "MiniApp-ul trebuie deschis din Telegram.";
+        btnBuy.disabled = true;
+      }
+
+      btnBack.onclick = () => {
+        window.history.back();
+      };
+
+      let prod = null;
+      let minQty = 1;
+      let maxQty = 1;
+
+      pSubtitle.textContent = "Se încarcă detaliile produsului...";
+
+      safeFetch(API_BASE + "/get_shop")
+        .then(data => {
+          prod = findProduct(data, productId);
+          if (!prod) {
+            throw new Error("Produsul nu există în shop.");
+          }
+          minQty = prod.min_qty || 1;
+          maxQty = prod.max_qty || minQty;
+
+          pTitle.textContent = "#" + (productIndex || "?") + " · " + (prod.name || "Produs");
+          pCategory.textContent = prod.category_name || "-";
+          pPrice.textContent = (prod.price || 0) + " cr.";
+          pDesc.textContent = prod.description || "Fără descriere.";
+          qtyEl.value = minQty;
+          qtyEl.min = minQty;
+          qtyEl.max = maxQty;
+          qtyInfo.textContent = "Poți cumpăra între " + minQty + " și " + maxQty + " buc.";
+          pSubtitle.textContent = "Alege cantitatea și cumpără.";
+        })
+        .catch(err => {
+          console.error(err);
+          errorEl.style.display = "block";
+          errorEl.textContent = "Nu s-a putut încărca produsul.";
+          btnBuy.disabled = true;
+          pSubtitle.textContent = "Eroare la API.";
+        });
+
+      function findProduct(shop, id) {
+        if (!shop || !Array.isArray(shop.categories)) return null;
+        for (const cat of shop.categories) {
+          for (const p of (cat.products || [])) {
+            if (p.id === id) {
+              const copy = Object.assign({}, p);
+              copy.category_name = cat.name;
+              copy.category_id = cat.id;
+              return copy;
+            }
+          }
+        }
+        return null;
+      }
+
+      btnBuy.onclick = () => {
+        if (!user || !prod) return;
+
+        let q = parseInt(qtyEl.value || "1", 10);
+        if (q < minQty) q = minQty;
+        if (q > maxQty) q = maxQty;
+
+        const payload = {
+          user_id: user.id,
+          username: user.username || "",
+          product_id: prod.id,
+          qty: q
+        };
+
+        btnBuy.disabled = true;
+        btnBuy.textContent = "Se procesează...";
+
+        fetch(API_BASE + "/buy_product", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.error) {
+              if (data.error === "not_enough_credits") {
+                errorEl.style.display = "block";
+                errorEl.textContent =
+                  "Nu ai suficiente credite. Ai " +
+                  (data.credits ?? 0) +
+                  " cr., ai nevoie de " +
+                  (data.required ?? 0) +
+                  " cr.";
+              } else {
+                errorEl.style.display = "block";
+                errorEl.textContent = "Eroare: " + data.error;
+              }
+              return;
+            }
+
+            const ticket = data.ticket;
+            toast("Cumpărare reușită! Ticket " + ticket.id + " creat.");
+            errorEl.style.display = "none";
+
+            // optional: redirecționează spre profil cu history
+            setTimeout(() => {
+              window.location.href = "profile.html#tickets";
+            }, 600);
+          })
+          .catch(err => {
+            console.error(err);
+            errorEl.style.display = "block";
+            errorEl.textContent = "Eroare la cumpărare.";
+          })
+          .finally(() => {
+            btnBuy.disabled = false;
+            btnBuy.textContent = "Cumpără";
+          });
+      };
+    })();
+  </script>
+</body>
+</html>
