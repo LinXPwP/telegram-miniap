@@ -2,9 +2,8 @@
 <html lang="ro">
 <head>
   <meta charset="UTF-8" />
-  <title>Telegram Shop MiniApp</title>
+  <title>Shop – MiniApp</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -14,8 +13,8 @@
       <div class="app-brand">
         <div class="brand-logo"><span>S</span></div>
         <div class="brand-text">
-          <h1>Shop MiniApp</h1>
-          <p id="subtitle">Se încarcă datele din Telegram...</p>
+          <h1>Shop</h1>
+          <p id="subtitle">Se încarcă datele...</p>
         </div>
       </div>
       <div id="role-chip" class="role-chip" style="display:none;">
@@ -24,139 +23,54 @@
       </div>
     </header>
 
-    <div class="tabbar">
-      <button id="tab-shop" class="tab-btn active">Shop</button>
-      <button id="tab-admin" class="tab-btn hidden">Admin</button>
-    </div>
-
-    <!-- TAB SHOP -->
-    <main id="view-shop">
-      <section class="card">
-        <div class="card-header">
-          <div>
-            <div class="card-title">Profil & Credite</div>
-            <div class="card-sub">Date citite în siguranță din bot</div>
-          </div>
-          <div id="user-id" class="badge-id">ID: -</div>
+    <section class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Balance</div>
+          <div class="card-sub">Creditele tale disponibile</div>
         </div>
+        <div id="user-id" class="badge-id">ID: -</div>
+      </div>
 
-        <div class="info-row">
-          <div class="info-label">Username</div>
-          <div id="username" class="info-value">loading...</div>
+      <div class="info-row">
+        <div class="info-label">Username</div>
+        <div id="username" class="info-value">loading...</div>
+      </div>
+
+      <div class="info-row">
+        <div class="info-label">Credite</div>
+        <div id="credits" class="info-value credits">0</div>
+      </div>
+
+      <div id="profile-error" class="error-text" style="display:none;"></div>
+    </section>
+
+    <section class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Produse</div>
+          <div class="card-sub">Cumpără folosind creditele tale</div>
         </div>
-
-        <div class="info-row">
-          <div class="info-label">Status</div>
-          <div id="status" class="info-value">loading...</div>
-        </div>
-
-        <div class="info-row">
-          <div class="info-label">Credite disponibile</div>
-          <div id="credits" class="info-value credits">loading...</div>
-        </div>
-
-        <div id="profile-error" class="info-value error-text" style="display:none;"></div>
-      </section>
-
-      <section class="card">
-        <div class="card-header">
-          <div>
-            <div class="card-title">Shop</div>
-            <div class="card-sub">Categorii & produse plătibile cu credite</div>
-          </div>
-        </div>
-        <div id="shop-container">
-          <div class="skeleton skeleton-line"></div>
-          <div class="skeleton skeleton-line"></div>
-          <div class="skeleton skeleton-line short"></div>
-        </div>
-      </section>
-    </main>
-
-    <!-- TAB ADMIN (doar pentru admin) -->
-    <main id="view-admin" class="hidden">
-      <section class="card">
-        <div class="card-header">
-          <div>
-            <div class="card-title">Admin dashboard</div>
-            <div class="card-sub">Editează categoriile & produsele shop-ului</div>
-          </div>
-        </div>
-
-        <div id="admin-disabled" class="info-value error-text" style="display:none;">
-          Doar administratorul poate accesa acest panou.
-        </div>
-
-        <div id="admin-content" class="admin-columns hidden">
-          <div class="admin-list-card">
-            <div class="admin-section-title">Categorii</div>
-            <div id="admin-cat-list"></div>
-
-            <div class="admin-actions-row">
-              <button id="btn-add-cat" class="btn btn-secondary">+ categorie</button>
-              <button id="btn-del-cat" class="btn btn-danger">Șterge</button>
-            </div>
-          </div>
-
-          <div class="admin-list-card">
-            <div class="admin-section-title">Detalii categorie & produse</div>
-            <div class="admin-field">
-              <label for="cat-name">Nume categorie</label>
-              <input id="cat-name" type="text" placeholder="Ex: Premium" />
-            </div>
-            <div class="admin-field">
-              <label for="cat-desc">Descriere categorie</label>
-              <textarea id="cat-desc" placeholder="Descriere scurtă"></textarea>
-            </div>
-
-            <div class="admin-field">
-              <label>Produse în categorie</label>
-              <div id="admin-prod-list" class="admin-prod-scroll"></div>
-            </div>
-
-            <div class="admin-actions-row">
-              <button id="btn-add-prod" class="btn btn-secondary">+ produs</button>
-              <button id="btn-del-prod" class="btn btn-danger">Șterge produs</button>
-            </div>
-
-            <hr class="admin-separator" />
-
-            <div class="admin-field">
-              <label for="prod-name">Nume produs selectat</label>
-              <input id="prod-name" type="text" placeholder="Ex: Pachet Basic 1" />
-            </div>
-            <div class="admin-field">
-              <label for="prod-price">Preț (credite)</label>
-              <input id="prod-price" type="number" min="0" step="1" />
-            </div>
-            <div class="admin-field">
-              <label for="prod-desc">Descriere produs</label>
-              <textarea id="prod-desc" placeholder="Descriere produs"></textarea>
-            </div>
-            <div class="admin-field">
-              <label for="prod-min">Cantitate minimă</label>
-              <input id="prod-min" type="number" min="1" step="1" />
-            </div>
-            <div class="admin-field">
-              <label for="prod-max">Cantitate maximă</label>
-              <input id="prod-max" type="number" min="1" step="1" />
-            </div>
-
-            <div class="admin-actions-row admin-actions-bottom">
-              <button id="btn-apply-prod" class="btn btn-secondary">Aplică pe produs</button>
-              <button id="btn-save-shop" class="btn btn-primary">Salvează shop</button>
-            </div>
-          </div>
-        </div>
-      </section>
-    </main>
+      </div>
+      <div id="shop-container">
+        <div class="skeleton skeleton-line"></div>
+        <div class="skeleton skeleton-line"></div>
+        <div class="skeleton skeleton-line short"></div>
+      </div>
+    </section>
 
     <div class="footer">
-      Pasul următor: sistem de cumpărare + tickete către admin.
+      Navighează: Shop • Profil • Admin (doar admin)
     </div>
   </div>
 
   <div id="toast" class="toast"></div>
+
+  <nav class="tabbar" style="margin-top:8px;">
+    <a class="tab-btn active">Shop</a>
+    <a class="tab-btn" href="profile.html">Profil</a>
+    <a id="nav-admin" class="tab-btn hidden" href="profile.html#admin">Admin</a>
+  </nav>
 
   <script>
     (function () {
@@ -164,79 +78,44 @@
       if (tg && tg.expand) tg.expand();
 
       const ADMIN_ID = 7672256597;
-
-      // URL Netlify Functions (schimbă dacă folosești alt domeniu)
       const API_BASE = "https://melodic-mandazi-7a16dc.netlify.app/.netlify/functions";
 
-      // elemente principale
       const elSubtitle = document.getElementById("subtitle");
       const elUsername = document.getElementById("username");
-      const elStatus = document.getElementById("status");
       const elCredits = document.getElementById("credits");
       const elUserId = document.getElementById("user-id");
       const elRoleChip = document.getElementById("role-chip");
       const elRoleText = document.getElementById("role-text");
       const elProfileError = document.getElementById("profile-error");
-
       const elShopContainer = document.getElementById("shop-container");
-
-      const tabShop = document.getElementById("tab-shop");
-      const tabAdmin = document.getElementById("tab-admin");
-      const viewShop = document.getElementById("view-shop");
-      const viewAdmin = document.getElementById("view-admin");
-
+      const navAdmin = document.getElementById("nav-admin");
       const toastEl = document.getElementById("toast");
 
-      const adminDisabledEl = document.getElementById("admin-disabled");
-      const adminContentEl = document.getElementById("admin-content");
-
-      let user = null;
-      let isAdmin = false;
-      let adminInitialized = false;
-
-      // ----------------- UTILS -----------------
-      function showToast(msg) {
+      function toast(msg) {
         toastEl.textContent = msg;
         toastEl.classList.add("show");
-        setTimeout(() => {
-          toastEl.classList.remove("show");
-        }, 2200);
+        setTimeout(() => toastEl.classList.remove("show"), 2000);
       }
 
-      function safeFetchJson(url, options) {
-        return fetch(url, options || {}).then(function (res) {
-          if (!res.ok) {
-            return res.text().then(function (t) {
-              throw new Error("HTTP " + res.status + ": " + t);
-            });
-          }
+      function safeFetch(url) {
+        return fetch(url).then(res => {
+          if (!res.ok) return res.text().then(t => { throw new Error(t || res.status); });
           return res.json();
         });
       }
 
-      function setError(el, msg) {
-        el.style.display = "block";
-        el.textContent = msg;
-      }
-
-      // ----------------- TELEGRAM USER -----------------
+      let user = null;
       try {
-        if (tg && tg.initDataUnsafe) {
-          user = tg.initDataUnsafe.user || null;
-        }
+        user = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
       } catch (e) {
-        console.error("initDataUnsafe error:", e);
+        console.error(e);
       }
 
       if (!user) {
-        elSubtitle.textContent = "MiniApp-ul trebuie deschis din Telegram.";
-        elUsername.textContent = "necunoscut";
-        elStatus.textContent = "nu s-a putut citi utilizatorul";
+        elSubtitle.textContent = "Deschide miniapp-ul din Telegram, nu direct din browser.";
+        elProfileError.style.display = "block";
+        elProfileError.textContent = "User necunoscut.";
         elCredits.textContent = "–";
-        setError(
-          elProfileError,
-          "Deschide acest miniapp din botul Telegram, nu direct din browser."
-        );
         return;
       }
 
@@ -246,84 +125,56 @@
       elUsername.textContent = fullUsername + (fullName ? " • " + fullName : "");
       elUserId.textContent = "ID: " + user.id;
 
-      isAdmin = user.id === ADMIN_ID;
-      elStatus.textContent = isAdmin ? "Administrator" : "Utilizator normal";
-      elRoleText.textContent = isAdmin ? "ADMIN" : "USER";
-      elRoleChip.style.display = "inline-flex";
-
+      const isAdmin = user.id === ADMIN_ID;
       if (isAdmin) {
-        tabAdmin.classList.remove("hidden");
-        adminDisabledEl.style.display = "none";
-        adminContentEl.classList.remove("hidden");
-      } else {
-        adminDisabledEl.style.display = "block";
-        adminContentEl.classList.add("hidden");
+        elRoleChip.style.display = "inline-flex";
+        elRoleText.textContent = "ADMIN";
+        navAdmin.classList.remove("hidden");
       }
 
-      elSubtitle.textContent = "Datele sunt încărcate. Se iau creditele & shop-ul...";
+      elSubtitle.textContent = "Se încarcă creditele & shop-ul...";
 
-      // ----------------- TABS -----------------
-      tabShop.addEventListener("click", function () {
-        tabShop.classList.add("active");
-        tabAdmin.classList.remove("active");
-        viewShop.classList.remove("hidden");
-        viewAdmin.classList.add("hidden");
-      });
-
-      tabAdmin.addEventListener("click", function () {
-        if (!isAdmin) {
-          showToast("Doar administratorul are acces aici.");
-          return;
-        }
-        tabAdmin.classList.add("active");
-        tabShop.classList.remove("active");
-        viewAdmin.classList.remove("hidden");
-        viewShop.classList.add("hidden");
-      });
-
-      // ----------------- FETCH CREDITE -----------------
-      safeFetchJson(API_BASE + "/get_credits?user_id=" + encodeURIComponent(user.id))
-        .then(function (data) {
-          elCredits.textContent = data.credits != null ? data.credits : 0;
-
-          if (typeof data.is_admin === "boolean") {
-            const adminFromApi = data.is_admin;
-            elStatus.textContent = adminFromApi ? "Administrator" : "Utilizator normal";
-            elRoleText.textContent = adminFromApi ? "ADMIN" : "USER";
-            isAdmin = adminFromApi;
-            if (isAdmin) {
-              tabAdmin.classList.remove("hidden");
-              adminDisabledEl.style.display = "none";
-              adminContentEl.classList.remove("hidden");
-            }
+      // credite
+      safeFetch(API_BASE + "/get_credits?user_id=" + encodeURIComponent(user.id))
+        .then(data => {
+          elCredits.textContent = data.credits ?? 0;
+          if (data.is_admin) {
+            elRoleChip.style.display = "inline-flex";
+            elRoleText.textContent = "ADMIN";
+            navAdmin.classList.remove("hidden");
           }
-
-          elSubtitle.textContent = "Conectat cu succes la bot.";
+          elSubtitle.textContent = "Gata! Poți cumpăra produse.";
         })
-        .catch(function (err) {
-          console.error("Eroare API credite:", err);
+        .catch(err => {
+          console.error(err);
           elCredits.textContent = "–";
-          setError(
-            elProfileError,
-            "Nu s-au putut încărca creditele. Verifică API-ul Netlify / bot-ul."
-          );
-          elSubtitle.textContent = "Eroare la comunicarea cu API-ul de credite.";
+          elProfileError.style.display = "block";
+          elProfileError.textContent = "Nu s-au putut încărca creditele.";
+          elSubtitle.textContent = "Eroare la API-ul de credite.";
         });
 
-      // ----------------- SHOP DATA -----------------
-      let shopData = { categories: [] };
-
-      function renderShop() {
-        const data = shopData;
-        elShopContainer.innerHTML = "";
-
-        if (!data || !Array.isArray(data.categories) || data.categories.length === 0) {
+      // shop
+      safeFetch(API_BASE + "/get_shop")
+        .then(data => {
+          renderShop(data);
+        })
+        .catch(err => {
+          console.error(err);
           elShopContainer.innerHTML =
-            '<div class="info-value" style="font-size:13px; color:var(--muted);">Momentan nu există produse în shop.</div>';
+            '<div class="error-text">Eroare la încărcarea produselor.</div>';
+        });
+
+      function renderShop(data) {
+        if (!data || !Array.isArray(data.categories) || !data.categories.length) {
+          elShopContainer.innerHTML =
+            '<div class="info-value" style="font-size:13px; color:var(--muted);">Momentan nu există produse.</div>';
           return;
         }
 
-        data.categories.forEach(function (cat) {
+        elShopContainer.innerHTML = "";
+        let index = 1;
+
+        data.categories.forEach(cat => {
           const catBlock = document.createElement("div");
           catBlock.className = "category-block";
 
@@ -332,7 +183,7 @@
 
           const nameEl = document.createElement("div");
           nameEl.className = "category-name";
-          nameEl.textContent = cat.name || "Categorie fără nume";
+          nameEl.textContent = cat.name || "Categorie";
 
           const descEl = document.createElement("div");
           descEl.className = "category-desc";
@@ -342,349 +193,85 @@
           header.appendChild(descEl);
           catBlock.appendChild(header);
 
-          if (Array.isArray(cat.products) && cat.products.length > 0) {
-            cat.products.forEach(function (prod) {
-              const prodDiv = document.createElement("div");
-              prodDiv.className = "product-item";
+          (cat.products || []).forEach(prod => {
+            const prodDiv = document.createElement("div");
+            prodDiv.className = "product-item";
 
-              const top = document.createElement("div");
-              top.className = "product-top";
+            const top = document.createElement("div");
+            top.className = "product-top";
 
-              const pName = document.createElement("div");
-              pName.className = "product-name";
-              pName.textContent = prod.name || "Produs fără nume";
+            const pName = document.createElement("div");
+            pName.className = "product-name";
+            pName.textContent = "#" + index + " · " + (prod.name || "Produs");
 
-              const pPrice = document.createElement("div");
-              pPrice.className = "product-price";
-              pPrice.textContent = (prod.price || 0) + " credite";
+            const pPrice = document.createElement("div");
+            pPrice.className = "product-price";
+            pPrice.textContent = (prod.price || 0) + " cr.";
 
-              top.appendChild(pName);
-              top.appendChild(pPrice);
-              prodDiv.appendChild(top);
+            top.appendChild(pName);
+            top.appendChild(pPrice);
+            prodDiv.appendChild(top);
 
-              if (prod.description) {
-                const pDesc = document.createElement("div");
-                pDesc.className = "product-desc";
-                pDesc.textContent = prod.description;
-                prodDiv.appendChild(pDesc);
-              }
+            if (prod.description) {
+              const pDesc = document.createElement("div");
+              pDesc.className = "product-desc";
+              pDesc.textContent = prod.description;
+              prodDiv.appendChild(pDesc);
+            }
 
-              const limits = document.createElement("div");
-              limits.className = "product-limits";
-              limits.textContent =
-                "Cantitate: " +
-                (prod.min_qty || 1) +
-                " - " +
-                (prod.max_qty || prod.min_qty || 1);
+            const bottomRow = document.createElement("div");
+            bottomRow.style.display = "flex";
+            bottomRow.style.justifyContent = "space-between";
+            bottomRow.style.alignItems = "center";
+            bottomRow.style.marginTop = "4px";
 
-              prodDiv.appendChild(limits);
+            const limits = document.createElement("div");
+            limits.className = "product-limits";
+            limits.textContent =
+              "Cantitate: " +
+              (prod.min_qty || 1) +
+              " - " +
+              (prod.max_qty || prod.min_qty || 1);
 
-              catBlock.appendChild(prodDiv);
-            });
-          } else {
-            const empty = document.createElement("div");
-            empty.className = "product-desc";
-            empty.textContent = "Nu există produse în această categorie.";
-            catBlock.appendChild(empty);
-          }
+            const actions = document.createElement("div");
+
+            const btnView = document.createElement("button");
+            btnView.className = "btn btn-secondary";
+            btnView.textContent = "Detalii";
+            btnView.onclick = () => {
+              const url =
+                "product.html?id=" +
+                encodeURIComponent(prod.id) +
+                "&idx=" +
+                index;
+              window.location.href = url;
+            };
+
+            const btnBuy = document.createElement("button");
+            btnBuy.className = "btn btn-primary";
+            btnBuy.textContent = "Cumpără";
+            btnBuy.onclick = () => {
+              const url =
+                "product.html?id=" +
+                encodeURIComponent(prod.id) +
+                "&idx=" +
+                index;
+              window.location.href = url;
+            };
+
+            actions.appendChild(btnView);
+            actions.appendChild(btnBuy);
+
+            bottomRow.appendChild(limits);
+            bottomRow.appendChild(actions);
+            prodDiv.appendChild(bottomRow);
+
+            catBlock.appendChild(prodDiv);
+            index++;
+          });
 
           elShopContainer.appendChild(catBlock);
         });
-      }
-
-      safeFetchJson(API_BASE + "/get_shop")
-        .then(function (data) {
-          shopData = data || { categories: [] };
-          renderShop();
-          if (isAdmin && !adminInitialized) {
-            adminInit();
-            adminInitialized = true;
-          }
-        })
-        .catch(function (err) {
-          console.error("Eroare SHOP API:", err);
-          elShopContainer.innerHTML =
-            '<div class="info-value" style="font-size:13px; color:#ff7b8c;">Eroare la încărcarea produselor.</div>';
-        });
-
-      // ----------------- ADMIN DASHBOARD -----------------
-      function adminInit() {
-        if (!isAdmin) return;
-
-        const catListEl = document.getElementById("admin-cat-list");
-        const prodListEl = document.getElementById("admin-prod-list");
-
-        const catNameEl = document.getElementById("cat-name");
-        const catDescEl = document.getElementById("cat-desc");
-
-        const prodNameEl = document.getElementById("prod-name");
-        const prodPriceEl = document.getElementById("prod-price");
-        const prodDescEl = document.getElementById("prod-desc");
-        const prodMinEl = document.getElementById("prod-min");
-        const prodMaxEl = document.getElementById("prod-max");
-
-        const btnAddCat = document.getElementById("btn-add-cat");
-        const btnDelCat = document.getElementById("btn-del-cat");
-        const btnAddProd = document.getElementById("btn-add-prod");
-        const btnDelProd = document.getElementById("btn-del-prod");
-        const btnApplyProd = document.getElementById("btn-apply-prod");
-        const btnSaveShop = document.getElementById("btn-save-shop");
-
-        let selectedCatIndex = 0;
-        let selectedProdIndex = 0;
-
-        function ensureStructure() {
-          if (!shopData || typeof shopData !== "object") {
-            shopData = { categories: [] };
-          }
-          if (!Array.isArray(shopData.categories)) {
-            shopData.categories = [];
-          }
-        }
-
-        function getSelectedCat() {
-          ensureStructure();
-          return shopData.categories[selectedCatIndex] || null;
-        }
-
-        function getSelectedProd() {
-          const cat = getSelectedCat();
-          if (!cat || !Array.isArray(cat.products)) return null;
-          return cat.products[selectedProdIndex] || null;
-        }
-
-        function renderCatList() {
-          ensureStructure();
-          catListEl.innerHTML = "";
-          if (shopData.categories.length === 0) {
-            catListEl.innerHTML =
-              '<div class="product-desc">Nu există categorii. Adaugă una nouă.</div>';
-            catNameEl.value = "";
-            catDescEl.value = "";
-            prodListEl.innerHTML =
-              '<div class="product-desc">Nu există produse.</div>';
-            return;
-          }
-
-          shopData.categories.forEach(function (cat, idx) {
-            const item = document.createElement("div");
-            item.className =
-              "admin-cat-item" + (idx === selectedCatIndex ? " active" : "");
-            const nameSpan = document.createElement("span");
-            nameSpan.textContent = cat.name || "Categorie fără nume";
-
-            const pill = document.createElement("span");
-            pill.className = "admin-pill";
-            pill.textContent =
-              (cat.products ? cat.products.length : 0) + " prod.";
-
-            item.appendChild(nameSpan);
-            item.appendChild(pill);
-
-            item.addEventListener("click", function () {
-              selectedCatIndex = idx;
-              selectedProdIndex = 0;
-              renderCatList();
-              renderCatDetails();
-              renderProdList();
-            });
-
-            catListEl.appendChild(item);
-          });
-        }
-
-        function renderCatDetails() {
-          const cat = getSelectedCat();
-          if (!cat) {
-            catNameEl.value = "";
-            catDescEl.value = "";
-            return;
-          }
-          catNameEl.value = cat.name || "";
-          catDescEl.value = cat.description || "";
-        }
-
-        function renderProdList() {
-          const cat = getSelectedCat();
-          prodListEl.innerHTML = "";
-          if (!cat || !Array.isArray(cat.products) || cat.products.length === 0) {
-            prodListEl.innerHTML =
-              '<div class="product-desc">Nu există produse în această categorie.</div>';
-            prodNameEl.value = "";
-            prodPriceEl.value = "";
-            prodDescEl.value = "";
-            prodMinEl.value = "";
-            prodMaxEl.value = "";
-            return;
-          }
-
-          cat.products.forEach(function (prod, idx) {
-            const div = document.createElement("div");
-            div.className =
-              "admin-cat-item" + (idx === selectedProdIndex ? " active" : "");
-            const n = document.createElement("span");
-            n.textContent = prod.name || "Produs fără nume";
-            const p = document.createElement("span");
-            p.className = "admin-pill";
-            p.textContent = (prod.price || 0) + " cr.";
-
-            div.appendChild(n);
-            div.appendChild(p);
-
-            div.addEventListener("click", function () {
-              selectedProdIndex = idx;
-              renderProdList();
-              fillProdFields();
-            });
-
-            prodListEl.appendChild(div);
-          });
-
-          fillProdFields();
-        }
-
-        function fillProdFields() {
-          const prod = getSelectedProd();
-          if (!prod) return;
-          prodNameEl.value = prod.name || "";
-          prodPriceEl.value = prod.price != null ? prod.price : "";
-          prodDescEl.value = prod.description || "";
-          prodMinEl.value = prod.min_qty != null ? prod.min_qty : 1;
-          prodMaxEl.value = prod.max_qty != null ? prod.max_qty : prodMinEl.value || 1;
-        }
-
-        // --- EVENTS ---
-
-        btnAddCat.addEventListener("click", function () {
-          ensureStructure();
-          const newCatId = "cat_" + Date.now();
-          shopData.categories.push({
-            id: newCatId,
-            name: "Noua categorie",
-            description: "",
-            products: [],
-          });
-          selectedCatIndex = shopData.categories.length - 1;
-          selectedProdIndex = 0;
-          renderCatList();
-          renderCatDetails();
-          renderProdList();
-          renderShop();
-          showToast("Categorie adăugată.");
-        });
-
-        btnDelCat.addEventListener("click", function () {
-          ensureStructure();
-          if (shopData.categories.length === 0) return;
-          shopData.categories.splice(selectedCatIndex, 1);
-          selectedCatIndex = Math.max(0, selectedCatIndex - 1);
-          selectedProdIndex = 0;
-          renderCatList();
-          renderCatDetails();
-          renderProdList();
-          renderShop();
-          showToast("Categorie ștearsă.");
-        });
-
-        catNameEl.addEventListener("input", function () {
-          const cat = getSelectedCat();
-          if (!cat) return;
-          cat.name = catNameEl.value;
-          renderCatList();
-          renderShop();
-        });
-
-        catDescEl.addEventListener("input", function () {
-          const cat = getSelectedCat();
-          if (!cat) return;
-          cat.description = catDescEl.value;
-          renderShop();
-        });
-
-        btnAddProd.addEventListener("click", function () {
-          const cat = getSelectedCat();
-          if (!cat) return;
-          if (!Array.isArray(cat.products)) cat.products = [];
-          const newProdId = "prod_" + Date.now();
-          cat.products.push({
-            id: newProdId,
-            name: "Produs nou",
-            price: 0,
-            description: "",
-            min_qty: 1,
-            max_qty: 1,
-          });
-          selectedProdIndex = cat.products.length - 1;
-          renderProdList();
-          renderShop();
-          showToast("Produs adăugat.");
-        });
-
-        btnDelProd.addEventListener("click", function () {
-          const cat = getSelectedCat();
-          if (!cat || !Array.isArray(cat.products) || cat.products.length === 0)
-            return;
-          cat.products.splice(selectedProdIndex, 1);
-          selectedProdIndex = Math.max(0, selectedProdIndex - 1);
-          renderProdList();
-          renderShop();
-          showToast("Produs șters.");
-        });
-
-        btnApplyProd.addEventListener("click", function () {
-          const prod = getSelectedProd();
-          if (!prod) return;
-          const min = Number(prodMinEl.value || 1);
-          const max = Number(prodMaxEl.value || min);
-
-          prod.name = prodNameEl.value || "Produs";
-          prod.price = Math.max(0, Number(prodPriceEl.value || 0));
-          prod.description = prodDescEl.value || "";
-          prod.min_qty = Math.max(1, min);
-          prod.max_qty = Math.max(prod.min_qty, max);
-
-          renderProdList();
-          renderShop();
-          showToast("Modificări aplicate pe produs.");
-        });
-
-        btnSaveShop.addEventListener("click", function () {
-          const payload = {
-            user_id: user.id,
-            shop: shopData,
-          };
-
-          btnSaveShop.disabled = true;
-          btnSaveShop.textContent = "Se salvează...";
-
-          fetch(API_BASE + "/save_shop", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(payload),
-          })
-            .then(function (res) {
-              return res.json();
-            })
-            .then(function (data) {
-              if (data.error) throw new Error(data.error);
-              showToast("Shop salvat cu succes.");
-            })
-            .catch(function (err) {
-              console.error("Eroare save_shop:", err);
-              showToast("Eroare la salvarea shop-ului.");
-            })
-            .finally(function () {
-              btnSaveShop.disabled = false;
-              btnSaveShop.textContent = "Salvează shop";
-            });
-        });
-
-        // init
-        renderCatList();
-        renderCatDetails();
-        renderProdList();
       }
     })();
   </script>
