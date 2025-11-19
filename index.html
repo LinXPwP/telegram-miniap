@@ -1,35 +1,78 @@
 <!DOCTYPE html>
-<html>
+<html lang="ro">
 <head>
-  <meta charset="UTF-8" />
-  <title>MiniApp</title>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <meta charset="UTF-8">
+    <title>MiniApp - Credite</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Telegram WebApp script -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+    <style>
+        body {
+            background: #111;
+            color: white;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+
+        .card {
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #333;
+            margin-top: 20px;
+        }
+
+        .title {
+            font-size: 22px;
+            margin-bottom: 10px;
+            color: #e63946;
+        }
+
+        .label {
+            font-weight: bold;
+        }
+    </style>
 </head>
-<body style="background:#111; color:white; font-family:Arial;">
+<body>
 
-  <h2>MiniApp Test</h2>
-  <p><b>Username:</b> <span id="username">loading...</span></p>
-  <p><b>Status:</b> <span id="status">loading...</span></p>
+    <h1 class="title">MiniApp - Sistem Credite</h1>
 
-  <script>
-    const tg = window.Telegram.WebApp;
-    tg.expand();
+    <div class="card">
+        <p><span class="label">Username:</span> <span id="username">loading...</span></p>
+        <p><span class="label">Credite:</span> <span id="credits">loading...</span></p>
+        <p><span class="label">Status:</span> <span id="status">loading...</span></p>
+    </div>
 
-    const user = tg.initDataUnsafe.user;
-    const ADMIN_ID = 7672256597;
+    <script>
+        const tg = Telegram.WebApp;
+        tg.expand();
 
-    if (user) {
-      document.getElementById("username").innerText =
-        user.username ? "@" + user.username : "fără username";
+        // -----------------------------------------------------
+        // 1. MiniApp → trimite mesaj către bot să trimită creditele
+        // -----------------------------------------------------
+        tg.sendData("get_credits");
 
-      const isAdmin = user.id === ADMIN_ID;
-      document.getElementById("status").innerText =
-        isAdmin ? "Administrator" : "Utilizator normal";
-    } else {
-      document.getElementById("username").innerText = "Nu s-a putut citi userul";
-      document.getElementById("status").innerText = "Eroare";
-    }
-  </script>
+        // -----------------------------------------------
+        // 2. Bot → MiniApp: răspuns prin WebApp message
+        // -----------------------------------------------
+        Telegram.WebApp.onEvent("message", (event) => {
+            try {
+                const data = JSON.parse(event.data);
+
+                document.getElementById("credits").innerText = data.credits;
+                document.getElementById("username").innerText =
+                    data.username ? "@" + data.username : "(fără username)";
+
+                document.getElementById("status").innerText =
+                    data.is_admin ? "Administrator" : "Utilizator normal";
+
+            } catch (e) {
+                console.error("Eroare la citirea mesajului din bot:", e);
+            }
+        });
+    </script>
 
 </body>
 </html>
