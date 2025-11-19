@@ -2,137 +2,285 @@
 <html lang="ro">
 <head>
   <meta charset="UTF-8" />
-  <title>Profil – MiniApp</title>
+  <title>Admin Panel – Shop</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link rel="stylesheet" href="style.css" />
+  <style>
+    body {
+      padding: 10px;
+    }
+    .app-shell {
+      max-width: 980px;
+    }
+    .admin-layout-main {
+      display: grid;
+      grid-template-columns: 0.95fr 1.05fr;
+      gap: 10px;
+      margin-top: 6px;
+    }
+    .tickets-list {
+      max-height: 260px;
+      overflow: auto;
+      margin-top: 6px;
+    }
+    .ticket-item {
+      font-size: 12px;
+      padding: 6px 8px;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      margin-bottom: 4px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .ticket-item:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .ticket-item.open {
+      border-color: rgba(0, 200, 120, 0.6);
+      background: rgba(0, 200, 120, 0.12);
+    }
+    .ticket-item.closed {
+      border-color: rgba(160, 160, 180, 0.4);
+      background: rgba(120, 120, 145, 0.08);
+    }
+    .ticket-item span.badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    .tabs-admin {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .tabs-admin button {
+      flex: 0 0 auto;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(2, 2, 16, 0.9);
+      color: var(--muted);
+      font-size: 11px;
+      cursor: pointer;
+      transition: background 0.16s, color 0.16s, border-color 0.16s;
+    }
+    .tabs-admin button.active {
+      background: radial-gradient(circle at top, #ff567a, #ff2858 70%);
+      color: #fff;
+      border-color: transparent;
+    }
+    .admin-two-cols {
+      display: grid;
+      grid-template-columns: 0.85fr 1.15fr;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    @media (max-width: 840px) {
+      .admin-layout-main,
+      .admin-two-cols {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 </head>
 <body>
   <div class="app-shell">
     <header class="app-header">
       <div class="app-brand">
-        <div class="brand-logo"><span>U</span></div>
+        <div class="brand-logo"><span>A</span></div>
         <div class="brand-text">
-          <h1>Profil</h1>
-          <p id="subtitle">Se încarcă profilul...</p>
+          <h1>ADMIN PANEL</h1>
+          <p id="subtitle">Se verifică token-ul...</p>
         </div>
-      </div>
-      <div id="role-chip" class="role-chip" style="display:none;">
-        <span class="role-dot"></span>
-        <span id="role-text">USER</span>
       </div>
     </header>
 
-    <section class="card">
-      <div class="card-header">
-        <div>
-          <div class="card-title">Date utilizator</div>
-          <div class="card-sub">Din Telegram</div>
-        </div>
-        <div id="user-id" class="badge-id">ID: -</div>
-      </div>
-
-      <div class="info-row">
-        <div class="info-label">Username</div>
-        <div id="username" class="info-value">loading...</div>
-      </div>
-
-      <div class="info-row">
-        <div class="info-label">Nume</div>
-        <div id="name" class="info-value">-</div>
-      </div>
-
-      <div class="info-row">
-        <div class="info-label">Status</div>
-        <div id="status" class="info-value">Utilizator</div>
-      </div>
+    <section class="card" id="error-card" style="display:none;">
+      <div class="error-text" id="error-msg"></div>
     </section>
 
-    <section class="card">
+    <section class="card" id="main-card" style="display:none;">
       <div class="card-header">
         <div>
-          <div class="card-title">Credite</div>
-          <div class="card-sub">Soldul disponibil</div>
+          <div class="card-title">Shop & Tickete</div>
+          <div class="card-sub">Editezi produsele și vezi comenzile, fără JSON.</div>
         </div>
       </div>
 
-      <div class="info-row">
-        <div class="info-label">Total</div>
-        <div id="credits" class="info-value credits">0</div>
+      <div class="tabs-admin">
+        <button id="tab-tickets" class="active">Tickete</button>
+        <button id="tab-shop">Shop</button>
       </div>
-      <div id="profile-error" class="error-text" style="display:none;"></div>
-    </section>
 
-    <section class="card" id="tickets-card">
-      <div class="card-header">
-        <div>
-          <div class="card-title">Tickete (comenzi)</div>
-          <div class="card-sub">Ultimele comenzi făcute</div>
+      <!-- VIEW: TICKETS -->
+      <div id="view-tickets">
+        <div class="admin-layout-main">
+          <div class="admin-list-card">
+            <div class="admin-section-title">Tickete</div>
+
+            <div class="admin-actions-row" style="justify-content:flex-start;margin-bottom:4px;">
+              <button class="btn btn-secondary" id="filter-all">Toate</button>
+              <button class="btn btn-secondary" id="filter-open">Deschise</button>
+              <button class="btn btn-secondary" id="filter-closed">Închise</button>
+            </div>
+
+            <div id="tickets-list" class="tickets-list"></div>
+          </div>
+
+          <div class="admin-list-card">
+            <div class="admin-section-title">Detalii ticket</div>
+            <div id="ticket-details" class="product-desc">
+              Selectează un ticket din listă.
+            </div>
+
+            <div class="admin-field" style="margin-top:6px;">
+              <label for="ticket-note">Notă pentru acest ticket</label>
+              <textarea id="ticket-note" placeholder="Ex: livrat, rezolvat, detalii etc."></textarea>
+            </div>
+
+            <div class="admin-actions-row admin-actions-bottom">
+              <button id="btn-close-ticket" class="btn btn-primary">
+                Marchează ca rezolvat
+              </button>
+            </div>
+          </div>
         </div>
       </div>
-      <div id="tickets-container">
-        <div class="skeleton skeleton-line"></div>
-        <div class="skeleton skeleton-line short"></div>
-      </div>
-    </section>
 
-    <section class="card" id="admin-card" style="display:none;">
-      <div class="card-header">
-        <div>
-          <div class="card-title">Admin Panel</div>
-          <div class="card-sub">Deschide dashboard-ul complet</div>
+      <!-- VIEW: SHOP -->
+      <div id="view-shop" style="display:none;">
+        <div class="admin-two-cols">
+          <div class="admin-list-card">
+            <div class="admin-section-title">Categorii</div>
+            <div id="admin-cat-list"></div>
+
+            <div class="admin-actions-row" style="margin-top:6px;">
+              <button id="btn-add-cat" class="btn btn-secondary">+ categorie</button>
+              <button id="btn-del-cat" class="btn btn-danger">Șterge</button>
+            </div>
+          </div>
+
+          <div class="admin-list-card">
+            <div class="admin-section-title">Detalii categorie & produse</div>
+
+            <div class="admin-field">
+              <label for="cat-name">Nume categorie</label>
+              <input id="cat-name" type="text" placeholder="Ex: Premium" />
+            </div>
+
+            <div class="admin-field">
+              <label for="cat-desc">Descriere categorie</label>
+              <textarea id="cat-desc" placeholder="Descriere scurtă"></textarea>
+            </div>
+
+            <div class="admin-field">
+              <label>Produse în categorie</label>
+              <div id="admin-prod-list" style="max-height:110px; overflow:auto; margin-bottom:4px;"></div>
+            </div>
+
+            <div class="admin-actions-row">
+              <button id="btn-add-prod" class="btn btn-secondary">+ produs</button>
+              <button id="btn-del-prod" class="btn btn-danger">Șterge produs</button>
+            </div>
+
+            <hr style="border:none; border-top:1px solid rgba(255,255,255,0.06); margin:8px 0;" />
+
+            <div class="admin-field">
+              <label for="prod-name">Nume produs selectat</label>
+              <input id="prod-name" type="text" placeholder="Ex: Pachet Basic 1" />
+            </div>
+            <div class="admin-field">
+              <label for="prod-price">Preț (credite)</label>
+              <input id="prod-price" type="number" min="0" step="1" />
+            </div>
+            <div class="admin-field">
+              <label for="prod-desc">Descriere produs</label>
+              <textarea id="prod-desc" placeholder="Descriere produs"></textarea>
+            </div>
+            <div class="admin-field">
+              <label for="prod-min">Cantitate minimă</label>
+              <input id="prod-min" type="number" min="1" step="1" />
+            </div>
+            <div class="admin-field">
+              <label for="prod-max">Cantitate maximă</label>
+              <input id="prod-max" type="number" min="1" step="1" />
+            </div>
+
+            <div class="admin-actions-row" style="margin-top:6px;">
+              <button id="btn-apply-prod" class="btn btn-secondary">Aplică pe produs</button>
+              <button id="btn-save-shop" class="btn btn-primary">Salvează shop</button>
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="admin-actions-row admin-actions-bottom">
-        <button id="btn-open-admin" class="btn btn-primary" type="button">
-          Deschide Admin Website
-        </button>
-      </div>
-      <div class="product-desc" style="margin-top:6px;">
-        Se deschide un website separat cu token secret, doar pentru administrator.
       </div>
     </section>
 
     <div class="footer">
-      Navighează: Shop • Profil • Admin (doar admin)
+      Aceasta este interfața web de admin. Tokenul din URL trebuie păstrat secret.
     </div>
   </div>
-
-  <nav class="tabbar" style="margin-top:8px;">
-    <a class="tab-btn" href="index.html">Shop</a>
-    <a class="tab-btn active">Profil</a>
-    <a id="nav-admin" class="tab-btn hidden">Admin</a>
-  </nav>
 
   <div id="toast" class="toast"></div>
 
   <script>
     (function () {
-      const tg = window.Telegram.WebApp;
-      if (tg && tg.expand) tg.expand();
-
-      const ADMIN_ID = 7672256597;
       const API_BASE = "https://melodic-mandazi-7a16dc.netlify.app/.netlify/functions";
 
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get("token");
+
       const subtitle = document.getElementById("subtitle");
-      const userIdEl = document.getElementById("user-id");
-      const usernameEl = document.getElementById("username");
-      const nameEl = document.getElementById("name");
-      const statusEl = document.getElementById("status");
-      const creditsEl = document.getElementById("credits");
-      const errorEl = document.getElementById("profile-error");
-      const roleChip = document.getElementById("role-chip");
-      const roleText = document.getElementById("role-text");
-      const ticketsContainer = document.getElementById("tickets-container");
-      const adminCard = document.getElementById("admin-card");
-      const btnOpenAdmin = document.getElementById("btn-open-admin");
-      const navAdmin = document.getElementById("nav-admin");
+      const errorCard = document.getElementById("error-card");
+      const errorMsg = document.getElementById("error-msg");
+      const mainCard = document.getElementById("main-card");
       const toastEl = document.getElementById("toast");
+
+      // Tabs
+      const tabTickets = document.getElementById("tab-tickets");
+      const tabShop = document.getElementById("tab-shop");
+      const viewTickets = document.getElementById("view-tickets");
+      const viewShop = document.getElementById("view-shop");
+
+      // Tickets UI
+      const ticketsListEl = document.getElementById("tickets-list");
+      const ticketDetailsEl = document.getElementById("ticket-details");
+      const ticketNoteEl = document.getElementById("ticket-note");
+      const btnCloseTicket = document.getElementById("btn-close-ticket");
+      const filterAll = document.getElementById("filter-all");
+      const filterOpen = document.getElementById("filter-open");
+      const filterClosed = document.getElementById("filter-closed");
+
+      // Shop UI
+      const catListEl = document.getElementById("admin-cat-list");
+      const prodListEl = document.getElementById("admin-prod-list");
+      const catNameEl = document.getElementById("cat-name");
+      const catDescEl = document.getElementById("cat-desc");
+      const prodNameEl = document.getElementById("prod-name");
+      const prodPriceEl = document.getElementById("prod-price");
+      const prodDescEl = document.getElementById("prod-desc");
+      const prodMinEl = document.getElementById("prod-min");
+      const prodMaxEl = document.getElementById("prod-max");
+      const btnAddCat = document.getElementById("btn-add-cat");
+      const btnDelCat = document.getElementById("btn-del-cat");
+      const btnAddProd = document.getElementById("btn-add-prod");
+      const btnDelProd = document.getElementById("btn-del-prod");
+      const btnApplyProd = document.getElementById("btn-apply-prod");
+      const btnSaveShop = document.getElementById("btn-save-shop");
 
       function toast(msg) {
         toastEl.textContent = msg;
         toastEl.classList.add("show");
         setTimeout(() => toastEl.classList.remove("show"), 2000);
+      }
+
+      function showError(msg) {
+        errorCard.style.display = "block";
+        errorMsg.textContent = msg;
+        mainCard.style.display = "none";
       }
 
       function safeFetch(url) {
@@ -142,132 +290,406 @@
         });
       }
 
-      let user = null;
-      try {
-        user = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
-      } catch (e) {
-        console.error(e);
-      }
-
-      if (!user) {
-        subtitle.textContent = "Deschide miniapp-ul din Telegram.";
-        errorEl.style.display = "block";
-        errorEl.textContent = "User necunoscut.";
+      if (!token) {
+        showError("Lipsește token-ul în URL.");
+        subtitle.textContent = "Acces interzis.";
         return;
       }
 
-      const fullUsername = user.username ? "@" + user.username : "(fără username)";
-      const fullName = [user.first_name || "", user.last_name || ""].join(" ").trim();
+      // Tabs logic
+      tabTickets.addEventListener("click", () => {
+        tabTickets.classList.add("active");
+        tabShop.classList.remove("active");
+        viewTickets.style.display = "block";
+        viewShop.style.display = "none";
+      });
 
-      usernameEl.textContent = fullUsername;
-      nameEl.textContent = fullName || "–";
-      userIdEl.textContent = "ID: " + user.id;
+      tabShop.addEventListener("click", () => {
+        tabShop.classList.add("active");
+        tabTickets.classList.remove("active");
+        viewTickets.style.display = "none";
+        viewShop.style.display = "block";
+      });
 
-      const isAdminClient = user.id === ADMIN_ID;
-      if (isAdminClient) {
-        statusEl.textContent = "Administrator";
-        roleChip.style.display = "inline-flex";
-        roleText.textContent = "ADMIN";
-        adminCard.style.display = "block";
-        navAdmin.classList.remove("hidden");
-      } else {
-        statusEl.textContent = "Utilizator normal";
-      }
+      subtitle.textContent = "Se încarcă ticketele & shop-ul...";
 
-      subtitle.textContent = "Se încarcă creditele & ticketele...";
+      let tickets = [];
+      let ticketsFilter = "all"; // all | open | closed
+      let selectedTicket = null;
+      let shopData = { categories: [] };
+      let selectedCatIndex = 0;
+      let selectedProdIndex = 0;
 
-      // credite
-      safeFetch(API_BASE + "/get_credits?user_id=" + encodeURIComponent(user.id))
-        .then(data => {
-          creditsEl.textContent = data.credits ?? 0;
-          if (data.is_admin) {
-            statusEl.textContent = "Administrator";
-            roleChip.style.display = "inline-flex";
-            roleText.textContent = "ADMIN";
-            adminCard.style.display = "block";
-            navAdmin.classList.remove("hidden");
-          }
-          subtitle.textContent = "Profil încărcat.";
-        })
-        .catch(err => {
-          console.error(err);
-          errorEl.style.display = "block";
-          errorEl.textContent = "Nu s-au putut încărca creditele.";
-          subtitle.textContent = "Eroare la API-ul de credite.";
-        });
-
-      // tickete
-      safeFetch(API_BASE + "/user_tickets?user_id=" + encodeURIComponent(user.id))
-        .then(data => {
-          renderTickets(data.tickets || []);
-        })
-        .catch(err => {
-          console.error(err);
-          ticketsContainer.innerHTML =
-            '<div class="error-text">Nu s-au putut încărca ticketele.</div>';
-        });
-
-      function renderTickets(list) {
-        if (!list.length) {
-          ticketsContainer.innerHTML =
-            '<div class="product-desc">Nu ai tickete încă. Cumpără un produs din shop.</div>';
-          return;
-        }
-
-        ticketsContainer.innerHTML = "";
-        list.forEach(t => {
-          const div = document.createElement("div");
-          div.className = "product-item";
-
-          const top = document.createElement("div");
-          top.className = "product-top";
-
-          const left = document.createElement("div");
-          left.className = "product-name";
-          left.textContent = t.product_name || "Produs";
-
-          const right = document.createElement("div");
-          right.className = "product-price";
-          right.textContent = "#" + t.id;
-
-          top.appendChild(left);
-          top.appendChild(right);
-          div.appendChild(top);
-
-          const desc = document.createElement("div");
-          desc.className = "product-desc";
-          desc.textContent =
-            "Cantitate: " +
-            t.qty +
-            " • Total: " +
-            t.total_price +
-            " cr. • Status: " +
-            (t.status || "open");
-          div.appendChild(desc);
-
-          const date = document.createElement("div");
-          date.className = "product-limits";
-          date.textContent = t.created_at || "";
-          div.appendChild(date);
-
-          ticketsContainer.appendChild(div);
-        });
-      }
-
-      // admin panel
-      btnOpenAdmin.onclick = () => {
-        safeFetch(
-          API_BASE + "/admin_panel_url?user_id=" + encodeURIComponent(user.id)
-        )
+      function loadData() {
+        safeFetch(API_BASE + "/admin_tickets?token=" + encodeURIComponent(token))
           .then(data => {
-            if (!data.url) throw new Error("no url");
-            window.open(data.url, "_blank");
+            tickets = data.tickets || [];
+            shopData = data.shop || { categories: [] };
+            renderTickets();
+            initShop();
+            mainCard.style.display = "block";
+            errorCard.style.display = "none";
+            subtitle.textContent = "Admin panel încărcat.";
           })
           .catch(err => {
             console.error(err);
-            toast("Nu s-a putut obține linkul de admin.");
+            showError("Token invalid sau API indisponibil.");
+            subtitle.textContent = "Eroare la încărcare.";
           });
-      };
+      }
+
+      // ===== TICKETS =====
+
+      function filteredTickets() {
+        if (ticketsFilter === "open") {
+          return tickets.filter(t => t.status === "open");
+        }
+        if (ticketsFilter === "closed") {
+          return tickets.filter(t => t.status === "closed");
+        }
+        return tickets;
+      }
+
+      function renderTickets() {
+        const list = filteredTickets();
+        if (!list.length) {
+          ticketsListEl.innerHTML =
+            '<div class="product-desc">Nu există tickete pentru acest filtru.</div>';
+          ticketDetailsEl.textContent = "Selectează un ticket din listă.";
+          ticketNoteEl.value = "";
+          selectedTicket = null;
+          return;
+        }
+
+        ticketsListEl.innerHTML = "";
+        list.forEach(t => {
+          const div = document.createElement("div");
+          div.className =
+            "ticket-item " + (t.status === "open" ? "open" : "closed");
+
+          const left = document.createElement("div");
+          left.textContent =
+            t.id +
+            " · " +
+            (t.product_name || "Produs") +
+            " × " +
+            t.qty +
+            " • " +
+            (t.username || t.user_id);
+
+          const right = document.createElement("span");
+          right.className = "badge";
+          right.textContent = t.status === "open" ? "OPEN" : "CLOSED";
+
+          div.appendChild(left);
+          div.appendChild(right);
+
+          div.addEventListener("click", () => {
+            selectedTicket = t;
+            renderTicketDetails();
+          });
+
+          ticketsListEl.appendChild(div);
+        });
+      }
+
+      function renderTicketDetails() {
+        if (!selectedTicket) {
+          ticketDetailsEl.textContent = "Selectează un ticket.";
+          ticketNoteEl.value = "";
+          return;
+        }
+
+        ticketDetailsEl.innerHTML =
+          "<b>Ticket:</b> " +
+          selectedTicket.id +
+          "<br>" +
+          "<b>User:</b> " +
+          (selectedTicket.username || "fără username") +
+          " (" +
+          selectedTicket.user_id +
+          ")<br>" +
+          "<b>Produs:</b> " +
+          selectedTicket.product_name +
+          " × " +
+          selectedTicket.qty +
+          "<br>" +
+          "<b>Total:</b> " +
+          selectedTicket.total_price +
+          " cr.<br>" +
+          "<b>Status:</b> " +
+          selectedTicket.status +
+          "<br>" +
+          "<b>Creat la:</b> " +
+          (selectedTicket.created_at || "");
+
+        ticketNoteEl.value = selectedTicket.note || "";
+      }
+
+      btnCloseTicket.addEventListener("click", () => {
+        if (!selectedTicket) {
+          toast("Nu ai selectat niciun ticket.");
+          return;
+        }
+
+        const payload = {
+          token: token,
+          ticket_id: selectedTicket.id,
+          status: "closed",
+          note: ticketNoteEl.value || "",
+        };
+
+        fetch(API_BASE + "/admin_update_ticket", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.error) throw new Error(data.error);
+            toast("Ticket marcat ca rezolvat.");
+            loadData();
+          })
+          .catch(err => {
+            console.error(err);
+            toast("Eroare la actualizarea ticket-ului.");
+          });
+      });
+
+      filterAll.addEventListener("click", () => {
+        ticketsFilter = "all";
+        renderTickets();
+      });
+      filterOpen.addEventListener("click", () => {
+        ticketsFilter = "open";
+        renderTickets();
+      });
+      filterClosed.addEventListener("click", () => {
+        ticketsFilter = "closed";
+        renderTickets();
+      });
+
+      // ===== SHOP =====
+
+      function initShop() {
+        if (!shopData || !Array.isArray(shopData.categories)) {
+          shopData = { categories: [] };
+        }
+        renderCatList();
+        renderCatDetails();
+        renderProdList();
+      }
+
+      function renderCatList() {
+        catListEl.innerHTML = "";
+        if (!shopData.categories.length) {
+          catListEl.innerHTML =
+            '<div class="product-desc">Nu există categorii. Creează una nouă.</div>';
+          return;
+        }
+
+        shopData.categories.forEach((cat, idx) => {
+          const item = document.createElement("div");
+          item.className =
+            "admin-cat-item" + (idx === selectedCatIndex ? " active" : "");
+
+          const nameSpan = document.createElement("span");
+          nameSpan.textContent = cat.name || "Categorie";
+
+          const pill = document.createElement("span");
+          pill.className = "admin-pill";
+          pill.textContent =
+            (cat.products ? cat.products.length : 0) + " prod.";
+
+          item.appendChild(nameSpan);
+          item.appendChild(pill);
+
+          item.addEventListener("click", () => {
+            selectedCatIndex = idx;
+            selectedProdIndex = 0;
+            renderCatList();
+            renderCatDetails();
+            renderProdList();
+          });
+
+          catListEl.appendChild(item);
+        });
+      }
+
+      function renderCatDetails() {
+        const cat = shopData.categories[selectedCatIndex];
+        if (!cat) {
+          catNameEl.value = "";
+          catDescEl.value = "";
+          return;
+        }
+        catNameEl.value = cat.name || "";
+        catDescEl.value = cat.description || "";
+      }
+
+      function renderProdList() {
+        prodListEl.innerHTML = "";
+        const cat = shopData.categories[selectedCatIndex];
+        if (!cat || !Array.isArray(cat.products) || !cat.products.length) {
+          prodListEl.innerHTML =
+            '<div class="product-desc">Nu există produse în această categorie.</div>';
+          prodNameEl.value = "";
+          prodPriceEl.value = "";
+          prodDescEl.value = "";
+          prodMinEl.value = "";
+          prodMaxEl.value = "";
+          return;
+        }
+
+        cat.products.forEach((prod, idx) => {
+          const div = document.createElement("div");
+          div.className =
+            "admin-cat-item" + (idx === selectedProdIndex ? " active" : "");
+          const n = document.createElement("span");
+          n.textContent = prod.name || "Produs";
+          const p = document.createElement("span");
+          p.className = "admin-pill";
+          p.textContent = (prod.price || 0) + " cr.";
+
+          div.appendChild(n);
+          div.appendChild(p);
+
+          div.addEventListener("click", () => {
+            selectedProdIndex = idx;
+            renderProdList();
+            fillProdFields();
+          });
+
+          prodListEl.appendChild(div);
+        });
+
+        fillProdFields();
+      }
+
+      function fillProdFields() {
+        const cat = shopData.categories[selectedCatIndex];
+        if (!cat) return;
+        const prod = cat.products[selectedProdIndex];
+        if (!prod) return;
+
+        prodNameEl.value = prod.name || "";
+        prodPriceEl.value = prod.price != null ? prod.price : "";
+        prodDescEl.value = prod.description || "";
+        prodMinEl.value = prod.min_qty != null ? prod.min_qty : 1;
+        prodMaxEl.value = prod.max_qty != null ? prod.max_qty : prodMinEl.value || 1;
+      }
+
+      btnAddCat.addEventListener("click", () => {
+        if (!shopData.categories) shopData.categories = [];
+        const newCatId = "cat_" + Date.now();
+        shopData.categories.push({
+          id: newCatId,
+          name: "Noua categorie",
+          description: "",
+          products: [],
+        });
+        selectedCatIndex = shopData.categories.length - 1;
+        selectedProdIndex = 0;
+        renderCatList();
+        renderCatDetails();
+        renderProdList();
+        toast("Categorie creată.");
+      });
+
+      btnDelCat.addEventListener("click", () => {
+        if (!shopData.categories.length) return;
+        shopData.categories.splice(selectedCatIndex, 1);
+        selectedCatIndex = Math.max(0, selectedCatIndex - 1);
+        selectedProdIndex = 0;
+        renderCatList();
+        renderCatDetails();
+        renderProdList();
+        toast("Categorie ștearsă.");
+      });
+
+      catNameEl.addEventListener("input", () => {
+        const cat = shopData.categories[selectedCatIndex];
+        if (!cat) return;
+        cat.name = catNameEl.value;
+        renderCatList();
+      });
+
+      catDescEl.addEventListener("input", () => {
+        const cat = shopData.categories[selectedCatIndex];
+        if (!cat) return;
+        cat.description = catDescEl.value;
+      });
+
+      btnAddProd.addEventListener("click", () => {
+        const cat = shopData.categories[selectedCatIndex];
+        if (!cat) return;
+        if (!Array.isArray(cat.products)) cat.products = [];
+        const newProdId = "prod_" + Date.now();
+        cat.products.push({
+          id: newProdId,
+          name: "Produs nou",
+          price: 0,
+          description: "",
+          min_qty: 1,
+          max_qty: 1,
+        });
+        selectedProdIndex = cat.products.length - 1;
+        renderProdList();
+        toast("Produs creat.");
+      });
+
+      btnDelProd.addEventListener("click", () => {
+        const cat = shopData.categories[selectedCatIndex];
+        if (!cat || !Array.isArray(cat.products) || !cat.products.length) return;
+        cat.products.splice(selectedProdIndex, 1);
+        selectedProdIndex = Math.max(0, selectedProdIndex - 1);
+        renderProdList();
+        toast("Produs șters.");
+      });
+
+      btnApplyProd.addEventListener("click", () => {
+        const cat = shopData.categories[selectedCatIndex];
+        if (!cat || !Array.isArray(cat.products) || !cat.products.length) return;
+        const prod = cat.products[selectedProdIndex];
+        prod.name = prodNameEl.value || "Produs";
+        prod.price = Number(prodPriceEl.value || 0);
+        prod.description = prodDescEl.value || "";
+        prod.min_qty = Number(prodMinEl.value || 1);
+        prod.max_qty = Number(prodMaxEl.value || prod.min_qty || 1);
+        renderProdList();
+        toast("Modificări aplicate pe produs.");
+      });
+
+      btnSaveShop.addEventListener("click", () => {
+        const payload = {
+          token: token,
+          shop: shopData,
+        };
+
+        btnSaveShop.disabled = true;
+        btnSaveShop.textContent = "Salvez...";
+
+        fetch(API_BASE + "/admin_save_shop", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.error) throw new Error(data.error);
+            toast("Shop salvat cu succes.");
+          })
+          .catch(err => {
+            console.error(err);
+            toast("Eroare la salvarea shop-ului.");
+          })
+          .finally(() => {
+            btnSaveShop.disabled = false;
+            btnSaveShop.textContent = "Salvează shop";
+          });
+      });
+
+      loadData();
     })();
   </script>
 </body>
