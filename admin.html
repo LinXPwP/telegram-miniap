@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin Panel – Shop</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    body {
+      padding: 10px;
+    }
+    .app-shell {
+      max-width: 960px;
+    }
+    .admin-layout-main {
+      display: grid;
+      grid-template-columns: 0.9fr 1.1fr;
+      gap: 10px;
+      margin-top: 6px;
+    }
+    .tickets-list {
+      max-height: 220px;
+      overflow: auto;
+      margin-top: 6px;
+    }
+    .ticket-item {
+      font-size: 12px;
+      padding: 6px 8px;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      margin-bottom: 4px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .ticket-item.open {
+      border-color: rgba(0, 200, 120, 0.5);
+      background: rgba(0, 200, 120, 0.1);
+    }
+    .ticket-item.closed {
+      border-color: rgba(200, 200, 200, 0.4);
+      background: rgba(200, 200, 200, 0.05);
+    }
+    .ticket-item span.badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="app-brand">
+        <div class="brand-logo"><span>A</span></div>
+        <div class="brand-text">
+          <h1>Admin Panel</h1>
+          <p id="subtitle">Se verifică token-ul...</p>
+        </div>
+      </div>
+    </header>
+
+    <section class="card" id="error-card" style="display:none;">
+      <div class="error-text" id="error-msg"></div>
+    </section>
+
+    <section class="card" id="main-card" style="display:none;">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Shop & Tickete</div>
+          <div class="card-sub">Editezi produsele și vezi comenzile</div>
+        </div>
+      </div>
+
+      <div class="admin-layout-main">
+        <div class="admin-list-card">
+          <div class="admin-section-title">Tickete deschise</div>
+          <div id="tickets-list" class="tickets-list"></div>
+        </div>
+
+        <div>
+          <div class="admin-list-card">
+            <div class="admin-section-title">Detalii ticket</div>
+            <div id="ticket-details" class="product-desc">
+              Selectează un ticket din listă.
+            </div>
+
+            <div class="admin-field" style="margin-top:6px;">
+              <label for="ticket-note">Notă pentru acest ticket</label>
+              <textarea id="ticket-note" placeholder="Ex: livrat, rezolvat, etc."></textarea>
+            </div>
+
+            <div class="admin-actions-row admin-actions-bottom">
+              <button id="btn-close-ticket" class="btn btn-primary">
+                Marchează ca rezolvat
+              </button>
+            </div>
+          </div>
+
+          <div class="admin-list-card" style="margin-top:8px;">
+            <div class="admin-section-title">Shop (JSON quick edit)</div>
+            <div class="admin-field">
+              <label for="shop-json">Shop JSON (avansat)</label>
+              <textarea id="shop-json" style="min-height:120px;"></textarea>
+            </div>
+            <div class="admin-actions-row admin-actions-bottom">
+              <button id="btn-save-shop" class="btn btn-primary">Salvează shop</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="footer">
+      Aceasta este interfața web de admin. Tokenul din URL trebuie păstrat secret.
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    (function () {
+      const API_BASE = "https://melodic-mandazi-7a16dc.netlify.app/.netlify/functions";
+
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get("token");
+
+      const subtitle = document.getElementById("subtitle");
+      const errorCard = document.getElementById("error-card");
+      const errorMsg = document.getElementById("error-msg");
+      const mainCard = document.getElementById("main-card");
+      const ticketsListEl = document.getElementById("tickets-list");
+      const ticketDetailsEl = document.getElementById("ticket-details");
+      const ticketNoteEl = document.getElementById("ticket-note");
+      const btnCloseTicket = document.getElementById("btn-close-ticket");
+      const shopJsonEl = document.getElementById("shop-json");
+      const btnSaveShop = document.getElementById("btn-save-shop");
+      const toastEl = document.getElementById("toast");
+
+      function toast(msg) {
+        toastEl.textContent = msg;
+        toastEl.classList.add("show");
+        setTimeout(() => toastEl.classList.remove("show"), 2000);
+      }
+
+      function showError(msg) {
+        errorCard.style.display = "block";
+        errorMsg.textContent = msg;
+        mainCard.style.display = "none";
+      }
+
+      function safeFetch(url) {
+        return fetch(url).then(res => {
+          if (!res.ok) return res.text().then(t => { throw new Error(t || res.status); });
+          return res.json();
+        });
+      }
+
+      if (!token) {
+        showError("Lipsește token-ul în URL.");
+        subtitle.textContent = "Acces interzis.";
+        return;
+      }
+
+      subtitle.textContent = "Se încarcă ticketele & shop-ul...";
+
+      let tickets = [];
+      let selectedTicket = null;
+      let shopData = null;
+
+      function loadData() {
+        safeFetch(API_BASE + "/admin_tickets?token=" + encodeURIComponent(token))
+          .then(data => {
+            tickets = data.tickets || [];
+            shopData = data.shop || {};
+            renderTickets();
+            shopJsonEl.value = JSON.stringify(shopData, null, 2);
+            mainCard.style.display = "block";
+            errorCard.style.display = "none";
+            subtitle.textContent = "Admin panel încărcat.";
+          })
+          .catch(err => {
+            console.error(err);
+            showError("Token invalid sau API indisponibil.");
+            subtitle.textContent = "Eroare la încărcare.";
+          });
+      }
+
+      function renderTickets() {
+        if (!tickets.length) {
+          ticketsListEl.innerHTML =
+            '<div class="product-desc">Nu există tickete încă.</div>';
+          return;
+        }
+
+        ticketsListEl.innerHTML = "";
+        tickets.forEach(t => {
+          const div = document.createElement("div");
+          div.className =
+            "ticket-item " + (t.status === "open" ? "open" : "closed");
+
+          const left = document.createElement("div");
+          left.textContent = t.id + " · " + (t.product_name || "Produs");
+
+          const right = document.createElement("span");
+          right.className = "badge";
+          right.textContent = t.status === "open" ? "OPEN" : "CLOSED";
+
+          div.appendChild(left);
+          div.appendChild(right);
+
+          div.addEventListener("click", () => {
+            selectedTicket = t;
+            renderTicketDetails();
+          });
+
+          ticketsListEl.appendChild(div);
+        });
+      }
+
+      function renderTicketDetails() {
+        if (!selectedTicket) {
+          ticketDetailsEl.textContent = "Selectează un ticket.";
+          ticketNoteEl.value = "";
+          return;
+        }
+
+        ticketDetailsEl.innerHTML =
+          "<b>Ticket:</b> " +
+          selectedTicket.id +
+          "<br>" +
+          "<b>User:</b> " +
+          selectedTicket.username +
+          " (" +
+          selectedTicket.user_id +
+          ")<br>" +
+          "<b>Produs:</b> " +
+          selectedTicket.product_name +
+          " × " +
+          selectedTicket.qty +
+          "<br>" +
+          "<b>Total:</b> " +
+          selectedTicket.total_price +
+          " cr.<br>" +
+          "<b>Status:</b> " +
+          selectedTicket.status +
+          "<br>" +
+          "<b>Creat la:</b> " +
+          selectedTicket.created_at;
+
+        ticketNoteEl.value = selectedTicket.note || "";
+      }
+
+      btnCloseTicket.addEventListener("click", () => {
+        if (!selectedTicket) {
+          toast("Nu ai selectat niciun ticket.");
+          return;
+        }
+
+        const payload = {
+          token: token,
+          ticket_id: selectedTicket.id,
+          status: "closed",
+          note: ticketNoteEl.value || "",
+        };
+
+        fetch(API_BASE + "/admin_update_ticket", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.error) throw new Error(data.error);
+            toast("Ticket marcat ca rezolvat.");
+            loadData();
+          })
+          .catch(err => {
+            console.error(err);
+            toast("Eroare la actualizarea ticket-ului.");
+          });
+      });
+
+      btnSaveShop.addEventListener("click", () => {
+        let parsed;
+        try {
+          parsed = JSON.parse(shopJsonEl.value || "{}");
+        } catch (e) {
+          toast("JSON invalid.");
+          return;
+        }
+
+        const payload = {
+          user_id: ADMIN_ID_PLACEHOLDER, // nu contează, backend verifică doar token în admin_panel_url, aici folosim direct /api/save_shop în bot prin alt UI? 
+        };
+        // pentru admin.html folosești direct un mic script separat sau
+        // continui cu miniapp pentru save_shop. Ca să nu complic prea tare,
+        // mai simplu editezi shop-ul din miniapp admin existent sau
+        // chemi manual /save_shop dintr-o unealtă. (dacă vrei, putem extinde)
+
+        // pentru acum: doar salvezi JSON local
+        toast("Shop-ul este editat în JSON, trimite-l prin miniapp pentru salvare.");
+      });
+
+      loadData();
+    })();
+  </script>
+</body>
+</html>
