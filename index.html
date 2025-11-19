@@ -267,8 +267,8 @@
       subtitleEl.textContent = "Datele sunt încărcate. Se iau creditele din bot...";
 
       // URL-ul Worker-ului tău Cloudflare (SCHIMBĂ AICI!)
-      const WORKER_URL_BASE = "https://telegramshopminiapp.linx-discord22.workers.dev/";
-      const url = WORKER_URL_BASE + "/get_credits?user_id=" + encodeURIComponent(user.id);
+      const WORKER_URL_BASE = "https://melodic-mandazi-7a16dc.netlify.app/.netlify/functions";
+      const url = WORKER_URL_BASE + "/get_credits?user_id=" + user.id;
 
       fetch(url)
         .then(res => res.json())
