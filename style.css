@@ -1,91 +1,61 @@
-/* ===========================
-   THEME (Discord-like, red/black)
-   =========================== */
-
 :root {
-  --bg: #05060b;
-  --bg-soft: #090a13;
+  --bg: #020308;
+  --bg-soft: #060713;
   --bg-card: #11121f;
-  --bg-elevated: #151626;
-
-  --accent: #ff3355;
-  --accent-soft: rgba(255, 51, 85, 0.18);
-  --accent-strong: rgba(255, 51, 85, 0.95);
-
-  --text: #f7f7ff;
-  --muted: #9d9eb8;
-  --muted-soft: #6c6d86;
-
-  --border: #27283c;
-  --border-soft: rgba(255, 255, 255, 0.06);
-
+  --accent: #ff2858;
+  --accent-soft: rgba(255, 40, 88, 0.18);
+  --accent-strong: rgba(255, 40, 88, 0.95);
+  --text: #f6f7ff;
+  --muted: #9d9fbc;
+  --border: #25263b;
+  --border-soft: rgba(255, 255, 255, 0.04);
   --radius-xl: 24px;
   --radius-lg: 16px;
   --radius-md: 12px;
-  --radius-pill: 999px;
-
   --shadow-soft: 0 18px 40px rgba(0, 0, 0, 0.8);
-  --blur-strong: 26px;
-
   --transition-fast: 0.16s ease-out;
-  --transition-med: 0.22s ease-out;
+  --transition-med: 0.2s ease-out;
 }
 
-/* ===========================
-   GLOBAL
-   =========================== */
-
-*,
-*::before,
-*::after {
+* {
   box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+    "Segoe UI", sans-serif;
 }
 
 html,
 body {
-  margin: 0;
-  padding: 0;
+  height: 100%;
 }
 
 body {
-  min-height: 100vh;
-  background:
-    radial-gradient(circle at top, #2b0713 0, #05060b 45%, #020308 100%);
+  background: radial-gradient(circle at top, #2b0613 0, #020308 55%, #010208 100%);
   color: var(--text);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
-    "Segoe UI", sans-serif;
+  min-height: 100vh;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 14px;
 }
 
-/* ===========================
-   APP SHELL
-   =========================== */
+/* ========== SHELL / CONTAINER ========== */
 
 .app-shell {
   width: 100%;
   max-width: 480px;
-  border-radius: 28px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  background: linear-gradient(
-      145deg,
-      rgba(255, 255, 255, 0.02),
-      rgba(0, 0, 0, 0.8)
-    ),
-    radial-gradient(circle at top left, rgba(255, 51, 85, 0.12), transparent 55%);
-  background-blend-mode: screen, normal;
+  margin: 0 auto;
+  border-radius: 26px;
+  border: 1px solid var(--border-soft);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.02), #050518);
   box-shadow: var(--shadow-soft);
-  padding: 18px 18px 14px;
-  backdrop-filter: blur(var(--blur-strong));
+  padding: 16px 16px 14px;
+  backdrop-filter: blur(24px);
 }
 
-/* în admin.html poți suprascrie max-width în <style> local */
-
-/* ===========================
-   HEADER
-   =========================== */
+/* ========== HEADER & BRANDING ========== */
 
 .app-header {
   display: flex;
@@ -104,22 +74,22 @@ body {
 .brand-logo {
   width: 44px;
   height: 44px;
-  border-radius: var(--radius-pill);
+  border-radius: 999px;
   background: conic-gradient(
-    from 220deg,
-    #ff6485,
-    #ff3355,
-    #ff8a4f,
-    #ff6485,
-    #ff3355
+    from 210deg,
+    #ff567a,
+    #ff2858,
+    #ff7a42,
+    #ff567a,
+    #ff2858
   );
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 800;
   font-size: 20px;
-  color: #0b0204;
-  box-shadow: 0 12px 28px rgba(255, 51, 85, 0.9);
+  box-shadow: 0 12px 28px rgba(255, 40, 88, 0.9);
+  color: #fff;
 }
 
 .brand-logo span {
@@ -129,7 +99,7 @@ body {
 .brand-text h1 {
   font-size: 18px;
   font-weight: 700;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
@@ -138,13 +108,11 @@ body {
   color: var(--muted);
 }
 
-/* ===========================
-   ROLE CHIP (ADMIN/USER)
-   =========================== */
+/* ROLE / STATUS */
 
 .role-chip {
   padding: 6px 12px;
-  border-radius: var(--radius-pill);
+  border-radius: 999px;
   border: 1px solid var(--accent);
   background: var(--accent-soft);
   font-size: 11px;
@@ -154,22 +122,21 @@ body {
   align-items: center;
   gap: 6px;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .role-dot {
   width: 8px;
   height: 8px;
-  border-radius: var(--radius-pill);
+  border-radius: 999px;
   background: var(--accent-strong);
   box-shadow: 0 0 14px var(--accent-strong);
 }
 
-/* ===========================
-   CARDS
-   =========================== */
+/* ========== CARDS ========== */
 
 .card {
-  background: radial-gradient(circle at top, #18182a, #11121f 55%);
+  background: var(--bg-card);
   border-radius: var(--radius-xl);
   border: 1px solid var(--border);
   padding: 14px 14px 12px;
@@ -196,15 +163,12 @@ body {
 .badge-id {
   font-size: 11px;
   padding: 4px 9px;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  border: 1px solid var(--border);
   color: var(--muted);
-  background: rgba(0, 0, 0, 0.4);
 }
 
-/* ===========================
-   INFO ROWS & TEXT
-   =========================== */
+/* ========== INFO ROWS ========== */
 
 .info-row {
   margin-top: 8px;
@@ -229,15 +193,7 @@ body {
   color: #ffffff;
 }
 
-.error-text {
-  margin-top: 6px;
-  font-size: 12px;
-  color: #ff7b8c;
-}
-
-/* ===========================
-   SHOP LIST (categorii + produse)
-   =========================== */
+/* ========== SHOP LIST ========== */
 
 #shop-container {
   margin-top: 4px;
@@ -265,29 +221,23 @@ body {
 .category-desc {
   font-size: 11px;
   color: var(--muted);
+  max-width: 60%;
 }
 
 .product-item {
   margin-top: 6px;
   padding: 7px 9px;
   border-radius: var(--radius-md);
-  background: linear-gradient(
-    145deg,
-    rgba(4, 4, 18, 0.95),
-    rgba(12, 12, 30, 0.98)
-  );
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  transition:
-    transform var(--transition-fast),
-    box-shadow var(--transition-fast),
-    border-color var(--transition-fast),
-    background var(--transition-fast);
+  background: rgba(4, 5, 20, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast),
+    border-color var(--transition-fast), background var(--transition-fast);
 }
 
 .product-item:hover {
   transform: translateY(-1px);
   border-color: var(--accent-soft);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.65);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.75);
 }
 
 .product-top {
@@ -315,36 +265,28 @@ body {
 
 .product-limits {
   font-size: 11px;
-  color: var(--muted-soft);
+  color: var(--muted);
   margin-top: 2px;
 }
 
-/* ===========================
-   BUTTONS
-   =========================== */
+/* ========== BUTTONS ========== */
 
 .btn {
-  border-radius: var(--radius-pill);
+  border-radius: 999px;
   border: none;
-  padding: 6px 11px;
+  padding: 6px 10px;
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
-  transition:
-    transform var(--transition-fast),
-    box-shadow var(--transition-fast),
-    background var(--transition-fast),
-    opacity var(--transition-fast);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast),
+    background var(--transition-fast), opacity var(--transition-fast);
+  white-space: nowrap;
 }
 
 .btn-primary {
-  background: radial-gradient(circle at top, #ff6485, #ff3355 70%);
+  background: radial-gradient(circle at top, #ff567a, #ff2858 70%);
   color: #fff;
-  box-shadow: 0 10px 26px rgba(255, 51, 85, 0.75);
+  box-shadow: 0 10px 26px rgba(255, 40, 88, 0.8);
 }
 
 .btn-secondary {
@@ -353,7 +295,7 @@ body {
 }
 
 .btn-danger {
-  background: rgba(255, 64, 81, 0.18);
+  background: rgba(255, 64, 81, 0.16);
   color: #ff7b8c;
 }
 
@@ -362,39 +304,29 @@ body {
   box-shadow: none;
 }
 
-.btn[disabled] {
-  opacity: 0.5;
+.btn:disabled {
+  opacity: 0.6;
   cursor: default;
+  box-shadow: none;
 }
 
-/* row de butoane (în admin/produs etc) */
+/* BUTTON ROWS */
+
 .admin-actions-row {
   display: flex;
   gap: 6px;
+  margin-top: 4px;
   flex-wrap: wrap;
 }
 
 .admin-actions-bottom {
-  margin-top: 6px;
+  justify-content: flex-end;
 }
 
-/* ===========================
-   ADMIN PANELS (miniapp)
-   =========================== */
-
-.hidden {
-  display: none !important;
-}
-
-.admin-columns {
-  display: grid;
-  grid-template-columns: 0.9fr 1.1fr;
-  gap: 10px;
-  margin-top: 4px;
-}
+/* ========== ADMIN LIST / FIELDS (folosit și în miniapp + admin.html) ========== */
 
 .admin-list-card {
-  background: var(--bg-soft);
+  background: #070716;
   border-radius: var(--radius-lg);
   border: 1px solid var(--border);
   padding: 8px;
@@ -416,10 +348,8 @@ body {
   align-items: center;
   margin-bottom: 4px;
   border: 1px solid transparent;
-  transition:
-    background var(--transition-fast),
-    border-color var(--transition-fast),
-    transform var(--transition-fast);
+  background: transparent;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
 }
 
 .admin-cat-item:hover {
@@ -427,22 +357,19 @@ body {
 }
 
 .admin-cat-item.active {
-  background: rgba(255, 51, 85, 0.16);
-  border-color: rgba(255, 51, 85, 0.7);
-  transform: translateY(-0.5px);
+  background: rgba(255, 40, 88, 0.14);
+  border-color: rgba(255, 40, 88, 0.8);
 }
 
 .admin-pill {
   font-size: 10px;
   padding: 2px 6px;
-  border-radius: var(--radius-pill);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
   color: var(--muted);
 }
 
-/* ===========================
-   FORM FIELDS (admin / product qty)
-   =========================== */
+/* FORM FIELDS */
 
 .admin-field {
   margin-bottom: 6px;
@@ -458,9 +385,9 @@ body {
 .admin-field input,
 .admin-field textarea {
   width: 100%;
-  border-radius: 9px;
+  border-radius: 8px;
   border: 1px solid #2a2a3d;
-  background: rgba(4, 4, 18, 0.96);
+  background: rgba(3, 3, 15, 0.95);
   color: var(--text);
   font-size: 12px;
   padding: 6px 7px;
@@ -468,54 +395,49 @@ body {
 
 .admin-field textarea {
   resize: vertical;
-  min-height: 48px;
+  min-height: 46px;
 }
 
-/* ===========================
-   TABBAR (navigație jos)
-   =========================== */
+/* ========== TABBAR / BOTTOM NAV ========== */
 
 .tabbar {
   width: 100%;
   max-width: 480px;
-  margin: 10px auto 0;
+  margin: 8px auto 0;
   display: flex;
-  background: #050611;
-  border-radius: var(--radius-pill);
+  background: #050514;
+  border-radius: 999px;
   border: 1px solid var(--border);
   padding: 3px;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.65);
 }
 
-.tabbar a,
 .tab-btn {
   flex: 1;
+  text-align: center;
   border: none;
   background: transparent;
   color: var(--muted);
   font-size: 12px;
   font-weight: 500;
-  border-radius: var(--radius-pill);
+  border-radius: 999px;
   padding: 7px 0;
   cursor: pointer;
-  text-align: center;
   text-decoration: none;
-  transition:
-    background var(--transition-fast),
-    color var(--transition-fast),
+  transition: background var(--transition-fast), color var(--transition-fast),
     transform var(--transition-fast);
 }
 
-.tab-btn.active,
-.tabbar a.active {
-  background: radial-gradient(circle at top, #ff6485, #ff3355 65%);
+.tab-btn.active {
+  background: radial-gradient(circle at top, #ff567a, #ff2858 65%);
   color: #fff;
   transform: translateY(-0.5px);
 }
 
-/* ===========================
-   FOOTER
-   =========================== */
+.tab-btn.hidden {
+  display: none !important;
+}
+
+/* ========== FOOTER ========== */
 
 .footer {
   margin-top: 6px;
@@ -524,28 +446,24 @@ body {
   text-align: center;
 }
 
-/* ===========================
-   TOAST
-   =========================== */
+/* ========== TOAST ========== */
 
 .toast {
   position: fixed;
   left: 50%;
   bottom: 16px;
   transform: translateX(-50%);
-  background: #11111f;
+  background: #101021;
   color: #fff;
   padding: 8px 14px;
-  border-radius: var(--radius-pill);
+  border-radius: 999px;
   font-size: 12px;
   border: 1px solid rgba(255, 255, 255, 0.06);
   box-shadow: 0 10px 26px rgba(0, 0, 0, 0.8);
   opacity: 0;
   pointer-events: none;
-  transition:
-    opacity 0.2s ease-out,
-    transform 0.2s ease-out;
-  z-index: 999;
+  transition: opacity var(--transition-med), transform var(--transition-med);
+  z-index: 50;
 }
 
 .toast.show {
@@ -553,63 +471,77 @@ body {
   transform: translate(-50%, -4px);
 }
 
-/* ===========================
-   LOADING SKELETONS
-   =========================== */
+/* ========== GENERIC / UTIL ========== */
+
+.hidden {
+  display: none !important;
+}
+
+.error-text {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #ff7b8c;
+}
+
+/* Skeleton loading */
 
 .skeleton {
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.02),
-    rgba(255, 255, 255, 0.05),
-    rgba(255, 255, 255, 0.02)
-  );
-  background-size: 200% 100%;
-  animation: skeleton-loading 1.1s ease-in-out infinite;
-  border-radius: 6px;
+  position: relative;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #151527;
 }
 
 .skeleton-line {
   height: 10px;
   margin: 4px 0;
+  width: 100%;
 }
 
 .skeleton-line.short {
   width: 60%;
 }
 
-@keyframes skeleton-loading {
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.08),
+    transparent
+  );
+  animation: skeleton-shine 1.3s infinite;
+}
+
+@keyframes skeleton-shine {
   0% {
-    background-position: 200% 0;
+    transform: translateX(-100%);
   }
   100% {
-    background-position: -200% 0;
+    transform: translateX(100%);
   }
 }
 
-/* ===========================
-   RESPONSIVE (telefoane mici)
-   =========================== */
+/* ========== RESPONSIVE ========== */
 
-@media (max-width: 420px) {
+@media (max-width: 520px) {
   body {
     padding: 10px;
   }
 
   .app-shell {
-    border-radius: 22px;
     padding: 14px 12px 12px;
+    border-radius: 22px;
   }
 
-  .app-header {
-    align-items: flex-start;
+  .brand-text h1 {
+    font-size: 16px;
   }
 
-  .admin-columns {
-    grid-template-columns: 1fr;
-  }
-
-  .tabbar {
-    margin-top: 8px;
+  .admin-actions-row {
+    justify-content: space-between;
   }
 }
