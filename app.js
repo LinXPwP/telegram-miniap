@@ -1,31 +1,57 @@
 // app.js
 
+// URL-ul Netlify function (proxy către bot.py)
 const API_URL =
   "https://dancing-hotteok-480e3c.netlify.app/.netlify/functions/api";
 
 document.addEventListener("DOMContentLoaded", () => {
   const pageType = document.body.dataset.page;
+
+  // Tabs – segmented control, sincronizat cu CSS (data-active)
+  document.querySelectorAll(".tabs").forEach((tabs) => {
+    const buttons = tabs.querySelectorAll(".tab-btn");
+
+    // setează tab-ul activ inițial
+    let activeBtn =
+      tabs.querySelector(".tab-btn.active") || tabs.querySelector(".tab-btn");
+    if (activeBtn) {
+      tabs.setAttribute("data-active", activeBtn.dataset.tab);
+      const target = activeBtn.getAttribute("data-tab");
+      if (target) {
+        document
+          .querySelectorAll(".tab-section")
+          .forEach((s) => s.classList.remove("active"));
+        const section = document.getElementById(target);
+        if (section) section.classList.add("active");
+      }
+    }
+
+    buttons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        buttons.forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+
+        const target = btn.getAttribute("data-tab");
+        tabs.setAttribute("data-active", target || "");
+
+        // activăm secțiunea aferentă
+        if (target) {
+          document
+            .querySelectorAll(".tab-section")
+            .forEach((s) => s.classList.remove("active"));
+          const section = document.getElementById(target);
+          if (section) section.classList.add("active");
+        }
+      });
+    });
+  });
+
+  // Pornește aplicația corectă
   if (pageType === "user") {
     initUserApp();
   } else if (pageType === "admin") {
     initAdminApp();
   }
-
-  // Tabs (comun)
-  document.querySelectorAll(".tab-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      document
-        .querySelectorAll(".tab-btn")
-        .forEach((b) => b.classList.remove("active"));
-      btn.classList.add("active");
-
-      const target = btn.getAttribute("data-tab");
-      document
-        .querySelectorAll(".tab-section")
-        .forEach((s) => s.classList.remove("active"));
-      document.getElementById(target).classList.add("active");
-    });
-  });
 });
 
 /* ============================
@@ -86,7 +112,7 @@ function initUserApp() {
     userLineEl.innerHTML = `Utilizator: <b>${name}</b>`;
   }
 
-  // SHOP
+  /* ---------- SHOP (user) ---------- */
 
   function renderShop(shop) {
     categoriesContainer.innerHTML = "";
@@ -228,7 +254,11 @@ function initUserApp() {
       panelStatusEl.className = "status-bar status-ok";
       panelStatusEl.textContent = `Comandă trimisă, tichet #${newTicket.id} creat.`;
 
-      document.querySelector('.tab-btn[data-tab="ticketsTab"]').click();
+      // schimbă pe tab-ul de tichete
+      const ticketsTabBtn = document.querySelector(
+        '.tab-btn[data-tab="ticketsTab"]'
+      );
+      if (ticketsTabBtn) ticketsTabBtn.click();
     } catch (err) {
       console.error("buy_product error:", err);
       panelStatusEl.className = "status-bar status-error";
@@ -239,7 +269,7 @@ function initUserApp() {
   panelCloseBtn?.addEventListener("click", closeProductPanel);
   panelBuyBtn?.addEventListener("click", buySelectedProduct);
 
-  // CHAT – user
+  /* ---------- CHAT (user) ---------- */
 
   function renderTicketsInfo() {
     if (!CURRENT_TICKETS || CURRENT_TICKETS.length === 0) {
@@ -262,7 +292,7 @@ function initUserApp() {
     chatListEl.innerHTML = "";
     if (!CURRENT_TICKETS || CURRENT_TICKETS.length === 0) {
       chatListEl.innerHTML =
-        '<div style="padding:6px;font-size:12px;color:var(--muted);">Nu ai tichete încă.</div>';
+        '<div style="padding:8px;font-size:12px;color:var(--muted);">Nu ai tichete încă.</div>';
       return;
     }
 
@@ -415,7 +445,7 @@ function initUserApp() {
     const user = tg.initDataUnsafe?.user;
     if (!user) {
       userLineEl.textContent =
-        "Telegram nu a trimis datele userului. Deschide MiniApp-ul din butonul inline.";
+        "Telegram nu a trimis datele userului. Deschide MiniApp-ul din butonul inline al botului.";
       return;
     }
 
@@ -505,14 +535,14 @@ function initAdminApp() {
   function renderTokenInfo() {
     if (!ADMIN_TOKEN) {
       userLineEl.innerHTML =
-        "<span style='color:#ff5252;'>Token lipsă în URL.</span> Deschide admin.html?token=TOKENUL_TAU.";
+        "<span style='color:#ff5252;'>Token lipsă în URL.</span> Deschide admin.html?token=TOKENUL_TĂU.";
     } else {
       const short = ADMIN_TOKEN.slice(0, 4) + "..." + ADMIN_TOKEN.slice(-4);
       userLineEl.innerHTML = "Acces cu token: <b>" + short + "</b>";
     }
   }
 
-  // CHAT – admin
+  /* ---------- CHAT ADMIN ---------- */
 
   function getTicketLastMessage(t) {
     const msgs = t.messages || [];
@@ -524,7 +554,7 @@ function initAdminApp() {
     ticketsListEl.innerHTML = "";
     if (!ALL_TICKETS || ALL_TICKETS.length === 0) {
       ticketsListEl.innerHTML =
-        '<div style="padding:6px;font-size:12px;color:var(--muted);">Nu există tichete încă.</div>';
+        '<div style="padding:8px;font-size:12px;color:var(--muted);">Nu există tichete încă.</div>';
       ticketDetailsEl.style.display = "none";
       chatHeaderEl.innerHTML = "<span>Niciun tichet selectat</span>";
       chatMessagesEl.innerHTML = "";
@@ -708,7 +738,7 @@ function initAdminApp() {
   ticketSaveBtn?.addEventListener("click", () => saveSelectedTicket(false));
   ticketCloseBtn?.addEventListener("click", () => saveSelectedTicket(true));
 
-  // SHOP – admin
+  /* ---------- SHOP EDITOR ADMIN ---------- */
 
   function renderShopEditor() {
     shopContainerEl.innerHTML = "";
@@ -914,6 +944,8 @@ function initAdminApp() {
 
   addCategoryBtn?.addEventListener("click", addCategory);
   saveShopBtn?.addEventListener("click", saveShop);
+
+  /* ---------- POLLING ADMIN ---------- */
 
   async function pollAdminTickets() {
     if (!ADMIN_TOKEN) return;
