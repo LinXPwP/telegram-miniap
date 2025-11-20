@@ -30,13 +30,44 @@
         <p class="user-line" id="userLine">Verific token...</p>
       </div>
 
-      <div class="tabs tabs--admin">
+      <div class="tabs tabs--admin" data-active="chatTab">
         <button class="tab-btn active" data-tab="chatTab">Chat tichete</button>
         <button class="tab-btn" data-tab="shopTab">Shop</button>
       </div>
 
       <!-- CHAT TAB -->
       <div id="chatTab" class="tab-section active">
+        <!-- BARĂ FILTRE + STATISTICI -->
+        <div class="admin-toolbar">
+          <div class="toolbar-group">
+            <select id="filterStatus" class="toolbar-select">
+              <option value="all">Toate statusurile</option>
+              <option value="open">Doar deschise</option>
+              <option value="closed">Doar închise</option>
+            </select>
+            <input
+              id="filterSearch"
+              class="toolbar-search"
+              placeholder="Caută user, produs sau #id..."
+              autocomplete="off"
+            />
+          </div>
+          <div class="toolbar-stats">
+            <div class="stat-pill">
+              <span class="stat-label">Total</span>
+              <span class="stat-value" id="statTotal">0</span>
+            </div>
+            <div class="stat-pill stat-pill--open">
+              <span class="stat-label">Deschise</span>
+              <span class="stat-value" id="statOpen">0</span>
+            </div>
+            <div class="stat-pill stat-pill--closed">
+              <span class="stat-label">Închise</span>
+              <span class="stat-value" id="statClosed">0</span>
+            </div>
+          </div>
+        </div>
+
         <div class="chat-admin-layout">
           <div class="chat-sidebar" id="ticketsList"></div>
           <div class="chat-main">
@@ -85,6 +116,10 @@
             <p class="shop-sidepanel-text">
               Modificările se aplică instant doar aici. Apasă <b>Salvează shop</b> ca să scrii în fișier.
             </p>
+
+            <!-- METRICE SHOP -->
+            <div class="shop-metrics" id="shopMetrics"></div>
+
             <button class="btn-ghost full-width" id="addCategoryBtn">+ Adaugă categorie</button>
             <button class="btn-primary full-width" id="saveShopBtn">💾 Salvează shop</button>
             <div class="status-bar" id="shopStatusBar"></div>
