@@ -2,10 +2,9 @@
 <html lang="ro">
 <head>
   <meta charset="UTF-8" />
-  <title>Telegram MiniApp – API Test + Formular</title>
+  <title>Telegram MiniApp – Auth + API Test</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- Telegram WebApp script -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
   <style>
@@ -83,10 +82,10 @@
 </head>
 <body>
   <div class="box">
-    <h2>Test MiniApp ↔ Netlify ↔ PebbleHost</h2>
+    <h2>MiniApp ↔ Netlify ↔ PebbleHost</h2>
 
     <div id="userBlock">
-      <p class="label">Informații utilizator (Telegram WebApp):</p>
+      <p class="label">Informații utilizator (verificate pe server):</p>
       <p id="userInfo">Se încarcă...</p>
       <div id="debugInfo" class="debug"></div>
     </div>
@@ -120,81 +119,79 @@
       Ultimul răspuns JSON primit de la backend:
     </p>
     <pre id="output">{ nimic încă }</pre>
-
-    <p class="label">
-      Deschide DevTools → Console pentru a vedea <code>console.log()</code>.<br>
-      Pe PebbleHost (server), în consola unde rulează <code>bot.py</code> vei vedea datele formularului!
-    </p>
   </div>
 
   <script>
-    // 🔗 Netlify reverse proxy (HTTPS)
     const API_BASE_URL = "https://dancing-hotteok-480e3c.netlify.app/.netlify/functions";
-    const ADMIN_ID = 7672256597;
 
     const tg = window.Telegram?.WebApp;
     const outputEl = document.getElementById("output");
     const userInfoEl = document.getElementById("userInfo");
     const debugInfoEl = document.getElementById("debugInfo");
 
-    let CURRENT_USER_ID = null; // îl folosim mai târziu când trimitem spre backend
+    let CURRENT_USER = null; // setat după /auth
 
     // ---------------------------
-    // 1) Citim userul din Telegram (cu fallback)
+    // 1) Auth securizat cu initData
     // ---------------------------
-    function initUserInfo() {
+    async function initAuth() {
       if (!tg) {
         userInfoEl.innerHTML =
-          "Nu ești în Telegram MiniApp. Deschide link-ul prin bot, nu direct din browser.";
+          "Nu ești în Telegram MiniApp. Deschide link-ul prin bot (/start).";
         return;
       }
 
       tg.ready();
       tg.expand();
 
-      console.log("Telegram.WebApp:", tg);
-      console.log("tg.initData:", tg.initData);
-      console.log("tg.initDataUnsafe:", tg.initDataUnsafe);
+      const initData = tg.initData || "";
+      debugInfoEl.textContent = "initData length: " + initData.length;
 
-      const unsafe = tg.initDataUnsafe || {};
-      const user = unsafe.user || null;
-
-      // Debug text (ca să vezi ce vine din Telegram)
-      debugInfoEl.textContent = "initData: "
-        + (tg.initData ? tg.initData.substring(0, 120) + "..." : "gol")
-        + " | are user: " + (user ? "DA" : "NU");
-
-      if (!user) {
-        // Fallback: lăsăm aplicația să meargă, doar că nu avem auto user.
-        userInfoEl.innerHTML = `
-          Nu am primit detalii despre utilizator de la Telegram.<br>
-          MiniApp-ul funcționează în continuare, dar trebuie să completezi
-          manual numele în formular.
-        `;
+      if (!initData) {
+        userInfoEl.innerHTML =
+          "Telegram nu a trimis initData. Asigură-te că deschizi prin buton WebApp din bot.";
         return;
       }
 
-      CURRENT_USER_ID = user.id;
+      try {
+        const res = await fetch(`${API_BASE_URL}/auth`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ init_data: initData })
+        });
 
-      const isAdmin = user.id === ADMIN_ID;
-      const username =
-        user.username
-          ? "@" + user.username
-          : `${user.first_name || ""} ${user.last_name || ""}`.trim() || "fără username";
+        const data = await res.json();
+        console.log("Răspuns /auth:", data);
 
-      userInfoEl.innerHTML = `
-        <b>ID:</b> ${user.id}<br>
-        <b>Username:</b> ${username}<br>
-        <b>Rol:</b> 
-        <span style="color:${isAdmin ? '#ff5252' : '#4caf50'};">
-          ${isAdmin ? "Administrator" : "Utilizator normal"}
-        </span>
-      `;
+        if (!data.ok) {
+          userInfoEl.innerHTML = "Autentificare eșuată (auth_failed).";
+          return;
+        }
 
-      // Umplem automat și câmpul de nume în formular, ca să vezi că merge
-      const nameField = document.getElementById("fieldName");
-      if (nameField && !nameField.value) {
-        nameField.value = username;
+        CURRENT_USER = data.user;
+
+        const name =
+          CURRENT_USER.username
+            ? "@" + CURRENT_USER.username
+            : `${CURRENT_USER.first_name || ""} ${CURRENT_USER.last_name || ""}`.trim();
+
+        userInfoEl.innerHTML = `
+          <b>ID:</b> ${CURRENT_USER.id}<br>
+          <b>Username:</b> ${name || "fără username"}<br>
+          <b>Rol:</b> 
+          <span style="color:${CURRENT_USER.is_admin ? '#ff5252' : '#4caf50'};">
+            ${CURRENT_USER.is_admin ? "Administrator" : "Utilizator normal"}
+          </span><br>
+          <b>Credite:</b> ${CURRENT_USER.credits}
+        `;
+
+        const nameField = document.getElementById("fieldName");
+        if (nameField && name && !nameField.value) {
+          nameField.value = name;
+        }
+      } catch (err) {
+        console.error("Eroare la /auth:", err);
+        userInfoEl.innerHTML = "Eroare la autentificare.";
       }
     }
 
@@ -205,7 +202,6 @@
       try {
         const res = await fetch(`${API_BASE_URL}/ping`);
         const data = await res.json();
-
         console.log("Răspuns /ping:", data);
         outputEl.textContent = JSON.stringify(data, null, 2);
       } catch (err) {
@@ -221,7 +217,6 @@
       try {
         const res = await fetch(`${API_BASE_URL}/credits`);
         const data = await res.json();
-
         console.log("Răspuns /credits:", data);
         outputEl.textContent = JSON.stringify(data, null, 2);
       } catch (err) {
@@ -231,18 +226,17 @@
     }
 
     // ------------------------------------------------------
-    // 4) POST → /form-test  (Netlify → PebbleHost /api/form-test)
+    // 4) POST → /form-test
     // ------------------------------------------------------
     async function submitForm(event) {
       event.preventDefault();
 
       const payload = {
+        user: CURRENT_USER, // ce a validat serverul la /auth
         name: document.getElementById("fieldName").value || "",
         message: document.getElementById("fieldMessage").value || "",
         amount: Number(document.getElementById("fieldAmount").value || 0),
-        timestamp: Date.now(),
-        // Trimitem și userId dacă l-am primit (altfel null)
-        user_id: CURRENT_USER_ID
+        timestamp: Date.now()
       };
 
       console.log("Trimit formular:", payload);
@@ -255,7 +249,6 @@
         });
 
         const data = await res.json();
-
         console.log("Răspuns /form-test:", data);
         outputEl.textContent = JSON.stringify(data, null, 2);
       } catch (err) {
@@ -268,7 +261,7 @@
     document.getElementById("btnCredits").addEventListener("click", testCredits);
     document.getElementById("testForm").addEventListener("submit", submitForm);
 
-    initUserInfo();
+    initAuth();
   </script>
 </body>
 </html>
