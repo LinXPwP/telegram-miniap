@@ -16,14 +16,6 @@ document.addEventListener("DOMContentLoaded", () => {
       tabs.querySelector(".tab-btn.active") || tabs.querySelector(".tab-btn");
     if (activeBtn) {
       tabs.setAttribute("data-active", activeBtn.dataset.tab);
-      const target = activeBtn.getAttribute("data-tab");
-      if (target) {
-        document
-          .querySelectorAll(".tab-section")
-          .forEach((s) => s.classList.remove("active"));
-        const section = document.getElementById(target);
-        if (section) section.classList.add("active");
-      }
     }
 
     buttons.forEach((btn) => {
@@ -45,6 +37,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  // Pornește aplicația corectă
   if (pageType === "user") {
     initUserApp();
   } else if (pageType === "admin") {
@@ -285,7 +278,6 @@ function initUserApp() {
     return msgs[msgs.length - 1].text || "";
   }
 
-  // LISTĂ CU "ACTIVE" + "ISTORIC" ÎN ACEEAȘI COLONĂ
   function renderTicketsList() {
     chatListEl.innerHTML = "";
     if (!CURRENT_TICKETS || CURRENT_TICKETS.length === 0) {
@@ -294,59 +286,36 @@ function initUserApp() {
       return;
     }
 
-    const openTickets = CURRENT_TICKETS.filter((t) => t.status === "open");
-    const closedTickets = CURRENT_TICKETS.filter((t) => t.status !== "open");
+    CURRENT_TICKETS.sort((a, b) => {
+      if (a.status !== b.status) {
+        return a.status === "open" ? -1 : 1;
+      }
+      return (b.id || 0) - (a.id || 0);
+    });
 
-    const buildSection = (title, tickets) => {
-      if (tickets.length === 0) return;
+    CURRENT_TICKETS.forEach((t) => {
+      const item = document.createElement("div");
+      item.className = "chat-item";
+      if (t.id === SELECTED_TICKET_ID) item.classList.add("active");
 
-      const header = document.createElement("div");
-      header.style.padding = "6px 8px 2px";
-      header.style.fontSize = "11px";
-      header.style.textTransform = "uppercase";
-      header.style.color = "var(--muted)";
-      header.style.opacity = "0.85";
-      header.textContent = title;
-      chatListEl.appendChild(header);
+      const title = document.createElement("div");
+      title.className = "chat-item-title";
+      title.textContent = t.product_name || "Produs";
 
-      tickets
-        .sort((a, b) => (b.id || 0) - (a.id || 0))
-        .forEach((t) => {
-          const item = document.createElement("div");
-          item.className = "chat-item";
-          if (t.id === SELECTED_TICKET_ID) item.classList.add("active");
+      const statusText = t.status === "open" ? "DESCHIS" : "ÎNCHIS";
+      const lastMsg = getTicketLastMessage(t);
 
-          const titleEl = document.createElement("div");
-          titleEl.className = "chat-item-title";
-          titleEl.textContent = t.product_name || "Produs";
+      const line = document.createElement("div");
+      line.className = "chat-item-line";
+      line.textContent = `[${statusText}] ${lastMsg}`;
 
-          const lastMsg = getTicketLastMessage(t);
-          const line = document.createElement("div");
-          line.className = "chat-item-line";
-          line.textContent = lastMsg || "(fără mesaje încă)";
+      item.appendChild(title);
+      item.appendChild(line);
 
-          item.appendChild(titleEl);
-          item.appendChild(line);
+      item.addEventListener("click", () => selectTicket(t.id));
 
-          item.addEventListener("click", () => selectTicket(t.id));
-
-          chatListEl.appendChild(item);
-        });
-    };
-
-    buildSection("Tichete active", openTickets);
-    buildSection("Istoric tichete", closedTickets);
-  }
-
-  function setUserChatInputEnabled(enabled, reason) {
-    chatInputEl.disabled = !enabled;
-    chatSendBtn.disabled = !enabled;
-    if (enabled) {
-      chatInputEl.placeholder = "Scrie un mesaj către admin...";
-    } else {
-      chatInputEl.placeholder =
-        reason || "Tichet închis – nu mai poți trimite mesaje.";
-    }
+      chatListEl.appendChild(item);
+    });
   }
 
   function selectTicket(ticketId) {
@@ -357,7 +326,6 @@ function initUserApp() {
     if (!t) {
       chatHeaderEl.innerHTML = "<span>Niciun tichet selectat</span>";
       chatMessagesEl.innerHTML = "";
-      setUserChatInputEnabled(false, "");
       return;
     }
 
@@ -367,12 +335,6 @@ function initUserApp() {
     `;
 
     renderChatMessages(t);
-
-    if (t.status === "open") {
-      setUserChatInputEnabled(true);
-    } else {
-      setUserChatInputEnabled(false);
-    }
   }
 
   function renderChatMessages(ticket) {
@@ -404,13 +366,6 @@ function initUserApp() {
     const text = chatInputEl.value.trim();
     if (!text || !SELECTED_TICKET_ID) return;
 
-    const t = CURRENT_TICKETS.find((x) => x.id === SELECTED_TICKET_ID);
-    if (!t || t.status !== "open") {
-      // safety – nu trimitem mesaje la tichete închise
-      setUserChatInputEnabled(false);
-      return;
-    }
-
     chatInputEl.value = "";
 
     try {
@@ -425,7 +380,7 @@ function initUserApp() {
       }
 
       const updated = res.ticket;
-      const idx = CURRENT_TICKETS.findIndex((tt) => tt.id === updated.id);
+      const idx = CURRENT_TICKETS.findIndex((t) => t.id === updated.id);
       if (idx >= 0) {
         CURRENT_TICKETS[idx] = updated;
       } else {
@@ -458,7 +413,9 @@ function initUserApp() {
 
       if (SELECTED_TICKET_ID) {
         const t = CURRENT_TICKETS.find((x) => x.id === SELECTED_TICKET_ID);
-        if (t) selectTicket(t.id);
+        if (t) {
+          selectTicket(t.id);
+        }
       }
     } catch (err) {
       console.error("user_get_tickets error:", err);
@@ -546,6 +503,14 @@ function initAdminApp() {
   const saveShopBtn = document.getElementById("saveShopBtn");
   const ticketSaveBtn = document.getElementById("ticketSaveBtn");
   const ticketCloseBtn = document.getElementById("ticketCloseBtn");
+  const shopMetricsEl = document.getElementById("shopMetrics");
+
+  // filtre & statistici
+  const filterStatusEl = document.getElementById("filterStatus");
+  const filterSearchEl = document.getElementById("filterSearch");
+  const statTotalEl = document.getElementById("statTotal");
+  const statOpenEl = document.getElementById("statOpen");
+  const statClosedEl = document.getElementById("statClosed");
 
   let ALL_TICKETS = [];
   let CURRENT_SHOP = null;
@@ -575,6 +540,43 @@ function initAdminApp() {
     }
   }
 
+  /* ---------- STATISTICI & FILTRE ---------- */
+
+  function updateTicketStats() {
+    const total = ALL_TICKETS.length;
+    const open = ALL_TICKETS.filter((t) => t.status === "open").length;
+    const closed = ALL_TICKETS.filter((t) => t.status === "closed").length;
+
+    if (statTotalEl) statTotalEl.textContent = total;
+    if (statOpenEl) statOpenEl.textContent = open;
+    if (statClosedEl) statClosedEl.textContent = closed;
+  }
+
+  function getFilteredTickets() {
+    let list = ALL_TICKETS.slice();
+    const statusFilter = filterStatusEl?.value || "all";
+    const query = (filterSearchEl?.value || "").toLowerCase().trim();
+
+    if (statusFilter !== "all") {
+      list = list.filter((t) => (t.status || "") === statusFilter);
+    }
+
+    if (query) {
+      list = list.filter((t) => {
+        const user = (t.username || t.user_id || "").toString().toLowerCase();
+        const product = (t.product_name || "").toLowerCase();
+        const idStr = ("#" + t.id).toLowerCase();
+        return (
+          user.includes(query) ||
+          product.includes(query) ||
+          idStr.includes(query)
+        );
+      });
+    }
+
+    return list;
+  }
+
   /* ---------- CHAT ADMIN ---------- */
 
   function getTicketLastMessage(t) {
@@ -585,70 +587,58 @@ function initAdminApp() {
 
   function renderTicketsList() {
     ticketsListEl.innerHTML = "";
-    if (!ALL_TICKETS || ALL_TICKETS.length === 0) {
+    const list = getFilteredTickets();
+
+    if (!list || list.length === 0) {
       ticketsListEl.innerHTML =
-        '<div style="padding:8px;font-size:12px;color:var(--muted);">Nu există tichete încă.</div>';
-      ticketDetailsEl.style.display = "none";
-      chatHeaderEl.innerHTML = "<span>Niciun tichet selectat</span>";
-      chatMessagesEl.innerHTML = "";
+        '<div style="padding:8px;font-size:12px;color:var(--muted);">Nu există tichete pentru filtrele curente.</div>';
+      if (!SELECTED_TICKET_ID) {
+        ticketDetailsEl.style.display = "none";
+        chatHeaderEl.innerHTML = "<span>Niciun tichet selectat</span>";
+        chatMessagesEl.innerHTML = "";
+      }
       return;
     }
 
-    const openTickets = ALL_TICKETS.filter((t) => t.status === "open");
-    const closedTickets = ALL_TICKETS.filter((t) => t.status !== "open");
+    list.sort((a, b) => {
+      if (a.status !== b.status) {
+        return a.status === "open" ? -1 : 1;
+      }
+      return (b.id || 0) - (a.id || 0);
+    });
 
-    const buildSection = (title, tickets) => {
-      if (tickets.length === 0) return;
+    list.forEach((t) => {
+      const item = document.createElement("div");
+      item.className = "chat-item";
+      if (t.id === SELECTED_TICKET_ID) item.classList.add("active");
 
-      const header = document.createElement("div");
-      header.style.padding = "6px 8px 2px";
-      header.style.fontSize = "11px";
-      header.style.textTransform = "uppercase";
-      header.style.color = "var(--muted)";
-      header.style.opacity = "0.85";
-      header.textContent = title;
-      ticketsListEl.appendChild(header);
+      const headerRow = document.createElement("div");
+      headerRow.className = "chat-item-header-row";
 
-      tickets
-        .sort((a, b) => (b.id || 0) - (a.id || 0))
-        .forEach((t) => {
-          const item = document.createElement("div");
-          item.className = "chat-item";
-          if (t.id === SELECTED_TICKET_ID) item.classList.add("active");
+      const title = document.createElement("div");
+      title.className = "chat-item-title";
+      title.textContent = (t.username || t.user_id) + " · " + (t.product_name || "");
 
-          const titleEl = document.createElement("div");
-          titleEl.className = "chat-item-title";
-          titleEl.textContent =
-            (t.username || t.user_id) + " · " + (t.product_name || "");
+      const statusChip = document.createElement("span");
+      statusChip.className =
+        "ticket-status-pill " + (t.status === "open" ? "open" : "closed");
+      statusChip.textContent = t.status === "open" ? "DESCHIS" : "ÎNCHIS";
 
-          const lastMsg = getTicketLastMessage(t);
+      headerRow.appendChild(title);
+      headerRow.appendChild(statusChip);
 
-          const line = document.createElement("div");
-          line.className = "chat-item-line";
-          line.textContent = lastMsg || "(fără mesaje încă)";
+      const lastMsg = getTicketLastMessage(t);
+      const line = document.createElement("div");
+      line.className = "chat-item-line";
+      line.textContent = lastMsg ? lastMsg : "Fără mesaje încă.";
 
-          item.appendChild(titleEl);
-          item.appendChild(line);
+      item.appendChild(headerRow);
+      item.appendChild(line);
 
-          item.addEventListener("click", () => selectTicket(t.id));
+      item.addEventListener("click", () => selectTicket(t.id));
 
-          ticketsListEl.appendChild(item);
-        });
-    };
-
-    buildSection("Tichete active", openTickets);
-    buildSection("Istoric tichete", closedTickets);
-  }
-
-  function setAdminChatInputEnabled(enabled, reason) {
-    chatInputEl.disabled = !enabled;
-    chatSendBtn.disabled = !enabled;
-    if (enabled) {
-      chatInputEl.placeholder = "Răspunde utilizatorului...";
-    } else {
-      chatInputEl.placeholder =
-        reason || "Tichet închis – mesajele sunt doar informative.";
-    }
+      ticketsListEl.appendChild(item);
+    });
   }
 
   function selectTicket(ticketId) {
@@ -660,7 +650,6 @@ function initAdminApp() {
       ticketDetailsEl.style.display = "none";
       chatHeaderEl.innerHTML = "<span>Niciun tichet selectat</span>";
       chatMessagesEl.innerHTML = "";
-      setAdminChatInputEnabled(false, "");
       return;
     }
 
@@ -687,12 +676,6 @@ function initAdminApp() {
     ticketNoteEl.value = t.note || "";
     ticketStatusBarEl.textContent = "";
     ticketStatusBarEl.className = "status-bar";
-
-    if (t.status === "open") {
-      setAdminChatInputEnabled(true);
-    } else {
-      setAdminChatInputEnabled(false);
-    }
   }
 
   function renderChatMessages(ticket) {
@@ -724,12 +707,6 @@ function initAdminApp() {
     const text = chatInputEl.value.trim();
     if (!text || !SELECTED_TICKET_ID) return;
 
-    const t = ALL_TICKETS.find((x) => x.id === SELECTED_TICKET_ID);
-    if (!t || t.status !== "open") {
-      setAdminChatInputEnabled(false);
-      return;
-    }
-
     chatInputEl.value = "";
 
     try {
@@ -745,13 +722,14 @@ function initAdminApp() {
       }
 
       const updated = res.ticket;
-      const idx = ALL_TICKETS.findIndex((tt) => tt.id === updated.id);
+      const idx = ALL_TICKETS.findIndex((t) => t.id === updated.id);
       if (idx >= 0) {
         ALL_TICKETS[idx] = updated;
       } else {
         ALL_TICKETS.push(updated);
       }
 
+      updateTicketStats();
       renderTicketsList();
       selectTicket(updated.id);
     } catch (err) {
@@ -798,8 +776,8 @@ function initAdminApp() {
       ticketStatusBarEl.textContent = "Tichet salvat.";
       ticketStatusBarEl.className = "status-bar status-ok";
 
+      updateTicketStats();
       renderTicketsList();
-      selectTicket(t.id); // se va muta în istoric dacă e closed
     } catch (err) {
       console.error("admin_update_ticket error:", err);
       ticketStatusBarEl.textContent = "Eroare la comunicarea cu serverul.";
@@ -812,11 +790,39 @@ function initAdminApp() {
 
   /* ---------- SHOP EDITOR ADMIN ---------- */
 
+  function updateShopMetrics() {
+    if (!shopMetricsEl) return;
+    if (!CURRENT_SHOP || !CURRENT_SHOP.categories) {
+      shopMetricsEl.innerHTML =
+        '<div class="stat-pill stat-pill--soft"><span class="stat-label">Categorii</span><span class="stat-value">0</span></div>' +
+        '<div class="stat-pill stat-pill--soft"><span class="stat-label">Produse</span><span class="stat-value">0</span></div>';
+      return;
+    }
+
+    const catCount = CURRENT_SHOP.categories.length;
+    let prodCount = 0;
+    CURRENT_SHOP.categories.forEach((c) => {
+      prodCount += (c.products || []).length;
+    });
+
+    shopMetricsEl.innerHTML = `
+      <div class="stat-pill stat-pill--soft">
+        <span class="stat-label">Categorii</span>
+        <span class="stat-value">${catCount}</span>
+      </div>
+      <div class="stat-pill stat-pill--soft">
+        <span class="stat-label">Produse</span>
+        <span class="stat-value">${prodCount}</span>
+      </div>
+    `;
+  }
+
   function renderShopEditor() {
     shopContainerEl.innerHTML = "";
     if (!CURRENT_SHOP || !CURRENT_SHOP.categories) {
       shopContainerEl.innerHTML =
         '<div style="font-size:12px;color:var(--muted);">Nu există categorii. Adaugă una nouă.</div>';
+      updateShopMetrics();
       return;
     }
 
@@ -827,12 +833,33 @@ function initAdminApp() {
       const header = document.createElement("div");
       header.className = "cat-header";
 
+      const left = document.createElement("div");
+      left.className = "cat-header-left";
+
+      const toggleBtn = document.createElement("button");
+      toggleBtn.className = "btn-ghost cat-toggle";
+      toggleBtn.textContent = cat._collapsed ? "▸" : "▾";
+      toggleBtn.onclick = () => {
+        cat._collapsed = !cat._collapsed;
+        renderShopEditor();
+      };
+
       const nameInput = document.createElement("input");
       nameInput.placeholder = "Nume categorie";
       nameInput.value = cat.name || "";
       nameInput.addEventListener("input", () => {
         cat.name = nameInput.value;
       });
+
+      left.appendChild(toggleBtn);
+      left.appendChild(nameInput);
+
+      const right = document.createElement("div");
+      right.className = "cat-header-right";
+
+      const countBadge = document.createElement("div");
+      countBadge.className = "ticket-status-pill open";
+      countBadge.textContent = `${(cat.products || []).length} produse`;
 
       const deleteBtn = document.createElement("button");
       deleteBtn.className = "btn-ghost";
@@ -845,140 +872,154 @@ function initAdminApp() {
         }
       };
 
-      header.appendChild(nameInput);
-      header.appendChild(deleteBtn);
+      right.appendChild(countBadge);
+      right.appendChild(deleteBtn);
 
-      const descDiv = document.createElement("div");
-      descDiv.className = "cat-desc";
-      const descArea = document.createElement("textarea");
-      descArea.placeholder = "Descriere categorie";
-      descArea.value = cat.description || "";
-      descArea.addEventListener("input", () => {
-        cat.description = descArea.value;
-      });
-      descDiv.appendChild(descArea);
-
-      const productsWrap = document.createElement("div");
-      productsWrap.className = "products-list";
-
-      (cat.products = cat.products || []).forEach((prod, prodIndex) => {
-        const row = document.createElement("div");
-        row.className = "product-row";
-
-        const colName = document.createElement("div");
-        const nameInputProd = document.createElement("input");
-        nameInputProd.placeholder = "Nume produs";
-        nameInputProd.value = prod.name || "";
-        nameInputProd.addEventListener("input", () => {
-          prod.name = nameInputProd.value;
-        });
-        const nameLabel = document.createElement("div");
-        nameLabel.className = "small-input-label";
-        nameLabel.textContent = "Nume";
-        colName.appendChild(nameInputProd);
-        colName.appendChild(nameLabel);
-
-        const colPrice = document.createElement("div");
-        const priceInput = document.createElement("input");
-        priceInput.type = "number";
-        priceInput.placeholder = "Preț";
-        priceInput.value = prod.price || 0;
-        priceInput.addEventListener("input", () => {
-          prod.price = Number(priceInput.value || 0);
-        });
-        const priceLabel = document.createElement("div");
-        priceLabel.className = "small-input-label";
-        priceLabel.textContent = "Preț";
-        colPrice.appendChild(priceInput);
-        colPrice.appendChild(priceLabel);
-
-        const colMin = document.createElement("div");
-        const minInput = document.createElement("input");
-        minInput.type = "number";
-        minInput.placeholder = "Min";
-        minInput.value = prod.min_qty || 1;
-        minInput.addEventListener("input", () => {
-          prod.min_qty = Number(minInput.value || 1);
-        });
-        const minLabel = document.createElement("div");
-        minLabel.className = "small-input-label";
-        minLabel.textContent = "Min";
-        colMin.appendChild(minInput);
-        colMin.appendChild(minLabel);
-
-        const colMax = document.createElement("div");
-        const maxInput = document.createElement("input");
-        maxInput.type = "number";
-        maxInput.placeholder = "Max";
-        maxInput.value = prod.max_qty || prod.min_qty || 1;
-        maxInput.addEventListener("input", () => {
-          prod.max_qty = Number(maxInput.value || prod.min_qty || 1);
-        });
-        const maxLabel = document.createElement("div");
-        maxLabel.className = "small-input-label";
-        maxLabel.textContent = "Max";
-        colMax.appendChild(maxInput);
-        colMax.appendChild(maxLabel);
-
-        const colActions = document.createElement("div");
-        colActions.className = "product-mini-actions";
-        const delProdBtn = document.createElement("button");
-        delProdBtn.className = "btn-ghost";
-        delProdBtn.style.fontSize = "10px";
-        delProdBtn.textContent = "X";
-        delProdBtn.onclick = () => {
-          if (confirm("Ștergi produsul?")) {
-            cat.products.splice(prodIndex, 1);
-            renderShopEditor();
-          }
-        };
-        colActions.appendChild(delProdBtn);
-
-        row.appendChild(colName);
-        row.appendChild(colPrice);
-        row.appendChild(colMin);
-        row.appendChild(colMax);
-        row.appendChild(colActions);
-
-        productsWrap.appendChild(row);
-
-        const descRow = document.createElement("div");
-        descRow.style.gridColumn = "1 / -1";
-        descRow.style.marginBottom = "4px";
-        const descInput = document.createElement("input");
-        descInput.placeholder = "Descriere produs";
-        descInput.value = prod.description || "";
-        descInput.addEventListener("input", () => {
-          prod.description = descInput.value;
-        });
-        descRow.appendChild(descInput);
-        productsWrap.appendChild(descRow);
-      });
-
-      const addProdBtn = document.createElement("button");
-      addProdBtn.className = "btn-ghost";
-      addProdBtn.style.fontSize = "11px";
-      addProdBtn.textContent = "+ Produs";
-      addProdBtn.onclick = () => {
-        cat.products.push({
-          id: "prod_" + Date.now(),
-          name: "Produs nou",
-          price: 0,
-          description: "",
-          min_qty: 1,
-          max_qty: 1,
-        });
-        renderShopEditor();
-      };
-
-      productsWrap.appendChild(addProdBtn);
+      header.appendChild(left);
+      header.appendChild(right);
 
       catDiv.appendChild(header);
-      catDiv.appendChild(descDiv);
-      catDiv.appendChild(productsWrap);
+
+      if (!cat._collapsed) {
+        const descDiv = document.createElement("div");
+        descDiv.className = "cat-desc";
+        const descArea = document.createElement("textarea");
+        descArea.placeholder = "Descriere categorie";
+        descArea.value = cat.description || "";
+        descArea.addEventListener("input", () => {
+          cat.description = descArea.value;
+        });
+        descDiv.appendChild(descArea);
+
+        const productsWrap = document.createElement("div");
+        productsWrap.className = "products-list";
+
+        (cat.products = cat.products || []).forEach((prod, prodIndex) => {
+          const row = document.createElement("div");
+          row.className = "product-row";
+
+          const colName = document.createElement("div");
+          const nameInputProd = document.createElement("input");
+          nameInputProd.placeholder = "Nume produs";
+          nameInputProd.value = prod.name || "";
+          nameInputProd.addEventListener("input", () => {
+            prod.name = nameInputProd.value;
+          });
+          const nameLabel = document.createElement("div");
+          nameLabel.className = "small-input-label";
+          nameLabel.textContent = "Nume";
+          colName.appendChild(nameInputProd);
+          colName.appendChild(nameLabel);
+
+          const colPrice = document.createElement("div");
+          const priceInput = document.createElement("input");
+          priceInput.type = "number";
+          priceInput.placeholder = "Preț";
+          priceInput.value = prod.price || 0;
+          priceInput.addEventListener("input", () => {
+            prod.price = Number(priceInput.value || 0);
+          });
+          const priceLabel = document.createElement("div");
+          priceLabel.className = "small-input-label";
+          priceLabel.textContent = "Preț";
+          colPrice.appendChild(priceInput);
+          colPrice.appendChild(priceLabel);
+
+          const colMin = document.createElement("div");
+          const minInput = document.createElement("input");
+          minInput.type = "number";
+          minInput.placeholder = "Min";
+          minInput.value = prod.min_qty || 1;
+          minInput.addEventListener("input", () => {
+            prod.min_qty = Number(minInput.value || 1);
+          });
+          const minLabel = document.createElement("div");
+          minLabel.className = "small-input-label";
+          minLabel.textContent = "Min";
+          colMin.appendChild(minInput);
+          colMin.appendChild(minLabel);
+
+          const colMax = document.createElement("div");
+          const maxInput = document.createElement("input");
+          maxInput.type = "number";
+          maxInput.placeholder = "Max";
+          maxInput.value = prod.max_qty || prod.min_qty || 1;
+          maxInput.addEventListener("input", () => {
+            prod.max_qty = Number(maxInput.value || prod.min_qty || 1);
+          });
+          const maxLabel = document.createElement("div");
+          maxLabel.className = "small-input-label";
+          maxLabel.textContent = "Max";
+          colMax.appendChild(maxInput);
+          colMax.appendChild(maxLabel);
+
+          const colActions = document.createElement("div");
+          colActions.className = "product-mini-actions";
+          const delProdBtn = document.createElement("button");
+          delProdBtn.className = "btn-ghost";
+          delProdBtn.style.fontSize = "10px";
+          delProdBtn.textContent = "X";
+          delProdBtn.onclick = () => {
+            if (confirm("Ștergi produsul?")) {
+              cat.products.splice(prodIndex, 1);
+              renderShopEditor();
+            }
+          };
+          colActions.appendChild(delProdBtn);
+
+          row.appendChild(colName);
+          row.appendChild(colPrice);
+          row.appendChild(colMin);
+          row.appendChild(colMax);
+          row.appendChild(colActions);
+
+          productsWrap.appendChild(row);
+
+          const descRow = document.createElement("div");
+          descRow.style.gridColumn = "1 / -1";
+          descRow.style.marginBottom = "4px";
+          const descInput = document.createElement("input");
+          descInput.placeholder = "Descriere produs";
+          descInput.value = prod.description || "";
+          descInput.addEventListener("input", () => {
+            prod.description = descInput.value;
+          });
+          descRow.appendChild(descInput);
+
+          const extraInfo = document.createElement("div");
+          extraInfo.className = "small-input-label";
+          extraInfo.textContent = "ID: " + (prod.id || "(auto)");
+
+          descRow.appendChild(extraInfo);
+          productsWrap.appendChild(descRow);
+        });
+
+        const addProdBtn = document.createElement("button");
+        addProdBtn.className = "btn-ghost";
+        addProdBtn.style.fontSize = "11px";
+        addProdBtn.textContent = "+ Produs";
+        addProdBtn.onclick = () => {
+          cat.products.push({
+            id: "prod_" + Date.now(),
+            name: "Produs nou",
+            price: 0,
+            description: "",
+            min_qty: 1,
+            max_qty: 1,
+          });
+          renderShopEditor();
+        };
+
+        productsWrap.appendChild(addProdBtn);
+
+        catDiv.appendChild(descDiv);
+        catDiv.appendChild(productsWrap);
+      }
 
       shopContainerEl.appendChild(catDiv);
     });
+
+    updateShopMetrics();
   }
 
   async function saveShop() {
@@ -1033,12 +1074,15 @@ function initAdminApp() {
       ALL_TICKETS = res.tickets || [];
       CURRENT_SHOP = res.shop || { categories: [] };
 
+      updateTicketStats();
       renderTicketsList();
       renderShopEditor();
 
       if (SELECTED_TICKET_ID) {
         const t = ALL_TICKETS.find((x) => x.id === SELECTED_TICKET_ID);
-        if (t) selectTicket(t.id);
+        if (t) {
+          selectTicket(t.id);
+        }
       }
     } catch (err) {
       console.error("admin_get_tickets error:", err);
@@ -1046,6 +1090,17 @@ function initAdminApp() {
         "<span style='color:#ff5252;'>Eroare la rețea.</span>";
     }
   }
+
+  function onFilterChange() {
+    renderTicketsList();
+  }
+
+  let searchTimeout = null;
+  filterStatusEl?.addEventListener("change", onFilterChange);
+  filterSearchEl?.addEventListener("input", () => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(onFilterChange, 150);
+  });
 
   async function initAdmin() {
     renderTokenInfo();
