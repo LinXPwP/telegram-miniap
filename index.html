@@ -2,266 +2,691 @@
 <html lang="ro">
 <head>
   <meta charset="UTF-8" />
-  <title>Telegram MiniApp – API Test + Formular</title>
+  <title>MiniApp Shop – Credite</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
   <style>
+    :root {
+      --bg: #050509;
+      --bg-card: #111111;
+      --accent: #e50914;
+      --accent-soft: #ff4b5c;
+      --accent-muted: #8b0000;
+      --text: #f5f5f5;
+      --muted: #aaaaaa;
+      --border: #222222;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        sans-serif;
+    }
+
     body {
       margin: 0;
-      padding: 16px;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #050505;
-      color: #f5f5f5;
+      padding: 0;
+      background: radial-gradient(circle at top, #1a1a1a 0, #000 55%, #050509 100%);
+      color: var(--text);
+      min-height: 100vh;
     }
-    .box {
-      max-width: 520px;
+
+    .container {
+      max-width: 480px;
       margin: 0 auto;
-      border: 1px solid #333;
-      border-radius: 10px;
-      padding: 14px;
-      background: #111;
+      padding: 16px 14px 22px;
     }
-    button {
-      margin-top: 10px;
-      padding: 10px 14px;
-      border-radius: 6px;
-      border: none;
-      cursor: pointer;
-      font-size: 14px;
+
+    .card {
+      background: rgba(10, 10, 14, 0.96);
+      border-radius: 18px;
+      padding: 14px 14px 16px;
+      border: 1px solid rgba(229, 9, 20, 0.5);
+      box-shadow: 0 0 30px rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(10px);
     }
-    #btnPing {
-      background: #e53935;
-      color: white;
+
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
     }
-    #btnCredits {
-      background: #424242;
-      color: white;
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: radial-gradient(
+        circle at top left,
+        var(--accent-soft),
+        var(--accent)
+      );
+      color: #fff;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
     }
-    #btnSendForm {
-      background: #1e88e5;
-      color: white;
-      width: 100%;
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: #fff;
     }
-    pre {
-      font-size: 12px;
-      background: #000;
-      padding: 8px;
-      border-radius: 6px;
-      max-height: 220px;
-      overflow: auto;
-      white-space: pre-wrap;
-      word-break: break-all;
-    }
-    .label {
-      color: #aaaaaa;
+
+    .credits {
+      text-align: right;
       font-size: 13px;
     }
-    .field {
-      margin-top: 8px;
+
+    .credits span.value {
+      font-weight: 700;
+      color: var(--accent-soft);
+    }
+
+    h1 {
+      margin: 8px 0 2px;
+      font-size: 20px;
+    }
+
+    .subtitle {
+      margin: 0 0 12px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .user-line {
+      font-size: 13px;
+      margin-bottom: 10px;
+      color: var(--muted);
+    }
+
+    .user-line b {
+      color: var(--text);
+    }
+
+    .role-admin {
+      color: var(--accent-soft);
+      font-weight: 600;
+    }
+
+    .role-user {
+      color: #4caf50;
+      font-weight: 600;
+    }
+
+    .section-title {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin: 10px 0 4px;
+    }
+
+    .categories {
       display: flex;
       flex-direction: column;
-      gap: 4px;
-    }
-    input, textarea {
-      border-radius: 6px;
-      border: 1px solid #444;
-      padding: 8px;
-      font-size: 14px;
-      background: #000;
-      color: #f5f5f5;
-    }
-    .debug {
-      font-size: 11px;
-      color: #777;
+      gap: 10px;
       margin-top: 6px;
-      word-break: break-all;
+    }
+
+    .category {
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      padding: 10px 10px 8px;
+      background: linear-gradient(135deg, #141414, #0b0b0f);
+    }
+
+    .category-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+
+    .category-name {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .category-pill {
+      font-size: 10px;
+      text-transform: uppercase;
+      border-radius: 999px;
+      padding: 2px 8px;
+      border: 1px solid var(--accent-muted);
+      color: var(--accent-soft);
+    }
+
+    .category-desc {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .products {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .product {
+      border-radius: 10px;
+      border: 1px solid #252525;
+      padding: 6px 7px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: radial-gradient(circle at left, #181818, #080808);
+    }
+
+    .product-main {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      max-width: 70%;
+    }
+
+    .product-name {
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .product-desc {
+      font-size: 11px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .product-price {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent-soft);
+    }
+
+    .product-btn {
+      font-size: 11px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      background: linear-gradient(135deg, var(--accent), var(--accent-soft));
+      color: #fff;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .tickets-info {
+      margin-top: 10px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .tickets-info b {
+      color: var(--accent-soft);
+    }
+
+    .footer {
+      margin-top: 10px;
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .dot-red {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 10px var(--accent);
+    }
+
+    /* Product panel (pseudo-modal) */
+
+    .product-panel {
+      margin-top: 12px;
+      border-radius: 14px;
+      border: 1px solid var(--accent-muted);
+      padding: 10px 10px 12px;
+      background: radial-gradient(circle at top, #1b0b0b, #080606);
+    }
+
+    .product-panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .product-panel-name {
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .product-panel-close {
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-size: 16px;
+      cursor: pointer;
+      padding: 0 4px;
+    }
+
+    .product-panel-desc {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .product-panel-price {
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+
+    .qty-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .qty-row input {
+      width: 80px;
+      padding: 6px 6px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #050505;
+      color: var(--text);
+      font-size: 13px;
+      text-align: center;
+    }
+
+    .product-panel-buy {
+      width: 100%;
+      padding: 8px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      background: linear-gradient(135deg, var(--accent), var(--accent-soft));
+      color: #fff;
+    }
+
+    .status-bar {
+      margin-top: 8px;
+      font-size: 11px;
+      min-height: 14px;
+    }
+
+    .status-ok {
+      color: #4caf50;
+    }
+
+    .status-error {
+      color: #ff5252;
     }
   </style>
 </head>
 <body>
-  <div class="box">
-    <h2>MiniApp ↔ Netlify ↔ PebbleHost</h2>
+  <div class="container">
+    <div class="card">
+      <div class="header-top">
+        <div class="badge">
+          <span class="badge-dot"></span>
+          <span>Shop cu credite</span>
+        </div>
+        <div class="credits">
+          Credite: <span class="value" id="creditsValue">-</span>
+        </div>
+      </div>
 
-    <div id="userBlock">
-      <p class="label">Informații utilizator (din initDataUnsafe.user):</p>
-      <p id="userInfo">Se încarcă...</p>
-      <div id="debugInfo" class="debug"></div>
+      <h1>Bine ai venit!</h1>
+      <p class="subtitle">
+        Cumpără produse folosind creditele tale. După cumpărare se deschide un
+        tichet cu administratorul (max 24h răspuns).
+      </p>
+
+      <p class="user-line" id="userLine">Utilizator: …</p>
+
+      <div class="section-title">Categorii și produse</div>
+      <div id="categoriesContainer" class="categories">
+        <!-- aici generăm din JS -->
+      </div>
+
+      <div id="productPanel" class="product-panel" style="display: none;">
+        <div class="product-panel-header">
+          <div class="product-panel-name" id="panelName"></div>
+          <button class="product-panel-close" id="panelCloseBtn">×</button>
+        </div>
+        <div class="product-panel-desc" id="panelDesc"></div>
+        <div class="product-panel-price" id="panelPrice"></div>
+        <div class="qty-row">
+          <span style="font-size: 13px;">Cantitate:</span>
+          <input
+            type="number"
+            id="panelQty"
+            min="1"
+            value="1"
+          />
+          <span id="panelQtyRange" style="font-size: 11px; color: var(--muted);"></span>
+        </div>
+        <button class="product-panel-buy" id="panelBuyBtn">
+          Cumpără
+        </button>
+        <div class="status-bar" id="panelStatus"></div>
+      </div>
+
+      <div class="tickets-info" id="ticketsInfo"></div>
+
+      <div class="footer">
+        <span>v0.2 – shop funcțional</span>
+        <span class="dot-red"></span>
+      </div>
     </div>
-
-    <hr />
-
-    <p class="label">Teste API (GET prin Netlify):</p>
-    <button id="btnPing">Test /ping</button>
-    <button id="btnCredits">Test /credits (credits.json)</button>
-
-    <hr />
-
-    <p class="label">Formular test (POST → Netlify → bot.py):</p>
-    <form id="testForm">
-      <div class="field">
-        <label for="fieldName">Nume / Username</label>
-        <input id="fieldName" name="name" placeholder="ex: @linxpwp" />
-      </div>
-      <div class="field">
-        <label for="fieldMessage">Mesaj</label>
-        <textarea
-          id="fieldMessage"
-          name="message"
-          rows="3"
-          placeholder="Scrie ceva de test..."
-        ></textarea>
-      </div>
-      <div class="field">
-        <label for="fieldAmount">Cantitate / Suma (ex: credite)</label>
-        <input
-          id="fieldAmount"
-          name="amount"
-          type="number"
-          min="0"
-          value="1"
-        />
-      </div>
-      <button id="btnSendForm" type="submit">Trimite formularul</button>
-    </form>
-
-    <p class="label" style="margin-top: 12px;">
-      Ultimul răspuns JSON primit de la backend:
-    </p>
-    <pre id="output">{ nimic încă }</pre>
   </div>
 
   <script>
-    const API_BASE_URL =
-      "https://dancing-hotteok-480e3c.netlify.app/.netlify/functions";
+    const API_URL =
+      "https://dancing-hotteok-480e3c.netlify.app/.netlify/functions/api";
     const ADMIN_ID = 7672256597;
 
     const tg = window.Telegram?.WebApp;
-    const outputEl = document.getElementById("output");
-    const userInfoEl = document.getElementById("userInfo");
-    const debugInfoEl = document.getElementById("debugInfo");
 
-    let CURRENT_USER_ID = null;
-    let CURRENT_USERNAME = null;
+    let CURRENT_USER = null;
+    let CURRENT_SHOP = null;
+    let SELECTED_PRODUCT = null;
 
-    // 1) Citim user-ul din initDataUnsafe.user (ca în exemplul tău)
-    function initUserFromTelegram() {
+    const creditsValueEl = document.getElementById("creditsValue");
+    const userLineEl = document.getElementById("userLine");
+    const categoriesContainer = document.getElementById("categoriesContainer");
+    const ticketsInfoEl = document.getElementById("ticketsInfo");
+
+    const productPanelEl = document.getElementById("productPanel");
+    const panelNameEl = document.getElementById("panelName");
+    const panelDescEl = document.getElementById("panelDesc");
+    const panelPriceEl = document.getElementById("panelPrice");
+    const panelQtyEl = document.getElementById("panelQty");
+    const panelQtyRangeEl = document.getElementById("panelQtyRange");
+    const panelBuyBtn = document.getElementById("panelBuyBtn");
+    const panelCloseBtn = document.getElementById("panelCloseBtn");
+    const panelStatusEl = document.getElementById("panelStatus");
+
+    // ============================
+    // Helpers
+    // ============================
+
+    function apiCall(action, extraPayload = {}) {
+      const payload = {
+        action,
+        ...extraPayload,
+      };
+      return fetch(API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      }).then((r) => r.json());
+    }
+
+    function renderUserHeader() {
+      if (!CURRENT_USER) {
+        userLineEl.textContent =
+          "Utilizator necunoscut. Asigură-te că deschizi MiniApp-ul din bot.";
+        return;
+      }
+
+      const u = CURRENT_USER;
+      const isAdmin = Number(u.id) === ADMIN_ID;
+
+      creditsValueEl.textContent = u.credits;
+
+      const name =
+        u.username && u.username !== "fara_username"
+          ? "@" + u.username
+          : `ID ${u.id}`;
+
+      userLineEl.innerHTML = `
+        Utilizator: <b>${name}</b> ·
+        Rol:
+        <span class="${
+          isAdmin ? "role-admin" : "role-user"
+        }">${isAdmin ? "Administrator" : "Utilizator"}</span>
+      `;
+    }
+
+    function renderTicketsInfo(tickets) {
+      if (!tickets || tickets.length === 0) {
+        ticketsInfoEl.innerHTML =
+          "Nu ai tichet deschis în acest moment. Când cumperi un produs, se creează automat un tichet cu administratorul.";
+        return;
+      }
+
+      ticketsInfoEl.innerHTML = `Ai <b>${tickets.length}</b> tichet(e) deschis(e). Administratorul îți va răspunde în maxim 24h.`;
+    }
+
+    function renderShop(shop) {
+      categoriesContainer.innerHTML = "";
+      if (!shop || !shop.categories) return;
+
+      shop.categories.forEach((cat) => {
+        const catDiv = document.createElement("div");
+        catDiv.className = "category";
+
+        const header = document.createElement("div");
+        header.className = "category-header";
+
+        const nameSpan = document.createElement("div");
+        nameSpan.className = "category-name";
+        nameSpan.textContent = cat.name;
+
+        const pill = document.createElement("div");
+        pill.className = "category-pill";
+        pill.textContent = "Categorie";
+
+        header.appendChild(nameSpan);
+        header.appendChild(pill);
+
+        const desc = document.createElement("div");
+        desc.className = "category-desc";
+        desc.textContent = cat.description || "";
+
+        const productsDiv = document.createElement("div");
+        productsDiv.className = "products";
+
+        (cat.products || []).forEach((prod) => {
+          const prodDiv = document.createElement("div");
+          prodDiv.className = "product";
+
+          const main = document.createElement("div");
+          main.className = "product-main";
+
+          const title = document.createElement("div");
+          title.className = "product-name";
+          title.textContent = prod.name;
+
+          const pdesc = document.createElement("div");
+          pdesc.className = "product-desc";
+          pdesc.textContent = prod.description || "";
+
+          main.appendChild(title);
+          main.appendChild(pdesc);
+
+          const right = document.createElement("div");
+          right.style.textAlign = "right";
+
+          const price = document.createElement("div");
+          price.className = "product-price";
+          price.textContent = prod.price + " credite";
+
+          const btn = document.createElement("button");
+          btn.className = "product-btn";
+          btn.textContent = "Detalii";
+          btn.onclick = () => openProductPanel(prod);
+
+          right.appendChild(price);
+          right.appendChild(btn);
+
+          prodDiv.appendChild(main);
+          prodDiv.appendChild(right);
+
+          productsDiv.appendChild(prodDiv);
+        });
+
+        catDiv.appendChild(header);
+        catDiv.appendChild(desc);
+        catDiv.appendChild(productsDiv);
+
+        categoriesContainer.appendChild(catDiv);
+      });
+    }
+
+    function openProductPanel(prod) {
+      SELECTED_PRODUCT = prod;
+      panelStatusEl.textContent = "";
+      panelStatusEl.className = "status-bar";
+
+      panelNameEl.textContent = prod.name;
+      panelDescEl.textContent = prod.description || "";
+      panelPriceEl.textContent = `Preț: ${prod.price} credite / buc.`;
+
+      const min = prod.min_qty || 1;
+      const max = prod.max_qty || min;
+
+      panelQtyEl.min = min;
+      panelQtyEl.max = max;
+      panelQtyEl.value = min;
+      panelQtyRangeEl.textContent = `(min ${min}, max ${max})`;
+
+      productPanelEl.style.display = "block";
+    }
+
+    function closeProductPanel() {
+      SELECTED_PRODUCT = null;
+      productPanelEl.style.display = "none";
+    }
+
+    async function buySelectedProduct() {
+      if (!SELECTED_PRODUCT || !CURRENT_USER) return;
+
+      const qty = Number(panelQtyEl.value || 0);
+      const prod = SELECTED_PRODUCT;
+
+      panelStatusEl.textContent = "Se trimite comanda...";
+      panelStatusEl.className = "status-bar";
+
+      const userForBackend = {
+        id: CURRENT_USER.id,
+        username: CURRENT_USER.username,
+        first_name: CURRENT_USER.first_name,
+        last_name: CURRENT_USER.last_name,
+      };
+
+      try {
+        const res = await apiCall("buy_product", {
+          user: userForBackend,
+          product_id: prod.id,
+          qty: qty,
+        });
+
+        console.log("buy_product response:", res);
+
+        if (!res.ok) {
+          panelStatusEl.className = "status-bar status-error";
+          if (res.error === "not_enough_credits") {
+            panelStatusEl.textContent = `Nu ai suficiente credite (ai ${res.have}, ai nevoie de ${res.need}).`;
+          } else if (res.error === "qty_out_of_range") {
+            panelStatusEl.textContent = `Cantitate invalidă. Min ${res.min_qty}, max ${res.max_qty}.`;
+          } else {
+            panelStatusEl.textContent = "Eroare la cumpărare: " + (res.error || "necunoscută");
+          }
+          return;
+        }
+
+        // succes
+        CURRENT_USER.credits = res.new_balance;
+        creditsValueEl.textContent = CURRENT_USER.credits;
+
+        panelStatusEl.className = "status-bar status-ok";
+        panelStatusEl.textContent = `Comandă trimisă! ID tichet: ${res.ticket.id}. Verifică mesajul de la bot.`;
+
+      } catch (err) {
+        console.error("buy_product error:", err);
+        panelStatusEl.className = "status-bar status-error";
+        panelStatusEl.textContent = "Eroare la comunicarea cu serverul.";
+      }
+    }
+
+    // ============================
+    // INIT (cheamă /api init)
+    // ============================
+
+    async function initApp() {
       if (!tg) {
-        userInfoEl.innerHTML =
-          "Nu ești în Telegram MiniApp. Deschide link-ul prin bot, nu direct din browser.";
+        userLineEl.textContent =
+          "Nu ești în Telegram MiniApp. Deschide link-ul prin bot.";
         return;
       }
 
       tg.ready();
       tg.expand();
 
-      console.log("Telegram.WebApp:", tg);
-      console.log("initData:", tg.initData);
-      console.log("initDataUnsafe:", tg.initDataUnsafe);
-
       const user = tg.initDataUnsafe?.user;
-
-      debugInfoEl.textContent =
-        "initData length: " +
-        (tg.initData ? tg.initData.length : 0) +
-        " | user present: " +
-        (user ? "DA" : "NU");
-
       if (!user) {
-        userInfoEl.innerHTML =
-          "Telegram nu a trimis user-ul în initDataUnsafe.user.\n" +
-          "Asigură-te că deschizi MiniApp-ul din butonul inline 'Deschide MiniApp 🛒'.";
+        userLineEl.textContent =
+          "Telegram nu a trimis datele userului. Asigură-te că deschizi MiniApp-ul din butonul inline.";
         return;
       }
 
-      CURRENT_USER_ID = user.id;
-      CURRENT_USERNAME = user.username
-        ? "@" + user.username
-        : `${user.first_name || ""} ${user.last_name || ""}`.trim();
+      console.log("Telegram user:", user);
 
-      const isAdmin = CURRENT_USER_ID === ADMIN_ID;
-
-      userInfoEl.innerHTML = `
-        <b>ID:</b> ${CURRENT_USER_ID}<br />
-        <b>Username:</b> ${CURRENT_USERNAME || "fără username"}<br />
-        <b>Rol:</b>
-        <span style="color:${isAdmin ? "#ff5252" : "#4caf50"};">
-          ${isAdmin ? "Administrator" : "Utilizator normal"}
-        </span>
-      `;
-
-      // auto complete la formular
-      const nameField = document.getElementById("fieldName");
-      if (nameField && CURRENT_USERNAME && !nameField.value) {
-        nameField.value = CURRENT_USERNAME;
-      }
-    }
-
-    // 2) GET → /ping
-    async function testPing() {
-      try {
-        const res = await fetch(`${API_BASE_URL}/ping`);
-        const data = await res.json();
-        console.log("Răspuns /ping:", data);
-        outputEl.textContent = JSON.stringify(data, null, 2);
-      } catch (err) {
-        console.error(err);
-        outputEl.textContent = "Eroare /ping: " + err;
-      }
-    }
-
-    // 3) GET → /credits
-    async function testCredits() {
-      try {
-        const res = await fetch(`${API_BASE_URL}/credits`);
-        const data = await res.json();
-        console.log("Răspuns /credits:", data);
-        outputEl.textContent = JSON.stringify(data, null, 2);
-      } catch (err) {
-        console.error(err);
-        outputEl.textContent = "Eroare /credits: " + err;
-      }
-    }
-
-    // 4) POST → /form-test
-    async function submitForm(event) {
-      event.preventDefault();
-
-      const payload = {
-        user_id: CURRENT_USER_ID,
-        username: CURRENT_USERNAME,
-        name: document.getElementById("fieldName").value || "",
-        message: document.getElementById("fieldMessage").value || "",
-        amount: Number(document.getElementById("fieldAmount").value || 0),
-        timestamp: Date.now(),
+      // păstrăm info completă
+      CURRENT_USER = {
+        id: user.id,
+        username: user.username || null,
+        first_name: user.first_name || null,
+        last_name: user.last_name || null,
+        credits: 0,
       };
 
-      console.log("Trimit formular:", payload);
-
       try {
-        const res = await fetch(`${API_BASE_URL}/form-test`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+        const res = await apiCall("init", { user: CURRENT_USER });
+        console.log("init response:", res);
 
-        const data = await res.json();
-        console.log("Răspuns /form-test:", data);
-        outputEl.textContent = JSON.stringify(data, null, 2);
+        if (!res.ok) {
+          userLineEl.textContent =
+            "Eroare la inițializare (server nu a răspuns ok).";
+          return;
+        }
+
+        CURRENT_USER.credits = res.user.credits;
+        CURRENT_USER.username = res.user.username;
+
+        CURRENT_SHOP = res.shop;
+
+        renderUserHeader();
+        renderShop(CURRENT_SHOP);
+        renderTicketsInfo(res.tickets || []);
       } catch (err) {
-        console.error("Eroare la /form-test:", err);
-        outputEl.textContent = "Eroare /form-test: " + err;
+        console.error("init error:", err);
+        userLineEl.textContent = "Eroare la inițializare (network).";
       }
     }
 
-    document.getElementById("btnPing").addEventListener("click", testPing);
-    document.getElementById("btnCredits").addEventListener("click", testCredits);
-    document
-      .getElementById("testForm")
-      .addEventListener("submit", submitForm);
+    panelCloseBtn.addEventListener("click", closeProductPanel);
+    panelBuyBtn.addEventListener("click", buySelectedProduct);
 
-    initUserFromTelegram();
+    initApp();
   </script>
 </body>
 </html>
