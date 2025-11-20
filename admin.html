@@ -916,12 +916,13 @@
         username: u.username || null,
         first_name: u.first_name || null,
         last_name: u.last_name || null,
-        is_admin: true, // 👈 îl marcăm clar ca admin pentru backend
+        is_admin: true, // 🔴 spunem explicit backend-ului că e admin
       };
 
       if (!requireAdminOrStop()) {
         return;
       }
+
 
 
       renderUserLine();
