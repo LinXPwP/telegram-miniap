@@ -1,106 +1,177 @@
+/* ============================
+   THEME
+   ============================ */
+
 :root {
-  --bg: #050509;
-  --bg-card: #101015;
-  --accent: #e50914;
-  --accent-soft: #ff4b5c;
-  --accent-muted: #8b0000;
-  --text: #f5f5f5;
-  --muted: #aaaaaa;
-  --border: #25252f;
-  --bubble-user: #1f2933;
-  --bubble-admin: #8b0000;
-  --bubble-system: #333333;
+  --bg: #020308;
+  --bg-elevated: rgba(8, 10, 24, 0.9);
+  --bg-soft: rgba(9, 12, 32, 0.85);
+  --accent: #ff1843;
+  --accent-soft: #ff4b7a;
+  --accent-muted: #7d1230;
+  --accent-glow: rgba(255, 24, 67, 0.6);
+  --text: #f8f8ff;
+  --muted: #a4a7be;
+  --border-subtle: rgba(255, 255, 255, 0.05);
+  --chip-bg: rgba(255, 255, 255, 0.06);
+  --danger: #ff4b5c;
+  --success: #3ad67a;
+  --shadow-strong: 0 24px 60px rgba(0, 0, 0, 0.85);
+  --radius-lg: 20px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+  --transition-fast: 0.18s ease-out;
+  --transition-med: 0.25s ease-out;
 }
 
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+    "Segoe UI", sans-serif;
 }
+
+/* ============================
+   BACKGROUND / LAYOUT
+   ============================ */
 
 body {
   margin: 0;
   padding: 0;
-  background: radial-gradient(circle at top, #181820 0, #050509 55%, #000 100%);
-  color: var(--text);
   min-height: 100vh;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(255, 24, 67, 0.25), transparent 55%),
+    radial-gradient(circle at 100% 0%, rgba(77, 0, 153, 0.28), transparent 55%),
+    radial-gradient(circle at 50% 100%, rgba(255, 24, 67, 0.18), transparent 60%),
+    linear-gradient(160deg, #020308 0%, #050411 40%, #030308 100%);
+  color: var(--text);
 }
 
-/* Container & cards */
+/* blur blobs doar pe ecrane mari */
+@media (min-width: 900px) {
+  body::before,
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    mix-blend-mode: screen;
+    opacity: 0.7;
+    z-index: -1;
+  }
+
+  body::before {
+    background: radial-gradient(circle at 15% 0%, rgba(255, 24, 67, 0.35), transparent 60%);
+    filter: blur(60px);
+  }
+
+  body::after {
+    background: radial-gradient(circle at 90% 100%, rgba(92, 24, 255, 0.32), transparent 55%);
+    filter: blur(80px);
+  }
+}
+
+/* container general */
 
 .container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 10px 10px 18px;
+  padding: 12px 14px 20px;
 }
+
+/* în MiniApp user vrem card mai mic centrat */
+body[data-page="user"] .container {
+  max-width: 560px;
+}
+
+/* ============================
+   CARD PRINCIPAL
+   ============================ */
 
 .card {
-  background: var(--bg-card);
-  border-radius: 18px;
-  padding: 12px 12px 14px;
-  border: 1px solid rgba(229, 9, 20, 0.4);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(14px);
-  transition: box-shadow 0.3s ease, transform 0.3s ease;
+  position: relative;
+  border-radius: var(--radius-lg);
+  padding: 14px 14px 16px;
+  background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.04),
+      rgba(255, 255, 255, 0.01)
+    )
+    border-box;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: var(--shadow-strong);
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  overflow: hidden;
 }
 
-.card:hover {
-  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.9);
-  transform: translateY(-1px);
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 24, 67, 0.6),
+    rgba(150, 60, 255, 0.4),
+    rgba(10, 10, 24, 0.2)
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.6;
+  pointer-events: none;
 }
 
+/* Admin folosește toată lățimea, user e mai compact */
 .card--user {
-  max-width: 540px;
+  max-width: 560px;
   margin: 0 auto;
 }
 
-/* Admin full width */
-
-body[data-page="admin"] .container {
-  max-width: none;
-  padding: 12px 16px 20px;
-}
-
-body[data-page="admin"] .card--admin {
-  max-width: none;
-}
-
-/* Header */
+/* ============================
+   HEADER
+   ============================ */
 
 .header-top {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .badge {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-size: 11px;
-  padding: 4px 10px;
+  padding: 4px 12px;
   border-radius: 999px;
-  background: radial-gradient(circle at top left, var(--accent-soft), var(--accent));
+  background: radial-gradient(circle at 0 0, var(--accent-soft), var(--accent));
   color: #fff;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
 }
 
 .badge-dot {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: 999px;
   background: #fff;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.75);
 }
 
 .credits {
   text-align: right;
   font-size: 12px;
+  color: var(--muted);
 }
 
-.credits span.value {
+.credits .value {
   font-weight: 700;
   color: var(--accent-soft);
 }
@@ -108,23 +179,27 @@ body[data-page="admin"] .card--admin {
 .env-info {
   font-size: 11px;
   color: var(--muted);
+  opacity: 0.8;
 }
+
+/* titluri */
 
 h1 {
   margin: 4px 0 2px;
-  font-size: 19px;
+  font-size: 20px;
+  letter-spacing: 0.01em;
 }
 
 .subtitle {
-  margin: 0 0 6px;
+  margin: 0 0 8px;
   font-size: 12px;
   color: var(--muted);
 }
 
 .user-line {
   font-size: 12px;
-  margin: 0;
   color: var(--muted);
+  margin: 0 0 8px;
 }
 
 .user-line b {
@@ -137,46 +212,72 @@ h1 {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  gap: 10px;
+  gap: 12px;
   margin-bottom: 6px;
 }
 
-/* Tabs */
+/* ============================
+   TABS – segmented control
+   ============================ */
 
 .tabs {
+  position: relative;
   display: flex;
-  gap: 6px;
-  margin-top: 4px;
-  margin-bottom: 6px;
-}
-
-.tabs--admin {
-  margin-top: 0;
+  align-items: center;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(8, 10, 24, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  margin-bottom: 8px;
 }
 
 .tab-btn {
+  position: relative;
   flex: 1;
   font-size: 12px;
-  padding: 7px 4px;
+  padding: 7px 8px;
   border-radius: 999px;
-  border: 1px solid var(--border);
-  background: #090913;
+  border: none;
+  background: transparent;
   color: var(--muted);
   cursor: pointer;
-  transition: background 0.25s ease, color 0.25s ease, transform 0.1s ease;
-}
-
-.tab-btn:hover {
-  transform: translateY(-1px);
-  border-color: var(--accent-muted);
+  z-index: 1;
+  transition: color var(--transition-med), transform var(--transition-fast);
 }
 
 .tab-btn.active {
-  background: linear-gradient(135deg, var(--accent), var(--accent-soft));
   color: #fff;
-  border-color: transparent;
-  font-weight: 600;
+  transform: translateY(-0.5px);
 }
+
+.tabs::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc(50% - 4px);
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-soft));
+  box-shadow: 0 0 18px var(--accent-glow);
+  transition: transform var(--transition-med);
+}
+
+/* mutăm highlight-ul când e selectat tab-ul 2 */
+.tabs[data-active="shopTab"]::after {
+  transform: translateX(calc(100%));
+}
+
+.tabs[data-active="chatTab"]::after {
+  transform: translateX(0);
+}
+
+/* admin tabs (tot 2) */
+.tabs--admin[data-active="shopTab"]::after {
+  transform: translateX(calc(100%));
+}
+
+/* secțiuni */
 
 .tab-section {
   display: none;
@@ -186,79 +287,17 @@ h1 {
   display: block;
 }
 
-/* Section title */
-
 .section-title {
   font-size: 13px;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   color: var(--muted);
-  margin: 4px 0;
+  margin: 4px 0 6px;
 }
 
-/* Generic status bar */
-
-.status-bar {
-  margin-top: 6px;
-  font-size: 11px;
-  min-height: 14px;
-  color: var(--muted);
-}
-
-.status-ok {
-  color: #4caf50;
-}
-
-.status-error {
-  color: #ff5252;
-}
-
-/* Buttons */
-
-.btn-primary,
-.product-panel-buy,
-.chat-input button,
-.product-btn {
-  border: none;
-  border-radius: 999px;
-  padding: 6px 10px;
-  font-size: 12px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-soft));
-  color: #fff;
-  cursor: pointer;
-  transition: transform 0.1s ease, box-shadow 0.2s ease, opacity 0.15s ease;
-}
-
-.btn-primary:hover,
-.product-panel-buy:hover,
-.chat-input button:hover,
-.product-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 8px 18px rgba(229, 9, 20, 0.45);
-}
-
-.btn-ghost {
-  border-radius: 999px;
-  padding: 5px 10px;
-  border: 1px solid var(--border);
-  background: #050508;
-  font-size: 11px;
-  color: var(--muted);
-  cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease, transform 0.1s ease;
-}
-
-.btn-ghost:hover {
-  background: #15151f;
-  border-color: var(--accent-muted);
-  transform: translateY(-1px);
-}
-
-.full-width {
-  width: 100%;
-}
-
-/* Footer */
+/* ============================
+   FOOTER
+   ============================ */
 
 .footer {
   margin-top: 8px;
@@ -267,21 +306,20 @@ h1 {
   display: flex;
   justify-content: space-between;
   align-items: center;
-}
-
-.footer--admin {
-  margin-top: 10px;
+  opacity: 0.8;
 }
 
 .dot-red {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
   background: var(--accent);
-  box-shadow: 0 0 10px var(--accent);
+  box-shadow: 0 0 12px var(--accent-glow);
 }
 
-/* SHOP – user: list */
+/* ============================
+   SHOP – USER LIST
+   ============================ */
 
 .categories {
   display: flex;
@@ -291,17 +329,21 @@ h1 {
 }
 
 .category {
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  padding: 8px;
-  background: radial-gradient(circle at top, #18181f 0, #0b0b12 60%, #050509 100%);
-  transition: border-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  background: radial-gradient(circle at 0 0, rgba(255, 255, 255, 0.02), transparent 65%),
+    radial-gradient(circle at 100% 100%, rgba(255, 24, 67, 0.12), transparent 65%),
+    rgba(6, 8, 24, 0.9);
+  border: 1px solid var(--border-subtle);
+  transition: border-color var(--transition-fast),
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
 .category:hover {
-  border-color: rgba(229, 9, 20, 0.7);
+  border-color: rgba(255, 24, 67, 0.55);
   transform: translateY(-1px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.55);
 }
 
 .category-header {
@@ -319,16 +361,17 @@ h1 {
 .category-pill {
   font-size: 10px;
   text-transform: uppercase;
-  border-radius: 999px;
   padding: 2px 8px;
-  border: 1px solid var(--accent-muted);
-  color: var(--accent-soft);
+  border-radius: 999px;
+  background: var(--chip-bg);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: var(--muted);
 }
 
 .category-desc {
   font-size: 11px;
   color: var(--muted);
-  margin-bottom: 4px;
+  margin-bottom: 5px;
 }
 
 .products {
@@ -338,19 +381,22 @@ h1 {
 }
 
 .product {
-  border-radius: 10px;
-  border: 1px solid #25252f;
-  padding: 6px 7px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: linear-gradient(135deg, #171721, #080812);
-  transition: border-color 0.2s ease, background 0.2s ease;
+  gap: 6px;
+  padding: 6px 7px;
+  border-radius: var(--radius-sm);
+  background: rgba(9, 10, 30, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  transition: background var(--transition-fast), transform var(--transition-fast),
+    border-color var(--transition-fast);
 }
 
 .product:hover {
-  border-color: rgba(229, 9, 20, 0.5);
-  background: linear-gradient(135deg, #202032, #10101b);
+  background: rgba(14, 16, 40, 0.96);
+  border-color: rgba(255, 24, 67, 0.35);
+  transform: translateY(-0.5px);
 }
 
 .product-main {
@@ -369,29 +415,41 @@ h1 {
   font-size: 11px;
   color: var(--muted);
   white-space: nowrap;
-  overflow: hidden;
   text-overflow: ellipsis;
+  overflow: hidden;
 }
 
 .product-price {
   font-size: 12px;
   font-weight: 600;
   color: var(--accent-soft);
+  text-align: right;
 }
 
-/* Product panel (user) */
+.product-btn {
+  font-size: 11px;
+  padding: 5px 9px;
+}
+
+/* ============================
+   PRODUCT PANEL (USER)
+   ============================ */
 
 .product-panel {
-  margin-top: 8px;
-  border-radius: 14px;
-  border: 1px solid var(--accent-muted);
-  padding: 8px 8px 10px;
-  background: radial-gradient(circle at top, #1e1012 0, #070507 70%);
-  transform-origin: top center;
-  animation: panelFadeIn 0.2s ease-out;
+  margin-top: 10px;
+  border-radius: var(--radius-md);
+  padding: 10px;
+  background: linear-gradient(
+      135deg,
+      rgba(255, 24, 67, 0.12),
+      rgba(0, 0, 0, 0.2)
+    ),
+    rgba(5, 5, 15, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  animation: panelIn 0.22s ease-out;
 }
 
-@keyframes panelFadeIn {
+@keyframes panelIn {
   from {
     opacity: 0;
     transform: translateY(-4px) scale(0.98);
@@ -418,7 +476,7 @@ h1 {
   border: none;
   background: transparent;
   color: var(--muted);
-  font-size: 16px;
+  font-size: 18px;
   cursor: pointer;
   padding: 0 4px;
 }
@@ -426,7 +484,7 @@ h1 {
 .product-panel-desc {
   font-size: 12px;
   color: var(--muted);
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .product-panel-price {
@@ -441,19 +499,19 @@ h1 {
   margin-bottom: 8px;
 }
 
+.qty-label {
+  font-size: 12px;
+}
+
 .qty-row input {
   width: 70px;
-  padding: 5px 5px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: #050508;
+  padding: 5px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(4, 4, 14, 0.95);
   color: var(--text);
   font-size: 12px;
   text-align: center;
-}
-
-.qty-label {
-  font-size: 12px;
 }
 
 .qty-range {
@@ -465,38 +523,42 @@ h1 {
   width: 100%;
 }
 
-/* CHAT – user */
+/* ============================
+   CHAT LAYOUT (USER)
+   ============================ */
 
 .chat-layout {
   display: grid;
   grid-template-columns: 0.9fr 1.6fr;
-  gap: 6px;
+  gap: 8px;
   max-height: 360px;
 }
 
-/* Shared chat sidebar */
-
 .chat-sidebar {
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: #080812;
-  overflow: auto;
+  border-radius: var(--radius-md);
+  background: var(--bg-soft);
+  border: 1px solid var(--border-subtle);
+  overflow: hidden;
   font-size: 12px;
 }
 
+/* chat item */
+
 .chat-item {
-  padding: 6px 8px;
-  border-bottom: 1px solid #171727;
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition: background var(--transition-fast), border-color var(--transition-fast),
+    transform var(--transition-fast);
 }
 
 .chat-item:hover {
-  background: rgba(229, 9, 20, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+  transform: translateY(-0.5px);
 }
 
 .chat-item.active {
-  background: rgba(229, 9, 20, 0.22);
+  background: radial-gradient(circle at 0 0, rgba(255, 24, 67, 0.3), transparent 70%);
   border-left: 3px solid var(--accent-soft);
 }
 
@@ -509,23 +571,23 @@ h1 {
   font-size: 11px;
   color: var(--muted);
   white-space: nowrap;
-  overflow: hidden;
   text-overflow: ellipsis;
+  overflow: hidden;
 }
 
-/* Shared chat main */
+/* chat main */
 
 .chat-main {
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: #05050b;
+  border-radius: var(--radius-md);
+  background: var(--bg-soft);
+  border: 1px solid var(--border-subtle);
   display: flex;
   flex-direction: column;
 }
 
 .chat-header {
-  padding: 6px 8px;
-  border-bottom: 1px solid #171727;
+  padding: 7px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   font-size: 12px;
 }
 
@@ -535,15 +597,14 @@ h1 {
 
 .chat-messages {
   flex: 1;
-  padding: 6px 6px 4px;
+  padding: 8px 8px 4px;
   overflow-y: auto;
-  font-size: 12px;
 }
 
-/* Message bubbles */
+/* bubbles */
 
 .msg-row {
-  margin-bottom: 4px;
+  margin-bottom: 6px;
   display: flex;
 }
 
@@ -560,13 +621,12 @@ h1 {
 }
 
 .msg-bubble {
-  max-width: 80%;
-  padding: 5px 7px;
-  border-radius: 12px;
-  position: relative;
+  max-width: 78%;
+  padding: 6px 8px;
+  border-radius: 14px;
   font-size: 12px;
-  line-height: 1.3;
-  animation: bubbleIn 0.15s ease-out;
+  line-height: 1.35;
+  animation: bubbleIn 0.16s ease-out;
 }
 
 @keyframes bubbleIn {
@@ -581,50 +641,54 @@ h1 {
 }
 
 .msg-bubble.user {
-  background: var(--bubble-user);
-  border-bottom-right-radius: 2px;
+  background: linear-gradient(135deg, #1c2742, #131b30);
+  border-bottom-right-radius: 3px;
 }
 
 .msg-bubble.admin {
-  background: var(--bubble-admin);
-  border-bottom-left-radius: 2px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-soft));
+  border-bottom-left-radius: 3px;
 }
 
 .msg-bubble.system {
-  background: var(--bubble-system);
+  background: rgba(255, 255, 255, 0.06);
   border-radius: 999px;
   font-size: 11px;
   color: var(--muted);
 }
 
 .msg-meta {
-  font-size: 9px;
-  opacity: 0.7;
   margin-top: 2px;
+  font-size: 9px;
+  opacity: 0.8;
   text-align: right;
 }
 
-/* Chat input */
+/* chat input */
 
 .chat-input {
-  border-top: 1px solid #171727;
-  padding: 4px 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  padding: 6px;
   display: flex;
-  gap: 4px;
+  gap: 6px;
   align-items: center;
 }
 
 .chat-input input {
   flex: 1;
   border-radius: 999px;
-  border: 1px solid var(--border);
-  background: #050508;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(4, 4, 14, 0.95);
   color: var(--text);
-  padding: 5px 8px;
+  padding: 6px 10px;
   font-size: 12px;
 }
 
-/* Tickets info */
+.chat-input button {
+  white-space: nowrap;
+}
+
+/* tickets info */
 
 .tickets-info {
   margin-top: 6px;
@@ -632,32 +696,34 @@ h1 {
   color: var(--muted);
 }
 
-/* ADMIN CHAT LAYOUT */
+/* ============================
+   ADMIN – CHAT LAYOUT
+   ============================ */
 
 .chat-admin-layout {
   display: grid;
-  grid-template-columns: minmax(260px, 0.8fr) minmax(0, 1.7fr);
-  gap: 8px;
+  grid-template-columns: minmax(240px, 0.85fr) minmax(0, 1.7fr);
+  gap: 10px;
   max-height: 460px;
 }
 
-/* Ticket details (admin) */
+/* Ticket details */
 
 .ticket-details {
-  margin-top: 8px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  padding: 6px;
-  background: rgba(0, 0, 0, 0.6);
+  margin-top: 10px;
+  border-radius: var(--radius-md);
+  background: rgba(6, 8, 24, 0.95);
+  border: 1px solid var(--border-subtle);
+  padding: 8px 10px;
   font-size: 12px;
 }
 
 .ticket-summary {
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .ticket-field {
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .ticket-details label {
@@ -667,20 +733,20 @@ h1 {
 
 .ticket-details textarea {
   width: 100%;
-  min-height: 50px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: #050508;
+  min-height: 60px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(3, 3, 15, 0.98);
   color: var(--text);
-  padding: 6px;
+  padding: 6px 8px;
   font-size: 12px;
   resize: vertical;
 }
 
 .ticket-details select {
   border-radius: 999px;
-  border: 1px solid var(--border);
-  background: #050508;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(3, 3, 15, 0.98);
   color: var(--text);
   padding: 4px 8px;
   font-size: 12px;
@@ -692,11 +758,13 @@ h1 {
   gap: 6px;
 }
 
-/* Admin shop editor */
+/* ============================
+   ADMIN – SHOP EDITOR
+   ============================ */
 
 .shop-flex {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(260px, 0.9fr);
+  grid-template-columns: minmax(0, 2.1fr) minmax(260px, 0.9fr);
   gap: 10px;
   margin-top: 4px;
 }
@@ -704,17 +772,17 @@ h1 {
 .shop-container {
   max-height: 460px;
   overflow: auto;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  padding: 6px;
-  background: rgba(5, 5, 12, 0.9);
+  border-radius: var(--radius-md);
+  background: var(--bg-soft);
+  border: 1px solid var(--border-subtle);
+  padding: 8px;
 }
 
 .shop-sidepanel {
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  padding: 8px;
-  background: rgba(8, 8, 16, 0.9);
+  border-radius: var(--radius-md);
+  background: rgba(7, 7, 22, 0.96);
+  border: 1px solid var(--border-subtle);
+  padding: 10px;
   font-size: 12px;
 }
 
@@ -729,71 +797,70 @@ h1 {
   margin: 0 0 8px;
 }
 
+/* category editor */
+
 .cat-card {
-  border-radius: 10px;
-  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
   padding: 8px;
-  margin-bottom: 6px;
-  background: #090911;
+  margin-bottom: 8px;
+  background: rgba(10, 11, 30, 0.96);
+  border: 1px solid var(--border-subtle);
 }
 
 .cat-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  margin-bottom: 4px;
 }
 
 .cat-header input {
   flex: 1;
   border-radius: 999px;
-  border: 1px solid var(--border);
-  background: #050508;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(4, 4, 14, 0.96);
   color: var(--text);
-  padding: 5px 8px;
+  padding: 6px 10px;
   font-size: 12px;
-}
-
-.cat-desc {
-  margin-top: 4px;
 }
 
 .cat-desc textarea {
   width: 100%;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: #050508;
+  margin-top: 4px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(3, 3, 15, 0.96);
   color: var(--text);
-  padding: 5px;
+  padding: 6px 8px;
   font-size: 12px;
-  min-height: 40px;
   resize: vertical;
 }
 
+/* product rows */
+
 .products-list {
   margin-top: 6px;
-  border-radius: 8px;
-  border: 1px solid #202032;
-  padding: 5px;
-  background: #070712;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 6px;
+  background: rgba(5, 6, 20, 0.96);
 }
 
 .product-row {
   display: grid;
-  grid-template-columns: 1.5fr 0.7fr 0.7fr 0.7fr auto;
+  grid-template-columns: 1.6fr 0.7fr 0.7fr 0.7fr auto;
   gap: 4px;
-  margin-bottom: 4px;
   align-items: center;
+  margin-bottom: 4px;
 }
 
 .product-row input {
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: #050508;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(4, 4, 14, 0.96);
   color: var(--text);
-  padding: 4px 5px;
+  padding: 4px 6px;
   font-size: 11px;
-  width: 100%;
 }
 
 .product-mini-actions {
@@ -807,7 +874,84 @@ h1 {
   margin-top: 2px;
 }
 
-/* Responsiv */
+.products-list input[type="text"] {
+  width: 100%;
+}
+
+/* ============================
+   STATUS BARS
+   ============================ */
+
+.status-bar {
+  margin-top: 6px;
+  font-size: 11px;
+  min-height: 14px;
+  color: var(--muted);
+}
+
+.status-ok {
+  color: var(--success);
+}
+
+.status-error {
+  color: var(--danger);
+}
+
+/* ============================
+   BUTTONS GENERALE
+   ============================ */
+
+.btn-primary,
+.product-panel-buy,
+.chat-input button,
+.product-btn {
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-soft));
+  color: #fff;
+  font-size: 12px;
+  padding: 7px 12px;
+  cursor: pointer;
+  box-shadow: 0 10px 25px var(--accent-glow);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast),
+    filter var(--transition-fast);
+}
+
+.btn-primary:hover,
+.product-panel-buy:hover,
+.chat-input button:hover,
+.product-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px var(--accent-glow);
+  filter: brightness(1.05);
+}
+
+.btn-ghost {
+  border-radius: 999px;
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(5, 5, 15, 0.98);
+  font-size: 11px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast),
+    transform var(--transition-fast), color var(--transition-fast);
+}
+
+.btn-ghost:hover {
+  background: rgba(10, 10, 26, 0.98);
+  border-color: rgba(255, 255, 255, 0.16);
+  color: var(--text);
+  transform: translateY(-0.5px);
+}
+
+.full-width {
+  width: 100%;
+}
+
+/* ============================
+   RESPONSIVE
+   ============================ */
 
 @media (max-width: 900px) {
   .chat-layout,
@@ -817,7 +961,7 @@ h1 {
     max-height: none;
   }
 
-  body[data-page="admin"] .container {
-    padding: 8px;
+  .container {
+    padding-inline: 10px;
   }
 }
