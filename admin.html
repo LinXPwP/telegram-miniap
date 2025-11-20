@@ -2,7 +2,7 @@
 <html lang="ro">
 <head>
   <meta charset="UTF-8" />
-  <title>Admin Dashboard – Chat & Shop</title>
+  <title>Admin Dashboard – Shop & Chat</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <link rel="stylesheet" href="style.css" />
@@ -20,21 +20,23 @@
         </div>
       </div>
 
-      <h1>Panou administrator</h1>
-      <p class="subtitle">
-        Vezi toate tichetele de chat, răspunde utilizatorilor și administrează structura shop-ului.
-      </p>
+      <div class="admin-header-row">
+        <div>
+          <h1>Panou administrator</h1>
+          <p class="subtitle">
+            Gestionează tichetele și structura shop-ului.
+          </p>
+        </div>
+        <p class="user-line" id="userLine">Verific token...</p>
+      </div>
 
-      <p class="user-line" id="userLine">Verific token...</p>
-
-      <div class="tabs">
-        <button class="tab-btn active" data-tab="chatTab">Chat-uri tichete</button>
+      <div class="tabs tabs--admin">
+        <button class="tab-btn active" data-tab="chatTab">Chat tichete</button>
         <button class="tab-btn" data-tab="shopTab">Shop</button>
       </div>
 
       <!-- CHAT TAB -->
       <div id="chatTab" class="tab-section active">
-        <div class="section-title">Toate tichetele</div>
         <div class="chat-admin-layout">
           <div class="chat-sidebar" id="ticketsList"></div>
           <div class="chat-main">
@@ -56,14 +58,14 @@
         <div class="ticket-details" id="ticketDetails" style="display:none;">
           <div id="ticketSummary" class="ticket-summary"></div>
           <div class="ticket-field">
-            <label for="ticketStatusSelect">Status tichet:</label><br />
+            <label for="ticketStatusSelect">Status tichet</label><br />
             <select id="ticketStatusSelect">
               <option value="open">Deschis</option>
               <option value="closed">Închis</option>
             </select>
           </div>
           <div class="ticket-field">
-            <label for="ticketNote">Notă internă:</label><br />
+            <label for="ticketNote">Notă internă</label><br />
             <textarea id="ticketNote"></textarea>
           </div>
           <div class="ticket-actions">
@@ -76,17 +78,22 @@
 
       <!-- SHOP TAB -->
       <div id="shopTab" class="tab-section">
-        <div class="section-title">Categorii & produse</div>
-        <div class="shop-container" id="shopContainer"></div>
-        <div class="shop-actions">
-          <button class="btn-ghost" id="addCategoryBtn">+ Categorie</button>
-          <button class="btn-primary" id="saveShopBtn">Salvează shop</button>
+        <div class="shop-flex">
+          <div class="shop-container" id="shopContainer"></div>
+          <div class="shop-sidepanel">
+            <h2 class="shop-sidepanel-title">Acțiuni Shop</h2>
+            <p class="shop-sidepanel-text">
+              Modificările se aplică instant doar aici. Apasă <b>Salvează shop</b> ca să scrii în fișier.
+            </p>
+            <button class="btn-ghost full-width" id="addCategoryBtn">+ Adaugă categorie</button>
+            <button class="btn-primary full-width" id="saveShopBtn">💾 Salvează shop</button>
+            <div class="status-bar" id="shopStatusBar"></div>
+          </div>
         </div>
-        <div class="status-bar" id="shopStatusBar"></div>
       </div>
 
-      <div class="footer">
-        <span>v0.3 – admin chat & shop</span>
+      <div class="footer footer--admin">
+        <span>MiniApp · admin</span>
         <span class="dot-red"></span>
       </div>
     </div>
