@@ -2,11 +2,9 @@
 <html lang="ro">
 <head>
   <meta charset="UTF-8" />
-  <title>MiniApp Shop – Credite</title>
+  <title>MiniApp Shop – User</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
   <style>
     :root {
       --bg: #050509;
@@ -18,13 +16,11 @@
       --muted: #aaaaaa;
       --border: #222222;
     }
-
     * {
       box-sizing: border-box;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
         sans-serif;
     }
-
     body {
       margin: 0;
       padding: 0;
@@ -32,13 +28,11 @@
       color: var(--text);
       min-height: 100vh;
     }
-
     .container {
       max-width: 480px;
       margin: 0 auto;
       padding: 16px 14px 22px;
     }
-
     .card {
       background: rgba(10, 10, 14, 0.96);
       border-radius: 18px;
@@ -47,14 +41,12 @@
       box-shadow: 0 0 30px rgba(0, 0, 0, 0.7);
       backdrop-filter: blur(10px);
     }
-
     .header-top {
       display: flex;
       justify-content: space-between;
       align-items: center;
       gap: 12px;
     }
-
     .badge {
       display: inline-flex;
       align-items: center;
@@ -62,64 +54,50 @@
       font-size: 11px;
       padding: 4px 10px;
       border-radius: 999px;
-      background: radial-gradient(
-        circle at top left,
-        var(--accent-soft),
-        var(--accent)
-      );
+      background: radial-gradient(circle at top left, var(--accent-soft), var(--accent));
       color: #fff;
       text-transform: uppercase;
       letter-spacing: 0.08em;
     }
-
     .badge-dot {
       width: 6px;
       height: 6px;
       border-radius: 999px;
       background: #fff;
     }
-
     .credits {
       text-align: right;
       font-size: 13px;
     }
-
     .credits span.value {
       font-weight: 700;
       color: var(--accent-soft);
     }
-
     h1 {
       margin: 8px 0 2px;
       font-size: 20px;
     }
-
     .subtitle {
       margin: 0 0 12px;
       font-size: 13px;
       color: var(--muted);
     }
-
     .user-line {
       font-size: 13px;
       margin-bottom: 10px;
       color: var(--muted);
     }
-
     .user-line b {
       color: var(--text);
     }
-
     .role-admin {
       color: var(--accent-soft);
       font-weight: 600;
     }
-
     .role-user {
       color: #4caf50;
       font-weight: 600;
     }
-
     .section-title {
       font-size: 13px;
       text-transform: uppercase;
@@ -127,33 +105,28 @@
       color: var(--muted);
       margin: 10px 0 4px;
     }
-
     .categories {
       display: flex;
       flex-direction: column;
       gap: 10px;
       margin-top: 6px;
     }
-
     .category {
       border-radius: 14px;
       border: 1px solid var(--border);
       padding: 10px 10px 8px;
       background: linear-gradient(135deg, #141414, #0b0b0f);
     }
-
     .category-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 4px;
     }
-
     .category-name {
       font-size: 14px;
       font-weight: 600;
     }
-
     .category-pill {
       font-size: 10px;
       text-transform: uppercase;
@@ -162,19 +135,16 @@
       border: 1px solid var(--accent-muted);
       color: var(--accent-soft);
     }
-
     .category-desc {
       font-size: 12px;
       color: var(--muted);
       margin-bottom: 6px;
     }
-
     .products {
       display: flex;
       flex-direction: column;
       gap: 6px;
     }
-
     .product {
       border-radius: 10px;
       border: 1px solid #252525;
@@ -184,19 +154,16 @@
       align-items: center;
       background: radial-gradient(circle at left, #181818, #080808);
     }
-
     .product-main {
       display: flex;
       flex-direction: column;
       gap: 2px;
       max-width: 70%;
     }
-
     .product-name {
       font-size: 13px;
       font-weight: 600;
     }
-
     .product-desc {
       font-size: 11px;
       color: var(--muted);
@@ -204,13 +171,11 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
-
     .product-price {
       font-size: 12px;
       font-weight: 600;
       color: var(--accent-soft);
     }
-
     .product-btn {
       font-size: 11px;
       padding: 6px 10px;
@@ -222,17 +187,56 @@
       text-transform: uppercase;
       letter-spacing: 0.06em;
     }
-
     .tickets-info {
       margin-top: 10px;
       font-size: 11px;
       color: var(--muted);
     }
-
     .tickets-info b {
       color: var(--accent-soft);
     }
-
+    .tickets-list {
+      margin-top: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .ticket-card {
+      border-radius: 10px;
+      border: 1px solid #333;
+      padding: 6px 8px;
+      background: radial-gradient(circle at right, #161014, #050305);
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .ticket-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .ticket-id {
+      font-weight: 600;
+      color: var(--accent-soft);
+    }
+    .ticket-status {
+      font-size: 10px;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+    }
+    .ticket-status-open {
+      border-color: var(--accent-soft);
+      color: var(--accent-soft);
+    }
+    .ticket-status-closed {
+      border-color: #4caf50;
+      color: #4caf50;
+    }
+    .ticket-line {
+      margin-top: 2px;
+      color: var(--muted);
+    }
     .footer {
       margin-top: 10px;
       font-size: 11px;
@@ -241,7 +245,6 @@
       justify-content: space-between;
       align-items: center;
     }
-
     .dot-red {
       width: 8px;
       height: 8px;
@@ -250,29 +253,25 @@
       box-shadow: 0 0 10px var(--accent);
     }
 
-    /* Product panel (pseudo-modal) */
-
-    .product-panel {
+    .product-panel,
+    .ticket-panel {
       margin-top: 12px;
       border-radius: 14px;
       border: 1px solid var(--accent-muted);
       padding: 10px 10px 12px;
       background: radial-gradient(circle at top, #1b0b0b, #080606);
     }
-
-    .product-panel-header {
+    .panel-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 6px;
     }
-
-    .product-panel-name {
+    .panel-name {
       font-size: 14px;
       font-weight: 700;
     }
-
-    .product-panel-close {
+    .panel-close {
       border: none;
       background: transparent;
       color: var(--muted);
@@ -280,25 +279,21 @@
       cursor: pointer;
       padding: 0 4px;
     }
-
-    .product-panel-desc {
+    .panel-desc {
       font-size: 12px;
       color: var(--muted);
       margin-bottom: 8px;
     }
-
-    .product-panel-price {
+    .panel-price {
       font-size: 13px;
       margin-bottom: 8px;
     }
-
     .qty-row {
       display: flex;
       align-items: center;
       gap: 8px;
       margin-bottom: 10px;
     }
-
     .qty-row input {
       width: 80px;
       padding: 6px 6px;
@@ -309,8 +304,7 @@
       font-size: 13px;
       text-align: center;
     }
-
-    .product-panel-buy {
+    .panel-btn-primary {
       width: 100%;
       padding: 8px;
       border-radius: 999px;
@@ -321,19 +315,76 @@
       background: linear-gradient(135deg, var(--accent), var(--accent-soft));
       color: #fff;
     }
-
     .status-bar {
       margin-top: 8px;
       font-size: 11px;
       min-height: 14px;
     }
-
     .status-ok {
       color: #4caf50;
     }
-
     .status-error {
       color: #ff5252;
+    }
+
+    .ticket-messages {
+      max-height: 160px;
+      overflow-y: auto;
+      border-radius: 10px;
+      border: 1px solid #333;
+      padding: 6px;
+      background: rgba(0, 0, 0, 0.2);
+      margin-bottom: 6px;
+      font-size: 11px;
+    }
+    .msg {
+      margin-bottom: 4px;
+    }
+    .msg-user {
+      color: #ffcc80;
+    }
+    .msg-admin {
+      color: #81d4fa;
+    }
+    .msg-system {
+      color: #b0bec5;
+    }
+    .msg-time {
+      color: #777;
+      font-size: 10px;
+    }
+    .ticket-input-row {
+      display: flex;
+      gap: 6px;
+      margin-top: 4px;
+    }
+    .ticket-input-row input {
+      flex: 1;
+      padding: 6px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #050505;
+      color: var(--text);
+      font-size: 12px;
+    }
+    .ticket-input-row button {
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .admin-btn {
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 11px;
+      border: 1px solid var(--accent-soft);
+      background: transparent;
+      color: var(--accent-soft);
+      cursor: pointer;
     }
   </style>
 </head>
@@ -353,44 +404,66 @@
       <h1>Bine ai venit!</h1>
       <p class="subtitle">
         Cumpără produse folosind creditele tale. După cumpărare se deschide un
-        tichet cu administratorul (max 24h răspuns).
+        tichet în acest MiniApp (max 24h răspuns de la admin).
       </p>
 
       <p class="user-line" id="userLine">Utilizator: …</p>
 
       <div class="section-title">Categorii și produse</div>
-      <div id="categoriesContainer" class="categories">
-        <!-- aici generăm din JS -->
-      </div>
+      <div id="categoriesContainer" class="categories"></div>
 
       <div id="productPanel" class="product-panel" style="display: none;">
-        <div class="product-panel-header">
-          <div class="product-panel-name" id="panelName"></div>
-          <button class="product-panel-close" id="panelCloseBtn">×</button>
+        <div class="panel-header">
+          <div class="panel-name" id="panelName"></div>
+          <button class="panel-close" id="panelCloseBtn">×</button>
         </div>
-        <div class="product-panel-desc" id="panelDesc"></div>
-        <div class="product-panel-price" id="panelPrice"></div>
+        <div class="panel-desc" id="panelDesc"></div>
+        <div class="panel-price" id="panelPrice"></div>
         <div class="qty-row">
           <span style="font-size: 13px;">Cantitate:</span>
-          <input
-            type="number"
-            id="panelQty"
-            min="1"
-            value="1"
-          />
-          <span id="panelQtyRange" style="font-size: 11px; color: var(--muted);"></span>
+          <input type="number" id="panelQty" min="1" value="1" />
+          <span
+            id="panelQtyRange"
+            style="font-size: 11px; color: var(--muted);"
+          ></span>
         </div>
-        <button class="product-panel-buy" id="panelBuyBtn">
+        <button class="panel-btn-primary" id="panelBuyBtn">
           Cumpără
         </button>
         <div class="status-bar" id="panelStatus"></div>
       </div>
 
+      <div class="section-title">Tichetele mele</div>
       <div class="tickets-info" id="ticketsInfo"></div>
+      <div class="tickets-list" id="ticketsList"></div>
+
+      <div id="ticketPanel" class="ticket-panel" style="display: none;">
+        <div class="panel-header">
+          <div class="panel-name" id="ticketPanelTitle"></div>
+          <button class="panel-close" id="ticketPanelCloseBtn">×</button>
+        </div>
+        <div class="panel-desc" id="ticketPanelDesc"></div>
+        <div class="ticket-messages" id="ticketMessages"></div>
+        <div class="ticket-input-row">
+          <input
+            type="text"
+            id="ticketMessageInput"
+            placeholder="Scrie un mesaj către admin..."
+          />
+          <button id="ticketSendBtn">Trimite</button>
+        </div>
+        <div class="status-bar" id="ticketStatus"></div>
+      </div>
 
       <div class="footer">
-        <span>v0.2 – shop funcțional</span>
+        <span>v0.3 – user shop & chat</span>
         <span class="dot-red"></span>
+      </div>
+
+      <div id="adminTools" style="margin-top: 8px; display: none;">
+        <button class="admin-btn" id="openAdminBtn">
+          Deschide Admin Dashboard
+        </button>
       </div>
     </div>
   </div>
@@ -399,17 +472,19 @@
     const API_URL =
       "https://dancing-hotteok-480e3c.netlify.app/.netlify/functions/api";
     const ADMIN_ID = 7672256597;
-
     const tg = window.Telegram?.WebApp;
 
     let CURRENT_USER = null;
     let CURRENT_SHOP = null;
+    let USER_TICKETS = [];
     let SELECTED_PRODUCT = null;
+    let SELECTED_TICKET = null;
 
     const creditsValueEl = document.getElementById("creditsValue");
     const userLineEl = document.getElementById("userLine");
     const categoriesContainer = document.getElementById("categoriesContainer");
     const ticketsInfoEl = document.getElementById("ticketsInfo");
+    const ticketsListEl = document.getElementById("ticketsList");
 
     const productPanelEl = document.getElementById("productPanel");
     const panelNameEl = document.getElementById("panelName");
@@ -421,20 +496,21 @@
     const panelCloseBtn = document.getElementById("panelCloseBtn");
     const panelStatusEl = document.getElementById("panelStatus");
 
-    // ============================
-    // Helpers
-    // ============================
+    const ticketPanelEl = document.getElementById("ticketPanel");
+    const ticketPanelTitleEl = document.getElementById("ticketPanelTitle");
+    const ticketPanelDescEl = document.getElementById("ticketPanelDesc");
+    const ticketMessagesEl = document.getElementById("ticketMessages");
+    const ticketMessageInputEl = document.getElementById("ticketMessageInput");
+    const ticketSendBtn = document.getElementById("ticketSendBtn");
+    const ticketStatusEl = document.getElementById("ticketStatus");
+    const adminToolsEl = document.getElementById("adminTools");
+    const openAdminBtn = document.getElementById("openAdminBtn");
 
     function apiCall(action, extraPayload = {}) {
-      const payload = {
-        action,
-        ...extraPayload,
-      };
+      const payload = { action, ...extraPayload };
       return fetch(API_URL, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       }).then((r) => r.json());
     }
@@ -442,37 +518,25 @@
     function renderUserHeader() {
       if (!CURRENT_USER) {
         userLineEl.textContent =
-          "Utilizator necunoscut. Asigură-te că deschizi MiniApp-ul din bot.";
+          "Utilizator necunoscut. Deschide MiniApp-ul din bot.";
         return;
       }
-
       const u = CURRENT_USER;
       const isAdmin = Number(u.id) === ADMIN_ID;
-
       creditsValueEl.textContent = u.credits;
-
       const name =
         u.username && u.username !== "fara_username"
           ? "@" + u.username
           : `ID ${u.id}`;
-
       userLineEl.innerHTML = `
-        Utilizator: <b>${name}</b> ·
-        Rol:
-        <span class="${
-          isAdmin ? "role-admin" : "role-user"
-        }">${isAdmin ? "Administrator" : "Utilizator"}</span>
+        Utilizator: <b>${name}</b> · Rol:
+        <span class="${isAdmin ? "role-admin" : "role-user"}">${
+        isAdmin ? "Administrator" : "Utilizator"
+      }</span>
       `;
-    }
-
-    function renderTicketsInfo(tickets) {
-      if (!tickets || tickets.length === 0) {
-        ticketsInfoEl.innerHTML =
-          "Nu ai tichet deschis în acest moment. Când cumperi un produs, se creează automat un tichet cu administratorul.";
-        return;
+      if (isAdmin) {
+        adminToolsEl.style.display = "block";
       }
-
-      ticketsInfoEl.innerHTML = `Ai <b>${tickets.length}</b> tichet(e) deschis(e). Administratorul îți va răspunde în maxim 24h.`;
     }
 
     function renderShop(shop) {
@@ -551,11 +615,60 @@
       });
     }
 
+    function renderTickets(tickets) {
+      USER_TICKETS = tickets || [];
+      ticketsListEl.innerHTML = "";
+      if (!USER_TICKETS.length) {
+        ticketsInfoEl.innerHTML =
+          "Nu ai niciun tichet. Când cumperi un produs, se creează automat un tichet aici.";
+        return;
+      }
+      ticketsInfoEl.innerHTML = `Ai <b>${USER_TICKETS.length}</b> tichet(e) (deschise și închise).`;
+
+      USER_TICKETS.forEach((t) => {
+        const card = document.createElement("div");
+        card.className = "ticket-card";
+
+        const header = document.createElement("div");
+        header.className = "ticket-header";
+
+        const left = document.createElement("div");
+        left.className = "ticket-id";
+        left.textContent = "#" + t.id;
+
+        const status = document.createElement("div");
+        status.className =
+          "ticket-status " +
+          (t.status === "open"
+            ? "ticket-status-open"
+            : "ticket-status-closed");
+        status.textContent = t.status === "open" ? "DESCHIS" : "ÎNCHIS";
+
+        header.appendChild(left);
+        header.appendChild(status);
+
+        const line1 = document.createElement("div");
+        line1.className = "ticket-line";
+        line1.textContent = `${t.product_name} · ${t.qty} buc · ${t.total_price} credite`;
+
+        const line2 = document.createElement("div");
+        line2.className = "ticket-line";
+        line2.textContent = "Creat la: " + (t.created_at || "");
+
+        card.appendChild(header);
+        card.appendChild(line1);
+        card.appendChild(line2);
+
+        card.onclick = () => openTicketPanel(t);
+
+        ticketsListEl.appendChild(card);
+      });
+    }
+
     function openProductPanel(prod) {
       SELECTED_PRODUCT = prod;
       panelStatusEl.textContent = "";
       panelStatusEl.className = "status-bar";
-
       panelNameEl.textContent = prod.name;
       panelDescEl.textContent = prod.description || "";
       panelPriceEl.textContent = `Preț: ${prod.price} credite / buc.`;
@@ -578,7 +691,6 @@
 
     async function buySelectedProduct() {
       if (!SELECTED_PRODUCT || !CURRENT_USER) return;
-
       const qty = Number(panelQtyEl.value || 0);
       const prod = SELECTED_PRODUCT;
 
@@ -599,8 +711,6 @@
           qty: qty,
         });
 
-        console.log("buy_product response:", res);
-
         if (!res.ok) {
           panelStatusEl.className = "status-bar status-error";
           if (res.error === "not_enough_credits") {
@@ -608,18 +718,23 @@
           } else if (res.error === "qty_out_of_range") {
             panelStatusEl.textContent = `Cantitate invalidă. Min ${res.min_qty}, max ${res.max_qty}.`;
           } else {
-            panelStatusEl.textContent = "Eroare la cumpărare: " + (res.error || "necunoscută");
+            panelStatusEl.textContent =
+              "Eroare la cumpărare: " + (res.error || "necunoscută");
           }
           return;
         }
 
-        // succes
         CURRENT_USER.credits = res.new_balance;
         creditsValueEl.textContent = CURRENT_USER.credits;
 
-        panelStatusEl.className = "status-bar status-ok";
-        panelStatusEl.textContent = `Comandă trimisă! ID tichet: ${res.ticket.id}. Verifică mesajul de la bot.`;
+        if (res.ticket) {
+          USER_TICKETS.push(res.ticket);
+          renderTickets(USER_TICKETS);
+        }
 
+        panelStatusEl.className = "status-bar status-ok";
+        panelStatusEl.textContent =
+          "Comandă trimisă! Tichetul a fost creat mai jos în listă.";
       } catch (err) {
         console.error("buy_product error:", err);
         panelStatusEl.className = "status-bar status-error";
@@ -627,9 +742,87 @@
       }
     }
 
-    // ============================
-    // INIT (cheamă /api init)
-    // ============================
+    function renderTicketMessages(ticket) {
+      ticketMessagesEl.innerHTML = "";
+      (ticket.messages || []).forEach((m) => {
+        const div = document.createElement("div");
+        const senderClass =
+          m.sender === "admin"
+            ? "msg-admin"
+            : m.sender === "user"
+            ? "msg-user"
+            : "msg-system";
+        div.className = "msg " + senderClass;
+        div.innerHTML = `<span>${m.text}</span><br/><span class="msg-time">${
+          m.ts || ""
+        }</span>`;
+        ticketMessagesEl.appendChild(div);
+      });
+    }
+
+    function openTicketPanel(ticket) {
+      SELECTED_TICKET = ticket;
+      ticketStatusEl.textContent = "";
+      ticketStatusEl.className = "status-bar";
+
+      ticketPanelTitleEl.textContent = "Tichet #" + ticket.id;
+      ticketPanelDescEl.textContent = `${ticket.product_name} · ${ticket.qty} buc · ${ticket.total_price} credite · Status: ${ticket.status}`;
+
+      renderTicketMessages(ticket);
+
+      ticketPanelEl.style.display = "block";
+    }
+
+    function closeTicketPanel() {
+      SELECTED_TICKET = null;
+      ticketPanelEl.style.display = "none";
+    }
+
+    async function sendTicketMessage() {
+      if (!SELECTED_TICKET || !CURRENT_USER) return;
+      const text = ticketMessageInputEl.value.trim();
+      if (!text) return;
+
+      ticketStatusEl.textContent = "Se trimite mesajul...";
+      ticketStatusEl.className = "status-bar";
+
+      try {
+        const res = await apiCall("ticket_add_message", {
+          user: {
+            id: CURRENT_USER.id,
+            username: CURRENT_USER.username,
+            first_name: CURRENT_USER.first_name,
+            last_name: CURRENT_USER.last_name,
+          },
+          ticket_id: SELECTED_TICKET.id,
+          text,
+        });
+
+        if (!res.ok) {
+          ticketStatusEl.className = "status-bar status-error";
+          ticketStatusEl.textContent =
+            "Eroare la trimiterea mesajului: " + (res.error || "necunoscută");
+          return;
+        }
+
+        // local update
+        const now = new Date().toISOString();
+        if (!SELECTED_TICKET.messages) SELECTED_TICKET.messages = [];
+        SELECTED_TICKET.messages.push({
+          sender: "user",
+          text,
+          ts: now,
+        });
+        renderTicketMessages(SELECTED_TICKET);
+        ticketMessageInputEl.value = "";
+        ticketStatusEl.className = "status-bar status-ok";
+        ticketStatusEl.textContent = "Mesaj trimis.";
+      } catch (err) {
+        console.error("ticket_add_message error:", err);
+        ticketStatusEl.className = "status-bar status-error";
+        ticketStatusEl.textContent = "Eroare la comunicarea cu serverul.";
+      }
+    }
 
     async function initApp() {
       if (!tg) {
@@ -644,25 +837,21 @@
       const user = tg.initDataUnsafe?.user;
       if (!user) {
         userLineEl.textContent =
-          "Telegram nu a trimis datele userului. Asigură-te că deschizi MiniApp-ul din butonul inline.";
+          "Telegram nu a trimis datele userului. Deschide MiniApp-ul din butonul inline din bot.";
         return;
       }
 
-      console.log("Telegram user:", user);
-
-      // păstrăm info completă
       CURRENT_USER = {
         id: user.id,
         username: user.username || null,
         first_name: user.first_name || null,
         last_name: user.last_name || null,
         credits: 0,
+        is_admin: user.id === ADMIN_ID,
       };
 
       try {
         const res = await apiCall("init", { user: CURRENT_USER });
-        console.log("init response:", res);
-
         if (!res.ok) {
           userLineEl.textContent =
             "Eroare la inițializare (server nu a răspuns ok).";
@@ -671,12 +860,12 @@
 
         CURRENT_USER.credits = res.user.credits;
         CURRENT_USER.username = res.user.username;
-
         CURRENT_SHOP = res.shop;
+        USER_TICKETS = res.tickets || [];
 
         renderUserHeader();
         renderShop(CURRENT_SHOP);
-        renderTicketsInfo(res.tickets || []);
+        renderTickets(USER_TICKETS);
       } catch (err) {
         console.error("init error:", err);
         userLineEl.textContent = "Eroare la inițializare (network).";
@@ -685,6 +874,18 @@
 
     panelCloseBtn.addEventListener("click", closeProductPanel);
     panelBuyBtn.addEventListener("click", buySelectedProduct);
+
+    ticketPanelCloseBtn.addEventListener("click", closeTicketPanel);
+    ticketSendBtn.addEventListener("click", sendTicketMessage);
+
+    openAdminBtn.addEventListener("click", () => {
+      const adminUrl = "https://linxpwp.github.io/telegram-miniap/admin.html";
+      if (tg && tg.openLink) {
+        tg.openLink(adminUrl);
+      } else {
+        window.location.href = adminUrl;
+      }
+    });
 
     initApp();
   </script>
