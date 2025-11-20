@@ -1195,3 +1195,41 @@ h1 {
     padding-inline: 10px;
   }
 }
+/* ============================
+   ADMIN LAYOUT FIX – HEIGHT & SCROLL
+   ============================ */
+
+/* Cardul de admin devine flex ca să poată întinde tabul pe toată înălțimea */
+body[data-page="admin"] .card--admin {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 24px); /* un mic padding de la marginea paginii */
+}
+
+/* Tabul activ (Chat / Shop) ocupă tot spațiul disponibil în card */
+body[data-page="admin"] .card--admin .tab-section.active {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* foarte important pentru ca overflow-ul intern să funcționeze */
+}
+
+/* În Chat tab: gridul cu sidebar + chat trebuie să întindă tabul, dar să nu iasă din el */
+body[data-page="admin"] .card--admin #chatTab .chat-admin-layout {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden; /* tăiem overflow-ul aici, scroll-ul va fi doar în child-uri */
+}
+
+/* În Shop tab: editorul folosește restul spațiului disponibil */
+body[data-page="admin"] .card--admin #shopTab .shop-flex {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Ca să poată scroll-ui, nu au voie să aibă min-height > 0 în contextul ăsta */
+body[data-page="admin"] .card--admin .chat-main,
+body[data-page="admin"] .card--admin .chat-sidebar {
+  min-height: 0;
+}
+
