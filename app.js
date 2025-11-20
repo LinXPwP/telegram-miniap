@@ -2,7 +2,7 @@
 
 // URL-ul Netlify function (proxy către bot.py)
 const API_URL =
-  "https://dancing-hotteok-480e3c.netlify.app/.netlify/functions/api";
+  "https://api.redgen.vip/";
 
 /* ============================
    HELPER – SMART POLLING
