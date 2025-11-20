@@ -10,6 +10,22 @@ document.addEventListener("DOMContentLoaded", () => {
   } else if (pageType === "admin") {
     initAdminApp();
   }
+
+  // Tabs (comun)
+  document.querySelectorAll(".tab-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document
+        .querySelectorAll(".tab-btn")
+        .forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+
+      const target = btn.getAttribute("data-tab");
+      document
+        .querySelectorAll(".tab-section")
+        .forEach((s) => s.classList.remove("active"));
+      document.getElementById(target).classList.add("active");
+    });
+  });
 });
 
 /* ============================
@@ -46,22 +62,6 @@ function initUserApp() {
   const chatInputEl = document.getElementById("chatInput");
   const chatSendBtn = document.getElementById("chatSendBtn");
   const ticketsInfoEl = document.getElementById("ticketsInfo");
-
-  // Tabs handling (common)
-  document.querySelectorAll(".tab-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      document
-        .querySelectorAll(".tab-btn")
-        .forEach((b) => b.classList.remove("active"));
-      btn.classList.add("active");
-
-      const target = btn.getAttribute("data-tab");
-      document
-        .querySelectorAll(".tab-section")
-        .forEach((s) => s.classList.remove("active"));
-      document.getElementById(target).classList.add("active");
-    });
-  });
 
   function apiCall(action, extraPayload = {}) {
     const payload = {
@@ -244,7 +244,7 @@ function initUserApp() {
   function renderTicketsInfo() {
     if (!CURRENT_TICKETS || CURRENT_TICKETS.length === 0) {
       ticketsInfoEl.textContent =
-        "Nu ai tichete deschise încă. Când cumperi un produs, se creează automat un tichet de chat cu administratorul.";
+        "Nu ai tichete încă. Când cumperi un produs se creează automat un tichet.";
     } else {
       const openCount = CURRENT_TICKETS.filter((t) => t.status === "open")
         .length;
@@ -382,8 +382,6 @@ function initUserApp() {
     }
   });
 
-  // Polling
-
   async function pollTickets() {
     if (!CURRENT_USER) return;
     try {
@@ -403,8 +401,6 @@ function initUserApp() {
       console.error("user_get_tickets error:", err);
     }
   }
-
-  // INIT
 
   async function initApp() {
     if (!tg) {
@@ -492,22 +488,6 @@ function initAdminApp() {
   let CURRENT_SHOP = null;
   let SELECTED_TICKET_ID = null;
   let POLL_INTERVAL = null;
-
-  // Tabs handling (common)
-  document.querySelectorAll(".tab-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      document
-        .querySelectorAll(".tab-btn")
-        .forEach((b) => b.classList.remove("active"));
-      btn.classList.add("active");
-
-      const target = btn.getAttribute("data-tab");
-      document
-        .querySelectorAll(".tab-section")
-        .forEach((s) => s.classList.remove("active"));
-      document.getElementById(target).classList.add("active");
-    });
-  });
 
   function apiCall(action, extraPayload = {}) {
     const payload = {
@@ -728,7 +708,7 @@ function initAdminApp() {
   ticketSaveBtn?.addEventListener("click", () => saveSelectedTicket(false));
   ticketCloseBtn?.addEventListener("click", () => saveSelectedTicket(true));
 
-  // SHOP editor – admin
+  // SHOP – admin
 
   function renderShopEditor() {
     shopContainerEl.innerHTML = "";
@@ -935,8 +915,6 @@ function initAdminApp() {
   addCategoryBtn?.addEventListener("click", addCategory);
   saveShopBtn?.addEventListener("click", saveShop);
 
-  // Polling admin tickets
-
   async function pollAdminTickets() {
     if (!ADMIN_TOKEN) return;
     try {
@@ -973,9 +951,6 @@ function initAdminApp() {
     await pollAdminTickets();
     POLL_INTERVAL = setInterval(pollAdminTickets, 3000);
   }
-
-  ticketSaveBtn?.addEventListener("click", () => saveSelectedTicket(false));
-  ticketCloseBtn?.addEventListener("click", () => saveSelectedTicket(true));
 
   initAdmin();
 }
