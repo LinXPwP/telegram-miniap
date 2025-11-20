@@ -2,11 +2,8 @@
 <html lang="ro">
 <head>
   <meta charset="UTF-8" />
-  <title>Admin Dashboard – Shop & Tichete</title>
+  <title>Admin Dashboard – Chat & Shop</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-  <!-- Telegram script nu mai e obligatoriu, dar nu deranjează -->
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
   <style>
     :root {
@@ -18,6 +15,9 @@
       --text: #f5f5f5;
       --muted: #aaaaaa;
       --border: #222222;
+      --bubble-user: #1f2933;
+      --bubble-admin: #8b0000;
+      --bubble-system: #333333;
     }
 
     * {
@@ -35,15 +35,15 @@
     }
 
     .container {
-      max-width: 720px;
+      max-width: 900px;
       margin: 0 auto;
-      padding: 16px 10px 22px;
+      padding: 12px 8px 18px;
     }
 
     .card {
       background: rgba(10, 10, 14, 0.96);
       border-radius: 18px;
-      padding: 12px 12px 14px;
+      padding: 10px 10px 12px;
       border: 1px solid rgba(229, 9, 20, 0.5);
       box-shadow: 0 0 30px rgba(0, 0, 0, 0.7);
       backdrop-filter: blur(10px);
@@ -54,7 +54,7 @@
       justify-content: space-between;
       align-items: center;
       gap: 10px;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }
 
     .badge {
@@ -87,22 +87,21 @@
     }
 
     .subtitle {
-      margin: 0 0 10px;
+      margin: 0 0 6px;
       font-size: 12px;
       color: var(--muted);
     }
 
     .user-line {
       font-size: 12px;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
       color: var(--muted);
     }
 
-    .section-tabs {
+    .tabs {
       display: flex;
       gap: 6px;
-      margin-bottom: 8px;
-      margin-top: 4px;
+      margin-bottom: 6px;
     }
 
     .tab-btn {
@@ -135,52 +134,158 @@
       text-transform: uppercase;
       letter-spacing: 0.08em;
       color: var(--muted);
-      margin: 4px 0 6px;
+      margin: 4px 0;
     }
 
-    /* Tickets */
+    /* CHAT */
 
-    .tickets-list {
-      max-height: 320px;
-      overflow: auto;
+    .chat-admin-layout {
+      display: grid;
+      grid-template-columns: 0.9fr 1.7fr;
+      gap: 6px;
+      max-height: 420px;
+    }
+
+    .chat-sidebar {
       border-radius: 10px;
       border: 1px solid var(--border);
-      padding: 6px;
-      background: rgba(5, 5, 8, 0.8);
+      background: #08080b;
+      overflow: auto;
+      font-size: 12px;
     }
 
-    .ticket-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 6px;
-      font-size: 12px;
-      padding: 4px 6px;
-      border-radius: 8px;
+    .chat-item {
+      padding: 6px 6px;
+      border-bottom: 1px solid #151515;
       cursor: pointer;
     }
 
-    .ticket-row:nth-child(odd) {
-      background: rgba(255, 255, 255, 0.01);
-    }
-
-    .ticket-row.selected {
+    .chat-item.active {
       background: rgba(229, 9, 20, 0.25);
-      border: 1px solid rgba(229, 9, 20, 0.8);
+      border-left: 3px solid var(--accent-soft);
     }
 
-    .ticket-status-open {
-      color: #ffc107;
+    .chat-item-title {
+      font-weight: 600;
+      font-size: 12px;
     }
-    .ticket-status-closed {
-      color: #4caf50;
+
+    .chat-item-line {
+      font-size: 11px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .chat-main {
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #050509;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-header {
+      padding: 6px 8px;
+      border-bottom: 1px solid #151515;
+      font-size: 12px;
+    }
+
+    .chat-header span {
+      color: var(--muted);
+    }
+
+    .chat-messages {
+      flex: 1;
+      padding: 6px 6px 4px;
+      overflow-y: auto;
+      font-size: 12px;
+    }
+
+    .msg-row {
+      margin-bottom: 4px;
+      display: flex;
+    }
+
+    .msg-row.user {
+      justify-content: flex-start;
+    }
+
+    .msg-row.admin {
+      justify-content: flex-end;
+    }
+
+    .msg-row.system {
+      justify-content: center;
+    }
+
+    .msg-bubble {
+      max-width: 80%;
+      padding: 5px 7px;
+      border-radius: 12px;
+      position: relative;
+      font-size: 12px;
+      line-height: 1.3;
+    }
+
+    .msg-bubble.user {
+      background: var(--bubble-user);
+      border-bottom-left-radius: 2px;
+    }
+
+    .msg-bubble.admin {
+      background: var(--bubble-admin);
+      border-bottom-right-radius: 2px;
+    }
+
+    .msg-bubble.system {
+      background: var(--bubble-system);
+      border-radius: 999px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .msg-meta {
+      font-size: 9px;
+      opacity: 0.7;
+      margin-top: 2px;
+      text-align: left;
+    }
+
+    .chat-input {
+      border-top: 1px solid #151515;
+      padding: 4px 4px;
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+
+    .chat-input input {
+      flex: 1;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #050505;
+      color: var(--text);
+      padding: 5px 8px;
+      font-size: 12px;
+    }
+
+    .chat-input button {
+      border-radius: 999px;
+      border: none;
+      padding: 6px 9px;
+      font-size: 12px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-soft));
+      color: #fff;
+      cursor: pointer;
     }
 
     .ticket-details {
-      margin-top: 8px;
+      margin-top: 6px;
       border-radius: 10px;
       border: 1px solid var(--border);
-      padding: 8px;
+      padding: 6px;
       background: rgba(0, 0, 0, 0.6);
       font-size: 12px;
     }
@@ -192,7 +297,7 @@
 
     .ticket-details textarea {
       width: 100%;
-      min-height: 60px;
+      min-height: 50px;
       border-radius: 8px;
       border: 1px solid var(--border);
       background: #050505;
@@ -232,7 +337,7 @@
     }
 
     .status-bar {
-      margin-top: 6px;
+      margin-top: 4px;
       font-size: 11px;
       min-height: 14px;
       color: var(--muted);
@@ -246,10 +351,10 @@
       color: #ff5252;
     }
 
-    /* Shop editor */
+    /* SHOP */
 
     .shop-container {
-      max-height: 360px;
+      max-height: 420px;
       overflow: auto;
       border-radius: 10px;
       border: 1px solid var(--border);
@@ -323,12 +428,6 @@
       width: 100%;
     }
 
-    .product-row label {
-      display: block;
-      font-size: 10px;
-      color: var(--muted);
-    }
-
     .product-mini-actions {
       display: flex;
       gap: 4px;
@@ -340,15 +439,8 @@
       margin-top: 2px;
     }
 
-    .shop-actions {
-      margin-top: 6px;
-      display: flex;
-      justify-content: space-between;
-      gap: 6px;
-    }
-
     .footer {
-      margin-top: 10px;
+      margin-top: 8px;
       font-size: 10px;
       color: var(--muted);
       display: flex;
@@ -380,27 +472,39 @@
 
       <h1>Panou administrator</h1>
       <p class="subtitle">
-        Gestionezi tichetele de comenzi și structura shop-ului (categorii & produse)
-        folosind un token secret în URL.
+        Vezi toate tichetele de chat, răspunde utilizatorilor și administrează structura shop-ului.
       </p>
 
       <p class="user-line" id="userLine">Verific token...</p>
 
-      <div class="section-tabs">
-        <button class="tab-btn active" data-tab="ticketsTab">Tichete</button>
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="chatTab">Chat-uri tichete</button>
         <button class="tab-btn" data-tab="shopTab">Shop</button>
       </div>
 
-      <!-- TICKETS TAB -->
-      <div id="ticketsTab" class="tab-section active">
-        <div class="section-title">Tichete clienți</div>
-        <div class="tickets-list" id="ticketsList">
-          <!-- tichete generate din JS -->
+      <!-- CHAT TAB -->
+      <div id="chatTab" class="tab-section active">
+        <div class="section-title">Toate tichetele</div>
+        <div class="chat-admin-layout">
+          <div class="chat-sidebar" id="ticketsList"></div>
+          <div class="chat-main">
+            <div class="chat-header" id="chatHeader">
+              <span>Niciun tichet selectat</span>
+            </div>
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-input">
+              <input
+                id="chatInput"
+                placeholder="Răspunde utilizatorului..."
+                autocomplete="off"
+              />
+              <button id="chatSendBtn">Trimite</button>
+            </div>
+          </div>
         </div>
 
-        <div class="ticket-details" id="ticketDetails" style="display: none;">
-          <div id="ticketSummary" style="margin-bottom: 6px;"></div>
-
+        <div class="ticket-details" id="ticketDetails" style="display:none;">
+          <div id="ticketSummary" style="margin-bottom: 4px;"></div>
           <div style="margin-bottom: 4px;">
             <label for="ticketStatusSelect">Status tichet:</label><br />
             <select id="ticketStatusSelect">
@@ -408,21 +512,14 @@
               <option value="closed">Închis</option>
             </select>
           </div>
-
           <div>
-            <label for="ticketNote">Notă / răspuns intern:</label><br />
+            <label for="ticketNote">Notă internă:</label><br />
             <textarea id="ticketNote"></textarea>
           </div>
-
-          <div style="margin-top: 6px; display: flex; gap: 6px;">
-            <button class="btn-primary" id="ticketSaveBtn">
-              Salvează tichetul
-            </button>
-            <button class="btn-ghost" id="ticketCloseBtn">
-              Închide tichetul
-            </button>
+          <div style="margin-top: 4px; display: flex; gap: 6px;">
+            <button class="btn-primary" id="ticketSaveBtn">Salvează</button>
+            <button class="btn-ghost" id="ticketCloseBtn">Închide tichet</button>
           </div>
-
           <div class="status-bar" id="ticketStatusBar"></div>
         </div>
       </div>
@@ -430,20 +527,16 @@
       <!-- SHOP TAB -->
       <div id="shopTab" class="tab-section">
         <div class="section-title">Categorii & produse</div>
-        <div class="shop-container" id="shopContainer">
-          <!-- categorii generate din JS -->
-        </div>
-
-        <div class="shop-actions">
+        <div class="shop-container" id="shopContainer"></div>
+        <div style="margin-top: 6px; display:flex; gap:6px; justify-content:space-between;">
           <button class="btn-ghost" id="addCategoryBtn">+ Categorie</button>
           <button class="btn-primary" id="saveShopBtn">Salvează shop</button>
         </div>
-
         <div class="status-bar" id="shopStatusBar"></div>
       </div>
 
       <div class="footer">
-        <span>v0.3 – admin panel cu token</span>
+        <span>v0.3 – admin chat & shop</span>
         <span class="dot-red"></span>
       </div>
     </div>
@@ -453,21 +546,24 @@
     const API_URL =
       "https://dancing-hotteok-480e3c.netlify.app/.netlify/functions/api";
 
-    // luăm token-ul din URL
     const params = new URLSearchParams(window.location.search);
     const ADMIN_TOKEN = params.get("token") || "";
 
     const userLineEl = document.getElementById("userLine");
+
     const ticketsListEl = document.getElementById("ticketsList");
+    const chatHeaderEl = document.getElementById("chatHeader");
+    const chatMessagesEl = document.getElementById("chatMessages");
+    const chatInputEl = document.getElementById("chatInput");
+    const chatSendBtn = document.getElementById("chatSendBtn");
     const ticketDetailsEl = document.getElementById("ticketDetails");
     const ticketSummaryEl = document.getElementById("ticketSummary");
-    const ticketNoteEl = document.getElementById("ticketNote");
     const ticketStatusSelect = document.getElementById("ticketStatusSelect");
+    const ticketNoteEl = document.getElementById("ticketNote");
     const ticketStatusBarEl = document.getElementById("ticketStatusBar");
 
     const shopContainerEl = document.getElementById("shopContainer");
     const shopStatusBarEl = document.getElementById("shopStatusBar");
-
     const addCategoryBtn = document.getElementById("addCategoryBtn");
     const saveShopBtn = document.getElementById("saveShopBtn");
     const ticketSaveBtn = document.getElementById("ticketSaveBtn");
@@ -476,6 +572,7 @@
     let ALL_TICKETS = [];
     let CURRENT_SHOP = null;
     let SELECTED_TICKET_ID = null;
+    let POLL_INTERVAL = null;
 
     // Tabs
     document.querySelectorAll(".tab-btn").forEach((btn) => {
@@ -492,10 +589,6 @@
         document.getElementById(target).classList.add("active");
       });
     });
-
-    // ============================
-    // Helpers
-    // ============================
 
     function apiCall(action, extraPayload = {}) {
       const payload = {
@@ -520,16 +613,22 @@
       }
     }
 
-    // ============================
-    // Tickets
-    // ============================
+    // CHAT
+
+    function getTicketLastMessage(t) {
+      const msgs = t.messages || [];
+      if (msgs.length === 0) return "";
+      return msgs[msgs.length - 1].text || "";
+    }
 
     function renderTicketsList() {
       ticketsListEl.innerHTML = "";
       if (!ALL_TICKETS || ALL_TICKETS.length === 0) {
         ticketsListEl.innerHTML =
-          '<div style="font-size:12px; color:var(--muted);">Nu există tichete încă.</div>';
+          '<div style="padding:6px;font-size:12px;color:var(--muted);">Nu există tichete încă.</div>';
         ticketDetailsEl.style.display = "none";
+        chatHeaderEl.innerHTML = "<span>Niciun tichet selectat</span>";
+        chatMessagesEl.innerHTML = "";
         return;
       }
 
@@ -541,64 +640,57 @@
       });
 
       ALL_TICKETS.forEach((t) => {
-        const row = document.createElement("div");
-        row.className = "ticket-row";
-        if (t.id === SELECTED_TICKET_ID) row.classList.add("selected");
+        const item = document.createElement("div");
+        item.className = "chat-item";
+        if (t.id === SELECTED_TICKET_ID) item.classList.add("active");
 
-        const left = document.createElement("div");
-        left.style.flex = "1";
+        const title = document.createElement("div");
+        title.className = "chat-item-title";
+        title.textContent = (t.username || t.user_id) + " · " + (t.product_name || "");
 
-        const statusSpan = document.createElement("span");
-        statusSpan.className =
-          t.status === "open" ? "ticket-status-open" : "ticket-status-closed";
-        statusSpan.textContent =
-          t.status === "open" ? "● deschis" : "● închis";
+        const statusText = t.status === "open" ? "DESCHIS" : "ÎNCHIS";
+        const lastMsg = getTicketLastMessage(t);
 
-        const mainLine = document.createElement("div");
-        mainLine.innerHTML = `<b>${t.product_name || "Produs"}</b> · ${
-          t.qty
-        } buc.`;
+        const line = document.createElement("div");
+        line.className = "chat-item-line";
+        line.textContent = `[${statusText}] ${lastMsg}`;
 
-        const subLine = document.createElement("div");
-        subLine.style.fontSize = "11px";
-        subLine.style.color = "var(--muted)";
-        subLine.textContent =
-          `User ${t.username || t.user_id} · ${t.created_at || ""}`;
+        item.appendChild(title);
+        item.appendChild(line);
 
-        left.appendChild(mainLine);
-        left.appendChild(subLine);
+        item.addEventListener("click", () => selectTicket(t.id));
 
-        const right = document.createElement("div");
-        right.style.textAlign = "right";
-        right.style.fontSize = "11px";
-        right.innerHTML = `
-          ${statusSpan.outerHTML}<br/>
-          ${t.total_price} credite
-        `;
-
-        row.appendChild(left);
-        row.appendChild(right);
-
-        row.addEventListener("click", () => selectTicket(t.id));
-
-        ticketsListEl.appendChild(row);
+        ticketsListEl.appendChild(item);
       });
     }
 
     function selectTicket(ticketId) {
       SELECTED_TICKET_ID = ticketId;
-      const t = ALL_TICKETS.find((x) => x.id === ticketId);
       renderTicketsList();
 
+      const t = ALL_TICKETS.find((x) => x.id === ticketId);
       if (!t) {
         ticketDetailsEl.style.display = "none";
+        chatHeaderEl.innerHTML = "<span>Niciun tichet selectat</span>";
+        chatMessagesEl.innerHTML = "";
         return;
       }
+
+      chatHeaderEl.innerHTML = `
+        <b>Tichet #${t.id}</b><br/>
+        <span>User: ${t.username || t.user_id} · Produs: ${
+        t.product_name
+      } · ${t.qty} buc · total ${t.total_price} credite · status: ${
+        t.status
+      }</span>
+      `;
+
+      renderChatMessages(t);
 
       ticketDetailsEl.style.display = "block";
       ticketSummaryEl.innerHTML = `
         <b>Tichet #${t.id}</b><br/>
-        De la: <b>${t.username || t.user_id}</b><br/>
+        User: <b>${t.username || t.user_id}</b><br/>
         Produs: <b>${t.product_name}</b> (${t.qty} buc, total ${
         t.total_price
       } credite)
@@ -608,6 +700,72 @@
       ticketStatusBarEl.textContent = "";
       ticketStatusBarEl.className = "status-bar";
     }
+
+    function renderChatMessages(ticket) {
+      const msgs = ticket.messages || [];
+      chatMessagesEl.innerHTML = "";
+
+      msgs.forEach((m) => {
+        const row = document.createElement("div");
+        row.className = "msg-row " + m.from;
+
+        const bubble = document.createElement("div");
+        bubble.className = "msg-bubble " + m.from;
+        bubble.textContent = m.text;
+
+        const meta = document.createElement("div");
+        meta.className = "msg-meta";
+        meta.textContent = `${m.sender || ""}`;
+
+        bubble.appendChild(meta);
+        row.appendChild(bubble);
+
+        chatMessagesEl.appendChild(row);
+      });
+
+      chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+    }
+
+    async function sendAdminMessage() {
+      const text = chatInputEl.value.trim();
+      if (!text || !SELECTED_TICKET_ID) return;
+
+      chatInputEl.value = "";
+
+      try {
+        const res = await apiCall("admin_send_message", {
+          ticket_id: SELECTED_TICKET_ID,
+          text,
+          sender: "Admin",
+        });
+
+        if (!res.ok) {
+          console.error("admin_send_message error:", res);
+          return;
+        }
+
+        const updated = res.ticket;
+        const idx = ALL_TICKETS.findIndex((t) => t.id === updated.id);
+        if (idx >= 0) {
+          ALL_TICKETS[idx] = updated;
+        } else {
+          ALL_TICKETS.push(updated);
+        }
+
+        renderTicketsList();
+        selectTicket(updated.id);
+      } catch (err) {
+        console.error("admin_send_message error:", err);
+      }
+    }
+
+    chatSendBtn.addEventListener("click", sendAdminMessage);
+    chatInputEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendAdminMessage();
+      }
+    });
 
     async function saveSelectedTicket(closed = false) {
       if (!SELECTED_TICKET_ID) return;
@@ -649,15 +807,16 @@
       }
     }
 
-    // ============================
-    // Shop editor
-    // ============================
+    ticketSaveBtn.addEventListener("click", () => saveSelectedTicket(false));
+    ticketCloseBtn.addEventListener("click", () => saveSelectedTicket(true));
+
+    // SHOP EDITOR
 
     function renderShopEditor() {
       shopContainerEl.innerHTML = "";
       if (!CURRENT_SHOP || !CURRENT_SHOP.categories) {
         shopContainerEl.innerHTML =
-          '<div style="font-size:12px; color:var(--muted);">Nu există categorii. Adaugă una nouă.</div>';
+          '<div style="font-size:12px;color:var(--muted);">Nu există categorii. Adaugă una nouă.</div>';
         return;
       }
 
@@ -680,7 +839,7 @@
         deleteBtn.textContent = "Șterge";
         deleteBtn.style.fontSize = "11px";
         deleteBtn.onclick = () => {
-          if (confirm("Sigur vrei să ștergi categoria?")) {
+          if (confirm("Ștergi categoria?")) {
             CURRENT_SHOP.categories.splice(catIndex, 1);
             renderShopEditor();
           }
@@ -716,7 +875,6 @@
           const nameLabel = document.createElement("div");
           nameLabel.className = "small-input-label";
           nameLabel.textContent = "Nume";
-
           colName.appendChild(nameInputProd);
           colName.appendChild(nameLabel);
 
@@ -731,7 +889,6 @@
           const priceLabel = document.createElement("div");
           priceLabel.className = "small-input-label";
           priceLabel.textContent = "Preț";
-
           colPrice.appendChild(priceInput);
           colPrice.appendChild(priceLabel);
 
@@ -746,7 +903,6 @@
           const minLabel = document.createElement("div");
           minLabel.className = "small-input-label";
           minLabel.textContent = "Min";
-
           colMin.appendChild(minInput);
           colMin.appendChild(minLabel);
 
@@ -761,7 +917,6 @@
           const maxLabel = document.createElement("div");
           maxLabel.className = "small-input-label";
           maxLabel.textContent = "Max";
-
           colMax.appendChild(maxInput);
           colMax.appendChild(maxLabel);
 
@@ -777,7 +932,6 @@
               renderShopEditor();
             }
           };
-
           colActions.appendChild(delProdBtn);
 
           row.appendChild(colName);
@@ -860,38 +1014,30 @@
       renderShopEditor();
     }
 
-    // ============================
-    // INIT
-    // ============================
-
-    async function initAdmin() {
-      renderTokenInfo();
-
-      if (!ADMIN_TOKEN) {
-        return;
-      }
-
+    // Polling admin tickets
+    async function pollAdminTickets() {
+      if (!ADMIN_TOKEN) return;
       try {
         const res = await apiCall("admin_get_tickets", {});
-        console.log("admin_get_tickets:", res);
-
         if (!res.ok) {
           if (res.error === "forbidden") {
             userLineEl.innerHTML =
-              "<span style='color:#ff5252;'>Token invalid.</span> Verifică să fie identic cu cel din bot.py.";
-          } else {
-            userLineEl.innerHTML =
-              "<span style='color:#ff5252;'>Eroare API:</span> " +
-              (res.error || "necunoscută");
+              "<span style='color:#ff5252;'>Token invalid.</span>";
           }
           return;
         }
-
         ALL_TICKETS = res.tickets || [];
         CURRENT_SHOP = res.shop || { categories: [] };
 
         renderTicketsList();
         renderShopEditor();
+
+        if (SELECTED_TICKET_ID) {
+          const t = ALL_TICKETS.find((x) => x.id === SELECTED_TICKET_ID);
+          if (t) {
+            selectTicket(t.id);
+          }
+        }
       } catch (err) {
         console.error("admin_get_tickets error:", err);
         userLineEl.innerHTML =
@@ -899,11 +1045,16 @@
       }
     }
 
-    // Events
-    ticketSaveBtn.addEventListener("click", () => saveSelectedTicket(false));
-    ticketCloseBtn.addEventListener("click", () => saveSelectedTicket(true));
     addCategoryBtn.addEventListener("click", addCategory);
     saveShopBtn.addEventListener("click", saveShop);
+
+    // INIT
+    async function initAdmin() {
+      renderTokenInfo();
+      if (!ADMIN_TOKEN) return;
+      await pollAdminTickets();
+      POLL_INTERVAL = setInterval(pollAdminTickets, 3000);
+    }
 
     initAdmin();
   </script>
