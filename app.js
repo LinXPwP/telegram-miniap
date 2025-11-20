@@ -10,20 +10,20 @@ const API_URL =
 /**
  * createSmartPoll:
  *  - fetchFn: async () => snapshot (or undefined). Trebuie să facă și update de UI.
- *  - isEnabledFn: () => boolean – dacă e false, nu se face request (tab închis, fără tichete, etc.)
+ *  - isEnabledFn: () => boolean – dacă e false, nu se face request (tab închis, fereastră inactivă etc.)
  *  - options:
  *      minInterval   – ms, ex 3000
- *      maxInterval   – ms, ex 25000
- *      backoffStep   – ms, ex 3000
+ *      maxInterval   – ms, ex 8000
+ *      backoffStep   – ms, ex 2000
  *      idleThreshold – de câte ori la rând fără schimbări până creștem intervalul
  *
  *  snapshot-ul e comparat (JSON.stringify) cu cel anterior ca să vedem dacă s-a schimbat ceva.
  */
 function createSmartPoll(fetchFn, isEnabledFn, options = {}) {
   const minInterval = options.minInterval ?? 3000;
-  const maxInterval = options.maxInterval ?? 25000;
-  const backoffStep = options.backoffStep ?? 3000;
-  const idleThreshold = options.idleThreshold ?? 3;
+  const maxInterval = options.maxInterval ?? 8000;
+  const backoffStep = options.backoffStep ?? 2000;
+  const idleThreshold = options.idleThreshold ?? 4;
 
   let timeoutId = null;
   let active = false;
@@ -35,7 +35,7 @@ function createSmartPoll(fetchFn, isEnabledFn, options = {}) {
     if (!active) return;
 
     if (!isEnabledFn || !isEnabledFn()) {
-      // Nimic de urmărit acum -> mai încercăm peste un interval „rece”
+      // nimic de urmărit acum -> mai încercăm peste un interval „rece”
       schedule(maxInterval);
       return;
     }
@@ -61,7 +61,6 @@ function createSmartPoll(fetchFn, isEnabledFn, options = {}) {
       }
     } catch (e) {
       console.error("[smartPoll] error:", e);
-      // pe eroare, încercăm din nou peste un interval puțin mai mare
       currentInterval = Math.min(maxInterval, currentInterval + backoffStep);
     }
 
@@ -97,7 +96,7 @@ function createSmartPoll(fetchFn, isEnabledFn, options = {}) {
 }
 
 /* ============================
-   BOOTSTRAP
+   BOOTSTRAP – Tabs + init
    ============================ */
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -160,6 +159,13 @@ function initUserApp() {
   let CURRENT_SHOP = null;
   let CURRENT_TICKETS = [];
   let SELECTED_TICKET_ID = null;
+
+  // fereastră activă user (în ms) – doar atunci poll-uim
+  let userActiveUntil = 0;
+  function bumpUserActive(extraMs = 25000) {
+    const now = Date.now();
+    userActiveUntil = Math.max(userActiveUntil, now + extraMs);
+  }
 
   const creditsValueEl = document.getElementById("creditsValue");
   const userLineEl = document.getElementById("userLine");
@@ -354,13 +360,15 @@ function initUserApp() {
       panelStatusEl.className = "status-bar status-ok";
       panelStatusEl.textContent = `Comandă trimisă, tichet #${newTicket.id} creat.`;
 
-      // trecem automat pe tab-ul de tichete
+      // mergem automat pe tab-ul de tichete
       const ticketsTabBtn = document.querySelector(
         '.tab-btn[data-tab="ticketsTab"]'
       );
       if (ticketsTabBtn) ticketsTabBtn.click();
 
-      // un refresh manual imediat + accelerăm polling
+      // sesiune activă de chat încă ~25s
+      bumpUserActive();
+
       const snap = await pollTicketsUserCore();
       userTicketsPoller.bumpFast();
       return snap;
@@ -429,6 +437,7 @@ function initUserApp() {
 
       item.addEventListener("click", async () => {
         selectTicket(t.id);
+        bumpUserActive();
         const snap = await pollTicketsUserCore();
         userTicketsPoller.bumpFast();
         return snap;
@@ -511,6 +520,8 @@ function initUserApp() {
       selectTicket(updated.id);
       renderTicketsInfo();
 
+      bumpUserActive();
+
       const snap = await pollTicketsUserCore();
       userTicketsPoller.bumpFast();
       return snap;
@@ -527,7 +538,7 @@ function initUserApp() {
     }
   });
 
-  // funcția care e folosită de smartPoll – face refresh și returnează snapshot-ul curent
+  // funcția folosită de smartPoll – face refresh și întoarce snapshot
   async function pollTicketsUserCore() {
     if (!CURRENT_USER) return CURRENT_TICKETS;
     try {
@@ -553,32 +564,45 @@ function initUserApp() {
   const userTicketsPoller = createSmartPoll(
     pollTicketsUserCore,
     () => {
+      // activ doar când:
+      // - tab-ul de tichete e deschis
+      // - există tichete
+      // - suntem în fereastra activă (25s după ultima acțiune)
       if (!isTicketsTabActive()) return false;
       if (!CURRENT_TICKETS || CURRENT_TICKETS.length === 0) return false;
+
+      const now = Date.now();
+      if (now > userActiveUntil) return false;
+
       const hasOpen = CURRENT_TICKETS.some((t) => t.status === "open");
       const hasSelected = !!SELECTED_TICKET_ID;
       return hasOpen || hasSelected;
     },
     {
-      minInterval: 4000,
-      maxInterval: 25000,
-      backoffStep: 3000,
-      idleThreshold: 3,
+      minInterval: 3000,
+      maxInterval: 8000,
+      backoffStep: 2000,
+      idleThreshold: 4,
     }
   );
 
-  // tab change + visibility
+  // tab change (user)
   window.onUserTabChange = (tabId) => {
     if (tabId === "ticketsTab") {
+      bumpUserActive();
       userTicketsPoller.start();
     } else {
       userTicketsPoller.stop();
     }
   };
 
+  // când fereastra nu e vizibilă, oprim polling-ul
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
-      if (isTicketsTabActive()) userTicketsPoller.start();
+      if (isTicketsTabActive()) {
+        bumpUserActive();
+        userTicketsPoller.start();
+      }
     } else {
       userTicketsPoller.stop();
     }
@@ -629,6 +653,7 @@ function initUserApp() {
       renderTicketsInfo();
 
       if (isTicketsTabActive()) {
+        bumpUserActive();
         userTicketsPoller.start();
       }
     } catch (err) {
@@ -685,6 +710,13 @@ function initAdminApp() {
   let ALL_TICKETS = [];
   let CURRENT_SHOP = null;
   let SELECTED_TICKET_ID = null;
+
+  // fereastră activă admin (în ms)
+  let adminActiveUntil = 0;
+  function bumpAdminActive(extraMs = 30000) {
+    const now = Date.now();
+    adminActiveUntil = Math.max(adminActiveUntil, now + extraMs);
+  }
 
   function apiCall(action, extraPayload = {}) {
     const payload = {
@@ -816,6 +848,7 @@ function initAdminApp() {
 
       item.addEventListener("click", async () => {
         selectTicket(t.id);
+        bumpAdminActive();
         const snap = await pollAdminCore();
         adminPoller.bumpFast();
         return snap;
@@ -926,6 +959,8 @@ function initAdminApp() {
       renderTicketsList();
       selectTicket(updated.id);
 
+      bumpAdminActive();
+
       const snap = await pollAdminCore();
       adminPoller.bumpFast();
       return snap;
@@ -975,6 +1010,8 @@ function initAdminApp() {
       updateTicketStats();
       renderTicketsList();
       selectTicket(t.id);
+
+      bumpAdminActive();
 
       const snap = await pollAdminCore();
       adminPoller.bumpFast();
@@ -1260,7 +1297,8 @@ function initAdminApp() {
       shopStatusBarEl.textContent = "Shop salvat.";
       shopStatusBarEl.className = "status-bar status-ok";
 
-      // după save, facem un sync rapid cu serverul, apoi accelerăm polling-ul
+      bumpAdminActive();
+
       const snap = await pollAdminCore();
       adminPoller.bumpFast();
       return snap;
@@ -1314,7 +1352,6 @@ function initAdminApp() {
         }
       }
 
-      // snapshot-ul folosit de smartPoll pentru comparație
       return { tickets: ALL_TICKETS, shop: CURRENT_SHOP };
     } catch (err) {
       console.error("admin_get_tickets error:", err);
@@ -1331,16 +1368,19 @@ function initAdminApp() {
     () => {
       if (!ADMIN_TOKEN) return false;
       if (!isAnyAdminTabActive()) return false;
-      // are rost să poll-uim doar dacă sunt tichete sau câteva deschise
+
+      const now = Date.now();
+      if (now > adminActiveUntil) return false;
+
       const hasTickets = ALL_TICKETS.length > 0;
       const hasOpen = ALL_TICKETS.some((t) => t.status === "open");
       return hasTickets || hasOpen;
     },
     {
-      minInterval: 4000,
-      maxInterval: 25000,
-      backoffStep: 3000,
-      idleThreshold: 3,
+      minInterval: 2000,
+      maxInterval: 8000,
+      backoffStep: 2000,
+      idleThreshold: 4,
     }
   );
 
@@ -1359,6 +1399,7 @@ function initAdminApp() {
   // schimbare de tab în admin (chat / shop)
   window.onAdminTabChange = () => {
     if (isAnyAdminTabActive()) {
+      bumpAdminActive();
       adminPoller.start();
     } else {
       adminPoller.stop();
@@ -1368,7 +1409,10 @@ function initAdminApp() {
   // când fereastra nu e vizibilă, oprim polling-ul
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
-      if (isAnyAdminTabActive()) adminPoller.start();
+      if (isAnyAdminTabActive()) {
+        bumpAdminActive();
+        adminPoller.start();
+      }
     } else {
       adminPoller.stop();
     }
@@ -1380,9 +1424,8 @@ function initAdminApp() {
     renderTokenInfo();
     if (!ADMIN_TOKEN) return;
 
-    // prim fetch imediat
     await pollAdminCore();
-    // apoi lăsăm smartPoll să preia controlul
+    bumpAdminActive();
     adminPoller.start();
   }
 
