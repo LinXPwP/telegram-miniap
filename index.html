@@ -2,7 +2,7 @@
 <html lang="ro">
 <head>
   <meta charset="UTF-8" />
-  <title>Telegram MiniApp – Auth + API Test</title>
+  <title>Telegram MiniApp – API Test + Formular</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -85,18 +85,18 @@
     <h2>MiniApp ↔ Netlify ↔ PebbleHost</h2>
 
     <div id="userBlock">
-      <p class="label">Informații utilizator (verificate pe server):</p>
+      <p class="label">Informații utilizator (din initDataUnsafe.user):</p>
       <p id="userInfo">Se încarcă...</p>
       <div id="debugInfo" class="debug"></div>
     </div>
 
-    <hr>
+    <hr />
 
     <p class="label">Teste API (GET prin Netlify):</p>
     <button id="btnPing">Test /ping</button>
     <button id="btnCredits">Test /credits (credits.json)</button>
 
-    <hr>
+    <hr />
 
     <p class="label">Formular test (POST → Netlify → bot.py):</p>
     <form id="testForm">
@@ -106,11 +106,22 @@
       </div>
       <div class="field">
         <label for="fieldMessage">Mesaj</label>
-        <textarea id="fieldMessage" name="message" rows="3" placeholder="Scrie ceva de test..."></textarea>
+        <textarea
+          id="fieldMessage"
+          name="message"
+          rows="3"
+          placeholder="Scrie ceva de test..."
+        ></textarea>
       </div>
       <div class="field">
         <label for="fieldAmount">Cantitate / Suma (ex: credite)</label>
-        <input id="fieldAmount" name="amount" type="number" min="0" value="1" />
+        <input
+          id="fieldAmount"
+          name="amount"
+          type="number"
+          min="0"
+          value="1"
+        />
       </div>
       <button id="btnSendForm" type="submit">Trimite formularul</button>
     </form>
@@ -122,82 +133,72 @@
   </div>
 
   <script>
-    const API_BASE_URL = "https://dancing-hotteok-480e3c.netlify.app/.netlify/functions";
+    const API_BASE_URL =
+      "https://dancing-hotteok-480e3c.netlify.app/.netlify/functions";
+    const ADMIN_ID = 7672256597;
 
     const tg = window.Telegram?.WebApp;
     const outputEl = document.getElementById("output");
     const userInfoEl = document.getElementById("userInfo");
     const debugInfoEl = document.getElementById("debugInfo");
 
-    let CURRENT_USER = null; // setat după /auth
+    let CURRENT_USER_ID = null;
+    let CURRENT_USERNAME = null;
 
-    // ---------------------------
-    // 1) Auth securizat cu initData
-    // ---------------------------
-    async function initAuth() {
+    // 1) Citim user-ul din initDataUnsafe.user (ca în exemplul tău)
+    function initUserFromTelegram() {
       if (!tg) {
         userInfoEl.innerHTML =
-          "Nu ești în Telegram MiniApp. Deschide link-ul prin bot (/start).";
+          "Nu ești în Telegram MiniApp. Deschide link-ul prin bot, nu direct din browser.";
         return;
       }
 
       tg.ready();
       tg.expand();
 
-      const initData = tg.initData || "";
-      debugInfoEl.textContent = "initData length: " + initData.length;
+      console.log("Telegram.WebApp:", tg);
+      console.log("initData:", tg.initData);
+      console.log("initDataUnsafe:", tg.initDataUnsafe);
 
-      if (!initData) {
+      const user = tg.initDataUnsafe?.user;
+
+      debugInfoEl.textContent =
+        "initData length: " +
+        (tg.initData ? tg.initData.length : 0) +
+        " | user present: " +
+        (user ? "DA" : "NU");
+
+      if (!user) {
         userInfoEl.innerHTML =
-          "Telegram nu a trimis initData. Asigură-te că deschizi prin buton WebApp din bot.";
+          "Telegram nu a trimis user-ul în initDataUnsafe.user.\n" +
+          "Asigură-te că deschizi MiniApp-ul din butonul inline 'Deschide MiniApp 🛒'.";
         return;
       }
 
-      try {
-        const res = await fetch(`${API_BASE_URL}/auth`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ init_data: initData })
-        });
+      CURRENT_USER_ID = user.id;
+      CURRENT_USERNAME = user.username
+        ? "@" + user.username
+        : `${user.first_name || ""} ${user.last_name || ""}`.trim();
 
-        const data = await res.json();
-        console.log("Răspuns /auth:", data);
+      const isAdmin = CURRENT_USER_ID === ADMIN_ID;
 
-        if (!data.ok) {
-          userInfoEl.innerHTML = "Autentificare eșuată (auth_failed).";
-          return;
-        }
+      userInfoEl.innerHTML = `
+        <b>ID:</b> ${CURRENT_USER_ID}<br />
+        <b>Username:</b> ${CURRENT_USERNAME || "fără username"}<br />
+        <b>Rol:</b>
+        <span style="color:${isAdmin ? "#ff5252" : "#4caf50"};">
+          ${isAdmin ? "Administrator" : "Utilizator normal"}
+        </span>
+      `;
 
-        CURRENT_USER = data.user;
-
-        const name =
-          CURRENT_USER.username
-            ? "@" + CURRENT_USER.username
-            : `${CURRENT_USER.first_name || ""} ${CURRENT_USER.last_name || ""}`.trim();
-
-        userInfoEl.innerHTML = `
-          <b>ID:</b> ${CURRENT_USER.id}<br>
-          <b>Username:</b> ${name || "fără username"}<br>
-          <b>Rol:</b> 
-          <span style="color:${CURRENT_USER.is_admin ? '#ff5252' : '#4caf50'};">
-            ${CURRENT_USER.is_admin ? "Administrator" : "Utilizator normal"}
-          </span><br>
-          <b>Credite:</b> ${CURRENT_USER.credits}
-        `;
-
-        const nameField = document.getElementById("fieldName");
-        if (nameField && name && !nameField.value) {
-          nameField.value = name;
-        }
-      } catch (err) {
-        console.error("Eroare la /auth:", err);
-        userInfoEl.innerHTML = "Eroare la autentificare.";
+      // auto complete la formular
+      const nameField = document.getElementById("fieldName");
+      if (nameField && CURRENT_USERNAME && !nameField.value) {
+        nameField.value = CURRENT_USERNAME;
       }
     }
 
-    // ---------------
     // 2) GET → /ping
-    // ---------------
     async function testPing() {
       try {
         const res = await fetch(`${API_BASE_URL}/ping`);
@@ -210,9 +211,7 @@
       }
     }
 
-    // ------------------
     // 3) GET → /credits
-    // ------------------
     async function testCredits() {
       try {
         const res = await fetch(`${API_BASE_URL}/credits`);
@@ -225,18 +224,17 @@
       }
     }
 
-    // ------------------------------------------------------
     // 4) POST → /form-test
-    // ------------------------------------------------------
     async function submitForm(event) {
       event.preventDefault();
 
       const payload = {
-        user: CURRENT_USER, // ce a validat serverul la /auth
+        user_id: CURRENT_USER_ID,
+        username: CURRENT_USERNAME,
         name: document.getElementById("fieldName").value || "",
         message: document.getElementById("fieldMessage").value || "",
         amount: Number(document.getElementById("fieldAmount").value || 0),
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
 
       console.log("Trimit formular:", payload);
@@ -245,7 +243,7 @@
         const res = await fetch(`${API_BASE_URL}/form-test`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(payload),
         });
 
         const data = await res.json();
@@ -259,9 +257,11 @@
 
     document.getElementById("btnPing").addEventListener("click", testPing);
     document.getElementById("btnCredits").addEventListener("click", testCredits);
-    document.getElementById("testForm").addEventListener("submit", submitForm);
+    document
+      .getElementById("testForm")
+      .addEventListener("submit", submitForm);
 
-    initAuth();
+    initUserFromTelegram();
   </script>
 </body>
 </html>
