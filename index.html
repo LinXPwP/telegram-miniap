@@ -2,69 +2,73 @@
 <html lang="ro">
 <head>
   <meta charset="UTF-8" />
-  <title>MiniApp Shop & Chat</title>
+  <title>Admin Dashboard – Shop & Chat</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-  <!-- Telegram WebApp SDK -->
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
-  <!-- CSS comun -->
   <link rel="stylesheet" href="style.css" />
 </head>
-<body data-page="user">
+<body data-page="admin">
   <div class="container">
-    <div class="card card--user">
+    <div class="card card--admin">
       <div class="header-top">
         <div class="badge">
           <span class="badge-dot"></span>
-          <span>Shop & Chat</span>
+          <span>Admin dashboard</span>
         </div>
-        <div class="credits">
-          Credite: <span class="value" id="creditsValue">-</span>
+        <div class="env-info" id="envInfo">
+          MiniApp Admin (token)
         </div>
       </div>
 
-      <h1>MiniApp Shop</h1>
-      <p class="subtitle">
-        Cumpără cu credite și discută cu adminul direct în tichete.
-      </p>
-
-      <p class="user-line" id="userLine">Se încarcă utilizatorul...</p>
-
-      <div class="tabs">
-        <button class="tab-btn active" data-tab="shopTab">Shop</button>
-        <button class="tab-btn" data-tab="ticketsTab">Tichete</button>
+      <div class="admin-header-row">
+        <div>
+          <h1>Panou administrator</h1>
+          <p class="subtitle">
+            Gestionează tichetele și structura shop-ului.
+          </p>
+        </div>
+        <p class="user-line" id="userLine">Verific token...</p>
       </div>
 
-      <!-- SHOP TAB -->
-      <div id="shopTab" class="tab-section active">
-        <div class="section-title">Produse</div>
-        <div id="categoriesContainer" class="categories"></div>
+      <div class="tabs tabs--admin" data-active="chatTab">
+        <button class="tab-btn active" data-tab="chatTab">Chat tichete</button>
+        <button class="tab-btn" data-tab="shopTab">Shop</button>
+      </div>
 
-        <div id="productPanel" class="product-panel" style="display:none;">
-          <div class="product-panel-header">
-            <div class="product-panel-name" id="panelName"></div>
-            <button class="product-panel-close" id="panelCloseBtn">×</button>
+      <!-- CHAT TAB -->
+      <div id="chatTab" class="tab-section active">
+        <!-- BARĂ FILTRE + STATISTICI -->
+        <div class="admin-toolbar">
+          <div class="toolbar-group">
+            <select id="filterStatus" class="toolbar-select">
+              <option value="all">Toate statusurile</option>
+              <option value="open">Doar deschise</option>
+              <option value="closed">Doar închise</option>
+            </select>
+            <input
+              id="filterSearch"
+              class="toolbar-search"
+              placeholder="Caută user, produs sau #id..."
+              autocomplete="off"
+            />
           </div>
-          <div class="product-panel-desc" id="panelDesc"></div>
-          <div class="product-panel-price" id="panelPrice"></div>
-          <div class="qty-row">
-            <span class="qty-label">Cantitate:</span>
-            <input type="number" id="panelQty" min="1" value="1" />
-            <span id="panelQtyRange" class="qty-range"></span>
+          <div class="toolbar-stats">
+            <div class="stat-pill">
+              <span class="stat-label">Total</span>
+              <span class="stat-value" id="statTotal">0</span>
+            </div>
+            <div class="stat-pill stat-pill--open">
+              <span class="stat-label">Deschise</span>
+              <span class="stat-value" id="statOpen">0</span>
+            </div>
+            <div class="stat-pill stat-pill--closed">
+              <span class="stat-label">Închise</span>
+              <span class="stat-value" id="statClosed">0</span>
+            </div>
           </div>
-          <button class="product-panel-buy" id="panelBuyBtn">
-            Cumpără și deschide tichet
-          </button>
-          <div class="status-bar" id="panelStatus"></div>
         </div>
-      </div>
 
-      <!-- TICKETS TAB -->
-      <div id="ticketsTab" class="tab-section">
-        <div class="section-title">Tichetele mele</div>
-        <div class="chat-layout">
-          <div class="chat-sidebar" id="chatList"></div>
+        <div class="chat-admin-layout">
+          <div class="chat-sidebar" id="ticketsList"></div>
           <div class="chat-main">
             <div class="chat-header" id="chatHeader">
               <span>Niciun tichet selectat</span>
@@ -73,24 +77,75 @@
             <div class="chat-input">
               <input
                 id="chatInput"
-                placeholder="Scrie un mesaj către admin..."
+                placeholder="Răspunde utilizatorului..."
                 autocomplete="off"
               />
               <button id="chatSendBtn">Trimite</button>
             </div>
           </div>
         </div>
-        <div class="tickets-info" id="ticketsInfo"></div>
+
+        <!-- Detalii tichet (doar info + butoane închidere) -->
+        <div class="ticket-details" id="ticketDetails" style="display:none;">
+          <div id="ticketSummary" class="ticket-summary"></div>
+          <div id="ticketNoteInline" class="ticket-note-inline"></div>
+          <div class="ticket-actions">
+            <button class="btn-ghost" id="ticketCloseBtn">Închide tichet</button>
+            <button class="btn-primary" id="ticketCloseWithReasonBtn">
+              Închide cu motiv
+            </button>
+          </div>
+          <div class="status-bar" id="ticketStatusBar"></div>
+        </div>
       </div>
 
-      <div class="footer">
-        <span>MiniApp · shop & chat</span>
+      <!-- SHOP TAB -->
+      <div id="shopTab" class="tab-section">
+        <div class="shop-flex">
+          <div class="shop-container" id="shopContainer"></div>
+          <div class="shop-sidepanel">
+            <h2 class="shop-sidepanel-title">Acțiuni Shop</h2>
+            <p class="shop-sidepanel-text">
+              Modificările se aplică instant doar aici. Apasă <b>Salvează shop</b> ca să scrii în fișier.
+            </p>
+
+            <div class="shop-metrics" id="shopMetrics"></div>
+
+            <button class="btn-ghost full-width" id="addCategoryBtn">
+              + Adaugă categorie
+            </button>
+            <button class="btn-primary full-width" id="saveShopBtn">
+              💾 Salvează shop
+            </button>
+            <div class="status-bar" id="shopStatusBar"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer footer--admin">
+        <span>MiniApp · admin</span>
         <span class="dot-red"></span>
       </div>
     </div>
   </div>
 
-  <!-- JS comun -->
+  <!-- MODAL pentru "închide cu motiv" -->
+  <div class="modal-backdrop" id="reasonModal" style="display:none;">
+    <div class="modal">
+      <h3>Închide tichet cu motiv</h3>
+      <p class="modal-text">
+        Motivul va fi salvat ca <b>notă internă</b> pentru acest tichet.
+      </p>
+      <textarea id="reasonInput" placeholder="Scrie motivul de închidere..."></textarea>
+      <div class="modal-actions">
+        <button class="btn-ghost" id="reasonCancelBtn">Anulează</button>
+        <button class="btn-primary" id="reasonConfirmBtn">
+          Confirmă și închide
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script src="app.js"></script>
 </body>
 </html>
