@@ -1199,13 +1199,6 @@ h1 {
    ADMIN LAYOUT FIX – HEIGHT & SCROLL
    ============================ */
 
-/* Cardul de admin devine flex ca să poată întinde tabul pe toată înălțimea */
-body[data-page="admin"] .card--admin {
-  display: flex;
-  flex-direction: column;
-  max-height: calc(100vh - 24px); /* un mic padding de la marginea paginii */
-}
-
 /* Tabul activ (Chat / Shop) ocupă tot spațiul disponibil în card */
 body[data-page="admin"] .card--admin .tab-section.active {
   flex: 1;
@@ -1231,5 +1224,38 @@ body[data-page="admin"] .card--admin #shopTab .shop-flex {
 body[data-page="admin"] .card--admin .chat-main,
 body[data-page="admin"] .card--admin .chat-sidebar {
   min-height: 0;
+}
+/* === FIX 1: card admin să nu mai blocheze scroll-ul paginii === */
+
+body[data-page="admin"] .card--admin {
+  display: block;      /* nu mai e flex full-screen */
+  max-height: none;
+  overflow: visible;   /* lăsăm pagina să crească și să aibă scroll */
+}
+/* === FIX 2: layout chat admin – scroll separat listă / mesaje === */
+
+body[data-page="admin"] .chat-admin-layout {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.85fr) minmax(0, 1.7fr);
+  gap: 10px;
+  margin-top: 4px;
+}
+
+/* stânga: listă tichete – scroll doar aici */
+body[data-page="admin"] .chat-admin-layout .chat-sidebar {
+  max-height: 400px;     /* cât vrei să fie „fereastra” de chat */
+  overflow-y: auto;
+}
+
+/* dreapta: chat – input fix jos, mesaje scroll */
+body[data-page="admin"] .chat-admin-layout .chat-main {
+  max-height: 400px;
+  display: flex;
+  flex-direction: column;
+}
+
+body[data-page="admin"] .chat-admin-layout .chat-messages {
+  flex: 1;
+  overflow-y: auto;      /* scroll DOAR pe mesaje */
 }
 
