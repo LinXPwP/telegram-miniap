@@ -2,7 +2,7 @@
 
 // URL-ul Netlify function (proxy către bot.py)
 const API_URL =
-  "https://spring-flower-a997.linx-discord22.workers.dev/";
+  "https://dancing-hotteok-480e3c.netlify.app/.netlify/functions/api";
 
 /* ============================
    HELPER – SMART POLLING
