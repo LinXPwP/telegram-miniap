@@ -2,8 +2,9 @@
 <html lang="ro">
 <head>
   <meta charset="UTF-8" />
-  <title>Shop – MiniApp</title>
+  <title>Telegram Shop MiniApp</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -13,8 +14,8 @@
       <div class="app-brand">
         <div class="brand-logo"><span>S</span></div>
         <div class="brand-text">
-          <h1>Shop</h1>
-          <p id="subtitle">Se încarcă datele...</p>
+          <h1>Shop MiniApp</h1>
+          <p id="subtitle">Se încarcă datele din Telegram...</p>
         </div>
       </div>
       <div id="role-chip" class="role-chip" style="display:none;">
@@ -26,8 +27,8 @@
     <section class="card">
       <div class="card-header">
         <div>
-          <div class="card-title">Balance</div>
-          <div class="card-sub">Creditele tale disponibile</div>
+          <div class="card-title">Profil & credite</div>
+          <div class="card-sub">Date citite din bot prin API securizat.</div>
         </div>
         <div id="user-id" class="badge-id">ID: -</div>
       </div>
@@ -38,42 +39,44 @@
       </div>
 
       <div class="info-row">
+        <div class="info-label">Status</div>
+        <div id="status" class="info-value">loading...</div>
+      </div>
+
+      <div class="info-row">
         <div class="info-label">Credite</div>
-        <div id="credits" class="info-value credits">0</div>
+        <div id="credits" class="info-value credits">loading...</div>
       </div>
 
       <div id="profile-error" class="error-text" style="display:none;"></div>
+
+      <div class="admin-actions-row" id="admin-row" style="margin-top:8px; display:none;">
+        <button id="btn-open-admin" class="btn btn-primary">Deschide admin panel</button>
+      </div>
     </section>
 
     <section class="card">
       <div class="card-header">
         <div>
-          <div class="card-title">Produse</div>
-          <div class="card-sub">Cumpără folosind creditele tale</div>
+          <div class="card-title">Shop</div>
+          <div class="card-sub">Cumpără produse cu credite.</div>
         </div>
       </div>
       <div id="shop-container">
-        <div class="skeleton skeleton-line"></div>
-        <div class="skeleton skeleton-line"></div>
-        <div class="skeleton skeleton-line short"></div>
+        <div class="info-value" style="font-size:13px; color:var(--muted);">
+          Se încarcă lista de produse...
+        </div>
       </div>
     </section>
 
     <div class="footer">
-      Navighează: Shop • Profil • Admin (doar admin)
+      După cumpărare se deschide automat un ticket către administrator.
     </div>
   </div>
 
   <div id="toast" class="toast"></div>
 
-  <nav class="tabbar" style="margin-top:8px;">
-    <a class="tab-btn active">Shop</a>
-    <a class="tab-btn" href="profile.html">Profil</a>
-    <a id="nav-admin" class="tab-btn hidden" href="profile.html#admin">Admin</a>
-  </nav>
-
   <script>
-    console.log("Hello, JavaScript!");
     (function () {
       const tg = window.Telegram.WebApp;
       if (tg && tg.expand) tg.expand();
@@ -83,14 +86,23 @@
 
       const elSubtitle = document.getElementById("subtitle");
       const elUsername = document.getElementById("username");
+      const elStatus = document.getElementById("status");
       const elCredits = document.getElementById("credits");
       const elUserId = document.getElementById("user-id");
       const elRoleChip = document.getElementById("role-chip");
       const elRoleText = document.getElementById("role-text");
       const elProfileError = document.getElementById("profile-error");
       const elShopContainer = document.getElementById("shop-container");
-      const navAdmin = document.getElementById("nav-admin");
+      const adminRow = document.getElementById("admin-row");
+      const btnOpenAdmin = document.getElementById("btn-open-admin");
       const toastEl = document.getElementById("toast");
+
+      let user;
+      try {
+        user = tg.initDataUnsafe && tg.initDataUnsafe.user;
+      } catch (e) {
+        console.error(e);
+      }
 
       function toast(msg) {
         toastEl.textContent = msg;
@@ -105,18 +117,14 @@
         });
       }
 
-      let user = null;
-      try {
-        user = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
-      } catch (e) {
-        console.error(e);
-      }
-
       if (!user) {
-        elSubtitle.textContent = "Deschide miniapp-ul din Telegram, nu direct din browser.";
-        elProfileError.style.display = "block";
-        elProfileError.textContent = "User necunoscut.";
+        elSubtitle.textContent = "MiniApp-ul trebuie deschis din Telegram.";
+        elUsername.textContent = "necunoscut";
+        elStatus.textContent = "nu s-a putut citi utilizatorul";
         elCredits.textContent = "–";
+        elProfileError.style.display = "block";
+        elProfileError.textContent =
+          "Deschide acest miniapp din botul Telegram, nu din browser.";
         return;
       }
 
@@ -127,53 +135,49 @@
       elUserId.textContent = "ID: " + user.id;
 
       const isAdmin = user.id === ADMIN_ID;
+      elStatus.textContent = isAdmin ? "Administrator" : "Utilizator normal";
+      elRoleText.textContent = isAdmin ? "ADMIN" : "USER";
+      elRoleChip.style.display = "inline-flex";
+
       if (isAdmin) {
-        elRoleChip.style.display = "inline-flex";
-        elRoleText.textContent = "ADMIN";
-        navAdmin.classList.remove("hidden");
+        adminRow.style.display = "flex";
       }
 
-      elSubtitle.textContent = "Se încarcă creditele & shop-ul...";
+      elSubtitle.textContent = "Se iau creditele & shop-ul...";
 
-      // credite
+      // ====== CREDITE ======
       safeFetch(API_BASE + "/get_credits?user_id=" + encodeURIComponent(user.id))
         .then(data => {
-          elCredits.textContent = data.credits ?? 0;
-          if (data.is_admin) {
-            elRoleChip.style.display = "inline-flex";
-            elRoleText.textContent = "ADMIN";
-            navAdmin.classList.remove("hidden");
+          if (data.error) throw new Error(data.error);
+          elCredits.textContent = data.credits != null ? data.credits : 0;
+          if (typeof data.is_admin === "boolean") {
+            const adminFromApi = data.is_admin;
+            elStatus.textContent = adminFromApi ? "Administrator" : "Utilizator normal";
+            elRoleText.textContent = adminFromApi ? "ADMIN" : "USER";
           }
-          elSubtitle.textContent = "Gata! Poți cumpăra produse.";
+          elSubtitle.textContent = "Conectat la bot.";
         })
         .catch(err => {
-          console.error(err);
+          console.error("Eroare API credite:", err);
           elCredits.textContent = "–";
           elProfileError.style.display = "block";
-          elProfileError.textContent = "Nu s-au putut încărca creditele.";
-          elSubtitle.textContent = "Eroare la API-ul de credite.";
+          elProfileError.textContent =
+            "Nu s-au putut încărca creditele. Verifică API-ul Netlify / bot-ul.";
+          elSubtitle.textContent = "Eroare la API credite.";
         });
 
-      // shop
-      safeFetch(API_BASE + "/get_shop")
-        .then(data => {
-          renderShop(data);
-        })
-        .catch(err => {
-          console.error(err);
-          elShopContainer.innerHTML =
-            '<div class="error-text">Eroare la încărcarea produselor.</div>';
-        });
+      // ====== SHOP ======
+      let shopData = { categories: [] };
 
-      function renderShop(data) {
-        if (!data || !Array.isArray(data.categories) || !data.categories.length) {
+      function renderShop() {
+        const data = shopData;
+        elShopContainer.innerHTML = "";
+
+        if (!data || !Array.isArray(data.categories) || data.categories.length === 0) {
           elShopContainer.innerHTML =
-            '<div class="info-value" style="font-size:13px; color:var(--muted);">Momentan nu există produse.</div>';
+            '<div class="info-value" style="font-size:13px; color:var(--muted);">Momentan nu există produse în shop.</div>';
           return;
         }
-
-        elShopContainer.innerHTML = "";
-        let index = 1;
 
         data.categories.forEach(cat => {
           const catBlock = document.createElement("div");
@@ -184,7 +188,7 @@
 
           const nameEl = document.createElement("div");
           nameEl.className = "category-name";
-          nameEl.textContent = cat.name || "Categorie";
+          nameEl.textContent = cat.name || "Categorie fără nume";
 
           const descEl = document.createElement("div");
           descEl.className = "category-desc";
@@ -194,86 +198,149 @@
           header.appendChild(descEl);
           catBlock.appendChild(header);
 
-          (cat.products || []).forEach(prod => {
-            const prodDiv = document.createElement("div");
-            prodDiv.className = "product-item";
+          if (Array.isArray(cat.products) && cat.products.length > 0) {
+            cat.products.forEach(prod => {
+              const prodDiv = document.createElement("div");
+              prodDiv.className = "product-item";
 
-            const top = document.createElement("div");
-            top.className = "product-top";
+              const top = document.createElement("div");
+              top.className = "product-top";
 
-            const pName = document.createElement("div");
-            pName.className = "product-name";
-            pName.textContent = "#" + index + " · " + (prod.name || "Produs");
+              const pName = document.createElement("div");
+              pName.className = "product-name";
+              pName.textContent = prod.name || "Produs fără nume";
 
-            const pPrice = document.createElement("div");
-            pPrice.className = "product-price";
-            pPrice.textContent = (prod.price || 0) + " cr.";
+              const pPrice = document.createElement("div");
+              pPrice.className = "product-price";
+              pPrice.textContent = (prod.price || 0) + " credite";
 
-            top.appendChild(pName);
-            top.appendChild(pPrice);
-            prodDiv.appendChild(top);
+              top.appendChild(pName);
+              top.appendChild(pPrice);
+              prodDiv.appendChild(top);
 
-            if (prod.description) {
-              const pDesc = document.createElement("div");
-              pDesc.className = "product-desc";
-              pDesc.textContent = prod.description;
-              prodDiv.appendChild(pDesc);
-            }
+              if (prod.description) {
+                const pDesc = document.createElement("div");
+                pDesc.className = "product-desc";
+                pDesc.textContent = prod.description;
+                prodDiv.appendChild(pDesc);
+              }
 
-            const bottomRow = document.createElement("div");
-            bottomRow.style.display = "flex";
-            bottomRow.style.justifyContent = "space-between";
-            bottomRow.style.alignItems = "center";
-            bottomRow.style.marginTop = "4px";
+              const limits = document.createElement("div");
+              limits.className = "product-limits";
+              limits.textContent =
+                "Cantitate: " +
+                (prod.min_qty || 1) +
+                " - " +
+                (prod.max_qty || prod.min_qty || 1);
 
-            const limits = document.createElement("div");
-            limits.className = "product-limits";
-            limits.textContent =
-              "Cantitate: " +
-              (prod.min_qty || 1) +
-              " - " +
-              (prod.max_qty || prod.min_qty || 1);
+              prodDiv.appendChild(limits);
 
-            const actions = document.createElement("div");
+              const buyRow = document.createElement("div");
+              buyRow.style.marginTop = "6px";
+              buyRow.style.display = "flex";
+              buyRow.style.justifyContent = "flex-end";
 
-            const btnView = document.createElement("button");
-            btnView.className = "btn btn-secondary";
-            btnView.textContent = "Detalii";
-            btnView.onclick = () => {
-              const url =
-                "product.html?id=" +
-                encodeURIComponent(prod.id) +
-                "&idx=" +
-                index;
-              window.location.href = url;
-            };
+              const buyBtn = document.createElement("button");
+              buyBtn.className = "btn btn-primary";
+              buyBtn.textContent =
+                "Cumpără (" + (prod.price || 0) + " cr.)";
+              buyBtn.onclick = () => buyProduct(prod);
 
-            const btnBuy = document.createElement("button");
-            btnBuy.className = "btn btn-primary";
-            btnBuy.textContent = "Cumpără";
-            btnBuy.onclick = () => {
-              const url =
-                "product.html?id=" +
-                encodeURIComponent(prod.id) +
-                "&idx=" +
-                index;
-              window.location.href = url;
-            };
+              buyRow.appendChild(buyBtn);
+              prodDiv.appendChild(buyRow);
 
-            actions.appendChild(btnView);
-            actions.appendChild(btnBuy);
-
-            bottomRow.appendChild(limits);
-            bottomRow.appendChild(actions);
-            prodDiv.appendChild(bottomRow);
-
-            catBlock.appendChild(prodDiv);
-            index++;
-          });
+              catBlock.appendChild(prodDiv);
+            });
+          } else {
+            const empty = document.createElement("div");
+            empty.className = "product-desc";
+            empty.textContent = "Nu există produse în această categorie.";
+            catBlock.appendChild(empty);
+          }
 
           elShopContainer.appendChild(catBlock);
         });
       }
+
+      function buyProduct(prod) {
+        const qty = prod.min_qty || 1;
+        const payload = {
+          user_id: user.id,
+          username: user.username ? "@" + user.username : "",
+          product_id: prod.id,
+          qty: qty,
+        };
+
+        fetch(API_BASE + "/buy_product", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.error) {
+              console.error("BUY ERROR:", data);
+              if (data.error === "not_enough_credits") {
+                toast(
+                  "Nu ai suficiente credite (ai " +
+                    data.have +
+                    ", îți trebuie " +
+                    data.need +
+                    ")."
+                );
+              } else if (data.error === "qty_out_of_range") {
+                toast(
+                  "Cantitate invalidă. Minim " +
+                    data.min_qty +
+                    ", maxim " +
+                    data.max_qty
+                );
+              } else {
+                toast("Eroare la cumpărare: " + data.error);
+              }
+              return;
+            }
+
+            toast(
+              "Cumpărare reușită! Ticket ID: " +
+                data.ticket_id
+            );
+            if (typeof data.new_balance === "number") {
+              elCredits.textContent = data.new_balance;
+            }
+          })
+          .catch(err => {
+            console.error(err);
+            toast("Eroare la cumpărare (rețea / API).");
+          });
+      }
+
+      safeFetch(API_BASE + "/get_shop")
+        .then(data => {
+          if (data.error) throw new Error(data.error);
+          shopData = data || { categories: [] };
+          renderShop();
+        })
+        .catch(err => {
+          console.error("Eroare SHOP API:", err);
+          elShopContainer.innerHTML =
+            '<div class="info-value" style="font-size:13px; color:#ff7b8c;">Eroare la încărcarea produselor.</div>';
+        });
+
+      // ====== ADMIN REDIRECT ======
+      btnOpenAdmin.addEventListener("click", () => {
+        safeFetch(
+          API_BASE + "/admin_panel_url?user_id=" + encodeURIComponent(user.id)
+        )
+          .then(data => {
+            if (!data.url) throw new Error("no_url");
+            window.open(data.url, "_blank");
+          })
+          .catch(err => {
+            console.error(err);
+            toast("Nu s-a putut obține link-ul admin.");
+          });
+      });
     })();
   </script>
 </body>
