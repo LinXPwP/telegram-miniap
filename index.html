@@ -2,7 +2,7 @@
 <html lang="ro">
 <head>
   <meta charset="UTF-8" />
-  <title>Telegram MiniApp – Test API</title>
+  <title>Telegram MiniApp – Test API + Formular</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <!-- Telegram WebApp script -->
@@ -17,7 +17,7 @@
       color: #f5f5f5;
     }
     .box {
-      max-width: 480px;
+      max-width: 520px;
       margin: 0 auto;
       border: 1px solid #333;
       border-radius: 10px;
@@ -40,12 +40,17 @@
       background: #424242;
       color: white;
     }
+    #btnSendForm {
+      background: #1e88e5;
+      color: white;
+      width: 100%;
+    }
     pre {
       font-size: 12px;
       background: #000;
       padding: 8px;
       border-radius: 6px;
-      max-height: 200px;
+      max-height: 220px;
       overflow: auto;
       white-space: pre-wrap;
       word-break: break-all;
@@ -53,6 +58,20 @@
     .label {
       color: #aaaaaa;
       font-size: 13px;
+    }
+    .field {
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    input, textarea {
+      border-radius: 6px;
+      border: 1px solid #444;
+      padding: 8px;
+      font-size: 14px;
+      background: #000;
+      color: #f5f5f5;
     }
   </style>
 </head>
@@ -67,23 +86,43 @@
 
     <hr>
 
-    <p class="label">Teste API (prin Netlify):</p>
+    <p class="label">Teste API (GET prin Netlify):</p>
     <button id="btnPing">Test /ping</button>
     <button id="btnCredits">Test /credits (credits.json)</button>
 
+    <hr>
+
+    <p class="label">Formular test (POST → bot.py, vezi consola PebbleHost):</p>
+    <form id="testForm">
+      <div class="field">
+        <label for="fieldName">Nume / Username</label>
+        <input id="fieldName" name="name" placeholder="ex: @linxpwp" />
+      </div>
+      <div class="field">
+        <label for="fieldMessage">Mesaj</label>
+        <textarea id="fieldMessage" name="message" rows="3" placeholder="Scrie ceva de test..."></textarea>
+      </div>
+      <div class="field">
+        <label for="fieldAmount">Cantitate / Suma (ex: credite)</label>
+        <input id="fieldAmount" name="amount" type="number" min="0" value="1" />
+      </div>
+      <button id="btnSendForm" type="submit">Trimite formularul</button>
+    </form>
+
     <p class="label" style="margin-top: 12px;">
-      Ultimul răspuns:
+      Ultimul răspuns JSON primit de la backend:
     </p>
     <pre id="output">{ nimic încă }</pre>
 
     <p class="label">
-      Deschide DevTools → Console pentru a vedea <code>console.log()</code>.
+      Deschide DevTools → Console pentru a vedea <code>console.log()</code>.<br>
+      În plus, pe PebbleHost, în consola unde rulezi <code>bot.py</code>, vei vedea datele formularului.
     </p>
   </div>
 
   <script>
     // Netlify reverse proxy (HTTPS)
-    const API_BASE_URL = "https://melodic-mandazi-7a16dc.netlify.app/.netlify/functions";
+    const API_BASE_URL = "https://dancing-hotteok-480e3c.netlify.app/.netlify/functions";
     const ADMIN_ID = 7672256597;
 
     const tg = window.Telegram?.WebApp;
@@ -103,7 +142,10 @@
 
       const user = tg.initDataUnsafe?.user;
       if (!user) {
-        userInfoEl.innerHTML = "Nu am putut citi user-ul din initDataUnsafe.user 🤔";
+        console.log("initData:", tg.initData);
+        console.log("initDataUnsafe:", tg.initDataUnsafe);
+        userInfoEl.innerHTML =
+          "Nu am putut citi user-ul din initDataUnsafe.user 🤔<br>Deschide MiniApp-ul doar din butonul bot-ului (/start).";
         return;
       }
 
@@ -121,7 +163,7 @@
       `;
     }
 
-    // 2) Test /ping (Netlify → PebbleHost /api/ping)
+    // 2) Test /ping (GET)
     async function testPing() {
       try {
         const res = await fetch(`${API_BASE_URL}/ping`);
@@ -135,7 +177,7 @@
       }
     }
 
-    // 3) Test /credits (Netlify → PebbleHost /api/credits)
+    // 3) Test /credits (GET)
     async function testCredits() {
       try {
         const res = await fetch(`${API_BASE_URL}/credits`);
@@ -149,8 +191,44 @@
       }
     }
 
+    // 4) Formular – POST → Netlify → PebbleHost /api/form-test
+    async function submitForm(event) {
+      event.preventDefault();
+
+      const name = document.getElementById("fieldName").value || "";
+      const message = document.getElementById("fieldMessage").value || "";
+      const amount = Number(document.getElementById("fieldAmount").value || "0");
+
+      const payload = {
+        name,
+        message,
+        amount,
+        timestamp: Date.now()
+      };
+
+      console.log("Trimit formular:", payload);
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/form-test`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        console.log("Răspuns /form-test:", data);
+        outputEl.textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        console.error("Eroare la /form-test:", err);
+        outputEl.textContent = "Eroare la /form-test: " + err;
+      }
+    }
+
     document.getElementById("btnPing").addEventListener("click", testPing);
     document.getElementById("btnCredits").addEventListener("click", testCredits);
+    document.getElementById("testForm").addEventListener("submit", submitForm);
 
     initUserInfo();
   </script>
