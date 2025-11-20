@@ -2,7 +2,7 @@
 <html lang="ro">
 <head>
   <meta charset="UTF-8" />
-  <title>Telegram MiniApp – Test API + Formular</title>
+  <title>Telegram MiniApp – API Test + Formular</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <!-- Telegram WebApp script -->
@@ -92,7 +92,7 @@
 
     <hr>
 
-    <p class="label">Formular test (POST → bot.py, vezi consola PebbleHost):</p>
+    <p class="label">Formular test (POST → Netlify → bot.py):</p>
     <form id="testForm">
       <div class="field">
         <label for="fieldName">Nume / Username</label>
@@ -116,12 +116,12 @@
 
     <p class="label">
       Deschide DevTools → Console pentru a vedea <code>console.log()</code>.<br>
-      În plus, pe PebbleHost, în consola unde rulezi <code>bot.py</code>, vei vedea datele formularului.
+      Pe PebbleHost (server), în consola unde rulează <code>bot.py</code> vei vedea datele formularului!
     </p>
   </div>
 
   <script>
-    // Netlify reverse proxy (HTTPS)
+    // 🔗 Netlify reverse proxy (HTTPS)
     const API_BASE_URL = "https://dancing-hotteok-480e3c.netlify.app/.netlify/functions";
     const ADMIN_ID = 7672256597;
 
@@ -129,7 +129,9 @@
     const outputEl = document.getElementById("output");
     const userInfoEl = document.getElementById("userInfo");
 
-    // 1) Informații utilizator din Telegram WebApp
+    // ---------------------------
+    // 1) Citim userul din Telegram
+    // ---------------------------
     function initUserInfo() {
       if (!tg) {
         userInfoEl.innerHTML =
@@ -141,29 +143,35 @@
       tg.expand();
 
       const user = tg.initDataUnsafe?.user;
+
       if (!user) {
         console.log("initData:", tg.initData);
         console.log("initDataUnsafe:", tg.initDataUnsafe);
         userInfoEl.innerHTML =
-          "Nu am putut citi user-ul din initDataUnsafe.user 🤔<br>Deschide MiniApp-ul doar din butonul bot-ului (/start).";
+          "❌ Nu am putut citi user-ul. Deschide MiniApp-ul DOAR din butonul botului (/start).";
         return;
       }
 
       const isAdmin = user.id === ADMIN_ID;
-      const usernameText = user.username
-        ? "@" + user.username
-        : `${user.first_name || ""} ${user.last_name || ""}`.trim() || "fără username";
+
+      const username =
+        user.username
+          ? "@" + user.username
+          : `${user.first_name || ""} ${user.last_name || ""}`.trim();
 
       userInfoEl.innerHTML = `
-        ID: <b>${user.id}</b><br>
-        Username: <b>${usernameText}</b><br>
-        Rol: <b style="color:${isAdmin ? "#ff5252" : "#4caf50"};">
+        <b>ID:</b> ${user.id}<br>
+        <b>Username:</b> ${username}<br>
+        <b>Rol:</b> 
+        <span style="color:${isAdmin ? '#ff5252' : '#4caf50'};">
           ${isAdmin ? "Administrator" : "Utilizator normal"}
-        </b>
+        </span>
       `;
     }
 
-    // 2) Test /ping (GET)
+    // ---------------
+    // 2) GET → /ping
+    // ---------------
     async function testPing() {
       try {
         const res = await fetch(`${API_BASE_URL}/ping`);
@@ -172,12 +180,14 @@
         console.log("Răspuns /ping:", data);
         outputEl.textContent = JSON.stringify(data, null, 2);
       } catch (err) {
-        console.error("Eroare la /ping:", err);
-        outputEl.textContent = "Eroare la /ping: " + err;
+        console.error(err);
+        outputEl.textContent = "Eroare /ping: " + err;
       }
     }
 
-    // 3) Test /credits (GET)
+    // ------------------
+    // 3) GET → /credits
+    // ------------------
     async function testCredits() {
       try {
         const res = await fetch(`${API_BASE_URL}/credits`);
@@ -186,23 +196,21 @@
         console.log("Răspuns /credits:", data);
         outputEl.textContent = JSON.stringify(data, null, 2);
       } catch (err) {
-        console.error("Eroare la /credits:", err);
-        outputEl.textContent = "Eroare la /credits: " + err;
+        console.error(err);
+        outputEl.textContent = "Eroare /credits: " + err;
       }
     }
 
-    // 4) Formular – POST → Netlify → PebbleHost /api/form-test
+    // ------------------------------------------------------
+    // 4) POST → /form-test  (Netlify → PebbleHost /api/form-test)
+    // ------------------------------------------------------
     async function submitForm(event) {
       event.preventDefault();
 
-      const name = document.getElementById("fieldName").value || "";
-      const message = document.getElementById("fieldMessage").value || "";
-      const amount = Number(document.getElementById("fieldAmount").value || "0");
-
       const payload = {
-        name,
-        message,
-        amount,
+        name: document.getElementById("fieldName").value || "",
+        message: document.getElementById("fieldMessage").value || "",
+        amount: Number(document.getElementById("fieldAmount").value || 0),
         timestamp: Date.now()
       };
 
@@ -211,18 +219,17 @@
       try {
         const res = await fetch(`${API_BASE_URL}/form-test`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
         });
 
         const data = await res.json();
+
         console.log("Răspuns /form-test:", data);
         outputEl.textContent = JSON.stringify(data, null, 2);
       } catch (err) {
         console.error("Eroare la /form-test:", err);
-        outputEl.textContent = "Eroare la /form-test: " + err;
+        outputEl.textContent = "Eroare /form-test: " + err;
       }
     }
 
