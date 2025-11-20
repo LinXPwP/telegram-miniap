@@ -73,6 +73,12 @@
       background: #000;
       color: #f5f5f5;
     }
+    .debug {
+      font-size: 11px;
+      color: #777;
+      margin-top: 6px;
+      word-break: break-all;
+    }
   </style>
 </head>
 <body>
@@ -82,6 +88,7 @@
     <div id="userBlock">
       <p class="label">Informații utilizator (Telegram WebApp):</p>
       <p id="userInfo">Se încarcă...</p>
+      <div id="debugInfo" class="debug"></div>
     </div>
 
     <hr>
@@ -128,9 +135,12 @@
     const tg = window.Telegram?.WebApp;
     const outputEl = document.getElementById("output");
     const userInfoEl = document.getElementById("userInfo");
+    const debugInfoEl = document.getElementById("debugInfo");
+
+    let CURRENT_USER_ID = null; // îl folosim mai târziu când trimitem spre backend
 
     // ---------------------------
-    // 1) Citim userul din Telegram
+    // 1) Citim userul din Telegram (cu fallback)
     // ---------------------------
     function initUserInfo() {
       if (!tg) {
@@ -142,22 +152,35 @@
       tg.ready();
       tg.expand();
 
-      const user = tg.initDataUnsafe?.user;
+      console.log("Telegram.WebApp:", tg);
+      console.log("tg.initData:", tg.initData);
+      console.log("tg.initDataUnsafe:", tg.initDataUnsafe);
+
+      const unsafe = tg.initDataUnsafe || {};
+      const user = unsafe.user || null;
+
+      // Debug text (ca să vezi ce vine din Telegram)
+      debugInfoEl.textContent = "initData: "
+        + (tg.initData ? tg.initData.substring(0, 120) + "..." : "gol")
+        + " | are user: " + (user ? "DA" : "NU");
 
       if (!user) {
-        console.log("initData:", tg.initData);
-        console.log("initDataUnsafe:", tg.initDataUnsafe);
-        userInfoEl.innerHTML =
-          "❌ Nu am putut citi user-ul. Deschide MiniApp-ul DOAR din butonul botului (/start).";
+        // Fallback: lăsăm aplicația să meargă, doar că nu avem auto user.
+        userInfoEl.innerHTML = `
+          Nu am primit detalii despre utilizator de la Telegram.<br>
+          MiniApp-ul funcționează în continuare, dar trebuie să completezi
+          manual numele în formular.
+        `;
         return;
       }
 
-      const isAdmin = user.id === ADMIN_ID;
+      CURRENT_USER_ID = user.id;
 
+      const isAdmin = user.id === ADMIN_ID;
       const username =
         user.username
           ? "@" + user.username
-          : `${user.first_name || ""} ${user.last_name || ""}`.trim();
+          : `${user.first_name || ""} ${user.last_name || ""}`.trim() || "fără username";
 
       userInfoEl.innerHTML = `
         <b>ID:</b> ${user.id}<br>
@@ -167,6 +190,12 @@
           ${isAdmin ? "Administrator" : "Utilizator normal"}
         </span>
       `;
+
+      // Umplem automat și câmpul de nume în formular, ca să vezi că merge
+      const nameField = document.getElementById("fieldName");
+      if (nameField && !nameField.value) {
+        nameField.value = username;
+      }
     }
 
     // ---------------
@@ -211,7 +240,9 @@
         name: document.getElementById("fieldName").value || "",
         message: document.getElementById("fieldMessage").value || "",
         amount: Number(document.getElementById("fieldAmount").value || 0),
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        // Trimitem și userId dacă l-am primit (altfel null)
+        user_id: CURRENT_USER_ID
       };
 
       console.log("Trimit formular:", payload);
