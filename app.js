@@ -32,6 +32,14 @@ document.addEventListener("DOMContentLoaded", () => {
           const section = document.getElementById(target);
           if (section) section.classList.add("active");
         }
+
+        // notificăm app-ul de schimbarea tab-ului
+        if (pageType === "user" && typeof window.onUserTabChange === "function") {
+          window.onUserTabChange(target);
+        }
+        if (pageType === "admin" && typeof window.onAdminTabChange === "function") {
+          window.onAdminTabChange(target);
+        }
       });
     });
   });
@@ -54,7 +62,88 @@ function initUserApp() {
   let CURRENT_SHOP = null;
   let CURRENT_TICKETS = [];
   let SELECTED_TICKET_ID = null;
-  let POLL_INTERVAL = null;
+
+  // polling „deștept”
+  let userPollTimeout = null;
+  let userPollingActive = false;
+
+  const POLL_INTERVAL_MS = 8000; // 8 secunde
+
+  function isTicketsTabActive() {
+    const tab = document.getElementById("ticketsTab");
+    return tab && tab.classList.contains("active");
+  }
+
+  async function pollTicketsSafe() {
+    if (!CURRENT_USER) return;
+    if (!isTicketsTabActive()) return;
+    try {
+      const res = await apiCall("user_get_tickets", {});
+      if (!res.ok) return;
+      CURRENT_TICKETS = res.tickets || [];
+      renderTicketsList();
+      renderTicketsInfo();
+
+      if (SELECTED_TICKET_ID) {
+        const t = CURRENT_TICKETS.find((x) => x.id === SELECTED_TICKET_ID);
+        if (t) {
+          selectTicket(t.id);
+        }
+      }
+    } catch (err) {
+      console.error("user_get_tickets error:", err);
+    }
+  }
+
+  function scheduleUserPoll(delayMs) {
+    if (!userPollingActive) return;
+    if (userPollTimeout) clearTimeout(userPollTimeout);
+    userPollTimeout = setTimeout(async () => {
+      if (!userPollingActive) return;
+      if (document.visibilityState !== "visible") {
+        // pagina nu e vizibilă, mai încercăm peste puțin
+        scheduleUserPoll(POLL_INTERVAL_MS);
+        return;
+      }
+      await pollTicketsSafe();
+      scheduleUserPoll(POLL_INTERVAL_MS);
+    }, delayMs);
+  }
+
+  function startUserPolling() {
+    if (userPollingActive) return;
+    userPollingActive = true;
+    scheduleUserPoll(0);
+  }
+
+  function stopUserPolling() {
+    userPollingActive = false;
+    if (userPollTimeout) clearTimeout(userPollTimeout);
+  }
+
+  // când se schimbă vizibilitatea paginii
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      // reîncepem polling doar dacă suntem pe tab-ul de tichete
+      if (isTicketsTabActive()) {
+        startUserPolling();
+      }
+    } else {
+      stopUserPolling();
+    }
+  });
+
+  // expunem o funcție globală pentru schimbarea tab-urilor (setată în DOMContentLoaded)
+  window.onUserTabChange = (tabId) => {
+    if (tabId === "ticketsTab") {
+      // când intrăm în Tichete: facem refresh o dată + pornim polling
+      pollTicketsSafe();
+      startUserPolling();
+    } else {
+      // ieșim din Tichete: oprim polling
+      stopUserPolling();
+    }
+  };
 
   const creditsValueEl = document.getElementById("creditsValue");
   const userLineEl = document.getElementById("userLine");
@@ -243,10 +332,13 @@ function initUserApp() {
       panelStatusEl.className = "status-bar status-ok";
       panelStatusEl.textContent = `Comandă trimisă, tichet #${newTicket.id} creat.`;
 
+      // trecem automat pe tab-ul de tichete + refresh + pornim polling
       const ticketsTabBtn = document.querySelector(
-        '.tab-btn[data-tab="chatTab"]'
+        '.tab-btn[data-tab="ticketsTab"]'
       );
       if (ticketsTabBtn) ticketsTabBtn.click();
+      await pollTicketsSafe();
+      startUserPolling();
     } catch (err) {
       console.error("buy_product error:", err);
       panelStatusEl.className = "status-bar status-error";
@@ -310,7 +402,11 @@ function initUserApp() {
       item.appendChild(title);
       item.appendChild(line);
 
-      item.addEventListener("click", () => selectTicket(t.id));
+      item.addEventListener("click", () => {
+        selectTicket(t.id);
+        // când selectezi tichet, forțăm refresh o dată
+        pollTicketsSafe();
+      });
 
       chatListEl.appendChild(item);
     });
@@ -387,6 +483,10 @@ function initUserApp() {
 
       renderTicketsList();
       selectTicket(updated.id);
+
+      // după trimitere mesaj, facem încă un refresh „de confirmare”,
+      // dar nu modificăm intervalul global
+      pollTicketsSafe();
     } catch (err) {
       console.error("user_send_message error:", err);
     }
@@ -399,26 +499,6 @@ function initUserApp() {
       sendChatMessage();
     }
   });
-
-  async function pollTickets() {
-    if (!CURRENT_USER) return;
-    try {
-      const res = await apiCall("user_get_tickets", {});
-      if (!res.ok) return;
-      CURRENT_TICKETS = res.tickets || [];
-      renderTicketsList();
-      renderTicketsInfo();
-
-      if (SELECTED_TICKET_ID) {
-        const t = CURRENT_TICKETS.find((x) => x.id === SELECTED_TICKET_ID);
-        if (t) {
-          selectTicket(t.id);
-        }
-      }
-    } catch (err) {
-      console.error("user_get_tickets error:", err);
-    }
-  }
 
   async function initApp() {
     if (!tg) {
@@ -464,7 +544,10 @@ function initUserApp() {
       renderTicketsList();
       renderTicketsInfo();
 
-      POLL_INTERVAL = setInterval(pollTickets, 3000);
+      // pornim polling DOAR dacă tab-ul Tichete este activ
+      if (isTicketsTabActive()) {
+        startUserPolling();
+      }
     } catch (err) {
       console.error("init error:", err);
       userLineEl.textContent = "Eroare la inițializare (network).";
@@ -521,7 +604,95 @@ function initAdminApp() {
   let ALL_TICKETS = [];
   let CURRENT_SHOP = null;
   let SELECTED_TICKET_ID = null;
-  let POLL_INTERVAL = null;
+
+  // polling admin
+  let adminPollTimeout = null;
+  let adminPollingActive = false;
+  const ADMIN_POLL_INTERVAL_MS = 8000;
+
+  function isAnyAdminTabActive() {
+    // una din secțiuni e mereu active, dar verificăm totuși
+    const chatTab = document.getElementById("chatTab");
+    const shopTab = document.getElementById("shopTab");
+    return (
+      (chatTab && chatTab.classList.contains("active")) ||
+      (shopTab && shopTab.classList.contains("active"))
+    );
+  }
+
+  async function pollAdminTicketsSafe() {
+    if (!ADMIN_TOKEN) return;
+    if (!isAnyAdminTabActive()) return;
+    try {
+      const res = await apiCall("admin_get_tickets", {});
+      if (!res.ok) {
+        if (res.error === "forbidden") {
+          userLineEl.innerHTML =
+            "<span style='color:#ff5252;'>Token invalid.</span>";
+        }
+        return;
+      }
+      ALL_TICKETS = res.tickets || [];
+      CURRENT_SHOP = res.shop || { categories: [] };
+
+      updateTicketStats();
+      renderTicketsList();
+      renderShopEditor();
+
+      if (SELECTED_TICKET_ID) {
+        const t = ALL_TICKETS.find((x) => x.id === SELECTED_TICKET_ID);
+        if (t) {
+          selectTicket(t.id);
+        }
+      }
+    } catch (err) {
+      console.error("admin_get_tickets error:", err);
+      userLineEl.innerHTML =
+        "<span style='color:#ff5252;'>Eroare la rețea.</span>";
+    }
+  }
+
+  function scheduleAdminPoll(delayMs) {
+    if (!adminPollingActive) return;
+    if (adminPollTimeout) clearTimeout(adminPollTimeout);
+    adminPollTimeout = setTimeout(async () => {
+      if (!adminPollingActive) return;
+      if (document.visibilityState !== "visible") {
+        scheduleAdminPoll(ADMIN_POLL_INTERVAL_MS);
+        return;
+      }
+      await pollAdminTicketsSafe();
+      scheduleAdminPoll(ADMIN_POLL_INTERVAL_MS);
+    }, delayMs);
+  }
+
+  function startAdminPolling() {
+    if (adminPollingActive) return;
+    adminPollingActive = true;
+    scheduleAdminPoll(0);
+  }
+
+  function stopAdminPolling() {
+    adminPollingActive = false;
+    if (adminPollTimeout) clearTimeout(adminPollTimeout);
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      if (isAnyAdminTabActive()) startAdminPolling();
+    } else {
+      stopAdminPolling();
+    }
+  });
+
+  window.onAdminTabChange = () => {
+    // când schimbi tab-ul chat/shop, doar repornim polling-ul
+    if (isAnyAdminTabActive()) {
+      startAdminPolling();
+    } else {
+      stopAdminPolling();
+    }
+  };
 
   function apiCall(action, extraPayload = {}) {
     const payload = {
@@ -623,7 +794,8 @@ function initAdminApp() {
 
       const title = document.createElement("div");
       title.className = "chat-item-title";
-      title.textContent = (t.username || t.user_id) + " · " + (t.product_name || "");
+      title.textContent =
+        (t.username || t.user_id) + " · " + (t.product_name || "");
 
       const statusChip = document.createElement("span");
       statusChip.className =
@@ -641,7 +813,10 @@ function initAdminApp() {
       item.appendChild(headerRow);
       item.appendChild(line);
 
-      item.addEventListener("click", () => selectTicket(t.id));
+      item.addEventListener("click", () => {
+        selectTicket(t.id);
+        pollAdminTicketsSafe(); // refresh imediat pentru tichetul selectat
+      });
 
       ticketsListEl.appendChild(item);
     });
@@ -747,6 +922,9 @@ function initAdminApp() {
       updateTicketStats();
       renderTicketsList();
       selectTicket(updated.id);
+
+      // refresh suplimentar după trimitere mesaj
+      pollAdminTicketsSafe();
     } catch (err) {
       console.error("admin_send_message error:", err);
     }
@@ -793,6 +971,9 @@ function initAdminApp() {
       updateTicketStats();
       renderTicketsList();
       selectTicket(t.id);
+
+      // refresh global pentru a avea datele sincronizate
+      pollAdminTicketsSafe();
     } catch (err) {
       console.error("admin_update_ticket error:", err);
       ticketStatusBarEl.textContent = "Eroare la comunicarea cu serverul.";
@@ -1073,6 +1254,9 @@ function initAdminApp() {
       }
       shopStatusBarEl.textContent = "Shop salvat.";
       shopStatusBarEl.className = "status-bar status-ok";
+
+      // după salvare, facem și un refresh
+      pollAdminTicketsSafe();
     } catch (err) {
       console.error("admin_save_shop error:", err);
       shopStatusBarEl.textContent = "Eroare la comunicarea cu serverul.";
@@ -1094,38 +1278,7 @@ function initAdminApp() {
   addCategoryBtn?.addEventListener("click", addCategory);
   saveShopBtn?.addEventListener("click", saveShop);
 
-  /* ---------- POLLING ADMIN ---------- */
-
-  async function pollAdminTickets() {
-    if (!ADMIN_TOKEN) return;
-    try {
-      const res = await apiCall("admin_get_tickets", {});
-      if (!res.ok) {
-        if (res.error === "forbidden") {
-          userLineEl.innerHTML =
-            "<span style='color:#ff5252;'>Token invalid.</span>";
-        }
-        return;
-      }
-      ALL_TICKETS = res.tickets || [];
-      CURRENT_SHOP = res.shop || { categories: [] };
-
-      updateTicketStats();
-      renderTicketsList();
-      renderShopEditor();
-
-      if (SELECTED_TICKET_ID) {
-        const t = ALL_TICKETS.find((x) => x.id === SELECTED_TICKET_ID);
-        if (t) {
-          selectTicket(t.id);
-        }
-      }
-    } catch (err) {
-      console.error("admin_get_tickets error:", err);
-      userLineEl.innerHTML =
-        "<span style='color:#ff5252;'>Eroare la rețea.</span>";
-    }
-  }
+  /* ---------- FILTRE ---------- */
 
   function onFilterChange() {
     renderTicketsList();
@@ -1138,11 +1291,16 @@ function initAdminApp() {
     searchTimeout = setTimeout(onFilterChange, 150);
   });
 
+  /* ---------- INIT ADMIN ---------- */
+
   async function initAdmin() {
     renderTokenInfo();
     if (!ADMIN_TOKEN) return;
-    await pollAdminTickets();
-    POLL_INTERVAL = setInterval(pollAdminTickets, 3000);
+    await pollAdminTicketsSafe();
+    // pornește polling doar dacă pagina este vizibilă
+    if (document.visibilityState === "visible") {
+      startAdminPolling();
+    }
   }
 
   initAdmin();
