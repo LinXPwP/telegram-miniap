@@ -965,3 +965,150 @@ h1 {
     padding-inline: 10px;
   }
 }
+/* ============================
+   ADMIN TOOLBAR & STATS
+   ============================ */
+
+.admin-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  padding: 6px 8px;
+  border-radius: 14px;
+  background: rgba(5, 6, 20, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.toolbar-select {
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(4, 4, 14, 0.96);
+  color: var(--text);
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+.toolbar-search {
+  flex: 1;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(4, 4, 14, 0.96);
+  color: var(--text);
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.toolbar-stats {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* folosit și în metrics shop */
+
+.stat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 11px;
+}
+
+.stat-pill--open {
+  background: rgba(58, 214, 122, 0.08);
+  border-color: rgba(58, 214, 122, 0.35);
+}
+
+.stat-pill--closed {
+  background: rgba(255, 75, 92, 0.08);
+  border-color: rgba(255, 75, 92, 0.35);
+}
+
+.stat-pill--soft {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.stat-label {
+  color: var(--muted);
+}
+
+.stat-value {
+  font-weight: 600;
+}
+
+/* status pills în listă tichete */
+
+.chat-item-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+}
+
+.ticket-status-pill {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.ticket-status-pill.open {
+  background: rgba(58, 214, 122, 0.1);
+  border-color: rgba(58, 214, 122, 0.6);
+  color: #9bffb9;
+}
+
+.ticket-status-pill.closed {
+  background: rgba(255, 75, 92, 0.08);
+  border-color: rgba(255, 75, 92, 0.6);
+  color: #ff9ba4;
+}
+
+/* shop metrics în sidepanel */
+
+.shop-metrics {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+/* header categorie (admin) */
+
+.cat-header-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.cat-header-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* toggle categorie */
+
+.cat-toggle {
+  padding-inline: 6px;
+  min-width: 30px;
+}
+
