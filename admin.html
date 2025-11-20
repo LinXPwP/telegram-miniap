@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <title>Admin Dashboard – Shop & Chat</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-
   <link rel="stylesheet" href="style.css" />
 </head>
 <body data-page="admin">
@@ -86,22 +85,15 @@
           </div>
         </div>
 
+        <!-- Detalii tichet (doar info + butoane închidere) -->
         <div class="ticket-details" id="ticketDetails" style="display:none;">
           <div id="ticketSummary" class="ticket-summary"></div>
-          <div class="ticket-field">
-            <label for="ticketStatusSelect">Status tichet</label><br />
-            <select id="ticketStatusSelect">
-              <option value="open">Deschis</option>
-              <option value="closed">Închis</option>
-            </select>
-          </div>
-          <div class="ticket-field">
-            <label for="ticketNote">Notă internă</label><br />
-            <textarea id="ticketNote"></textarea>
-          </div>
+          <div id="ticketNoteInline" class="ticket-note-inline"></div>
           <div class="ticket-actions">
-            <button class="btn-primary" id="ticketSaveBtn">Salvează</button>
             <button class="btn-ghost" id="ticketCloseBtn">Închide tichet</button>
+            <button class="btn-primary" id="ticketCloseWithReasonBtn">
+              Închide cu motiv
+            </button>
           </div>
           <div class="status-bar" id="ticketStatusBar"></div>
         </div>
@@ -117,11 +109,14 @@
               Modificările se aplică instant doar aici. Apasă <b>Salvează shop</b> ca să scrii în fișier.
             </p>
 
-            <!-- METRICE SHOP -->
             <div class="shop-metrics" id="shopMetrics"></div>
 
-            <button class="btn-ghost full-width" id="addCategoryBtn">+ Adaugă categorie</button>
-            <button class="btn-primary full-width" id="saveShopBtn">💾 Salvează shop</button>
+            <button class="btn-ghost full-width" id="addCategoryBtn">
+              + Adaugă categorie
+            </button>
+            <button class="btn-primary full-width" id="saveShopBtn">
+              💾 Salvează shop
+            </button>
             <div class="status-bar" id="shopStatusBar"></div>
           </div>
         </div>
@@ -130,6 +125,23 @@
       <div class="footer footer--admin">
         <span>MiniApp · admin</span>
         <span class="dot-red"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL pentru "închide cu motiv" -->
+  <div class="modal-backdrop" id="reasonModal" style="display:none;">
+    <div class="modal">
+      <h3>Închide tichet cu motiv</h3>
+      <p class="modal-text">
+        Motivul va fi salvat ca <b>notă internă</b> pentru acest tichet.
+      </p>
+      <textarea id="reasonInput" placeholder="Scrie motivul de închidere..."></textarea>
+      <div class="modal-actions">
+        <button class="btn-ghost" id="reasonCancelBtn">Anulează</button>
+        <button class="btn-primary" id="reasonConfirmBtn">
+          Confirmă și închide
+        </button>
       </div>
     </div>
   </div>
