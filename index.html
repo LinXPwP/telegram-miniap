@@ -2,346 +2,157 @@
 <html lang="ro">
 <head>
   <meta charset="UTF-8" />
-  <title>Telegram Shop MiniApp</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Telegram MiniApp – Test API</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
+  <!-- Telegram WebApp script -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <link rel="stylesheet" href="style.css" />
+
+  <style>
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #050505;
+      color: #f5f5f5;
+    }
+    .box {
+      max-width: 480px;
+      margin: 0 auto;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 14px;
+      background: #111;
+    }
+    button {
+      margin-top: 10px;
+      padding: 10px 14px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    #btnPing {
+      background: #e53935;
+      color: white;
+    }
+    #btnCredits {
+      background: #424242;
+      color: white;
+    }
+    pre {
+      font-size: 12px;
+      background: #000;
+      padding: 8px;
+      border-radius: 6px;
+      max-height: 200px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .label {
+      color: #aaaaaa;
+      font-size: 13px;
+    }
+  </style>
 </head>
 <body>
-  <div class="app-shell">
-    <header class="app-header">
-      <div class="app-brand">
-        <div class="brand-logo"><span>S</span></div>
-        <div class="brand-text">
-          <h1>Shop MiniApp</h1>
-          <p id="subtitle">Se încarcă datele din Telegram...</p>
-        </div>
-      </div>
-      <div id="role-chip" class="role-chip" style="display:none;">
-        <span class="role-dot"></span>
-        <span id="role-text">USER</span>
-      </div>
-    </header>
+  <div class="box">
+    <h2>Test MiniApp ↔ Netlify ↔ PebbleHost</h2>
 
-    <section class="card">
-      <div class="card-header">
-        <div>
-          <div class="card-title">Profil & credite</div>
-          <div class="card-sub">Date citite din bot prin API securizat.</div>
-        </div>
-        <div id="user-id" class="badge-id">ID: -</div>
-      </div>
-
-      <div class="info-row">
-        <div class="info-label">Username</div>
-        <div id="username" class="info-value">loading...</div>
-      </div>
-
-      <div class="info-row">
-        <div class="info-label">Status</div>
-        <div id="status" class="info-value">loading...</div>
-      </div>
-
-      <div class="info-row">
-        <div class="info-label">Credite</div>
-        <div id="credits" class="info-value credits">loading...</div>
-      </div>
-
-      <div id="profile-error" class="error-text" style="display:none;"></div>
-
-      <div class="admin-actions-row" id="admin-row" style="margin-top:8px; display:none;">
-        <button id="btn-open-admin" class="btn btn-primary">Deschide admin panel</button>
-      </div>
-    </section>
-
-    <section class="card">
-      <div class="card-header">
-        <div>
-          <div class="card-title">Shop</div>
-          <div class="card-sub">Cumpără produse cu credite.</div>
-        </div>
-      </div>
-      <div id="shop-container">
-        <div class="info-value" style="font-size:13px; color:var(--muted);">
-          Se încarcă lista de produse...
-        </div>
-      </div>
-    </section>
-
-    <div class="footer">
-      După cumpărare se deschide automat un ticket către administrator.
+    <div id="userBlock">
+      <p class="label">Informații utilizator (Telegram WebApp):</p>
+      <p id="userInfo">Se încarcă...</p>
     </div>
+
+    <hr>
+
+    <p class="label">Teste API (prin Netlify):</p>
+    <button id="btnPing">Test /ping</button>
+    <button id="btnCredits">Test /credits (credits.json)</button>
+
+    <p class="label" style="margin-top: 12px;">
+      Ultimul răspuns:
+    </p>
+    <pre id="output">{ nimic încă }</pre>
+
+    <p class="label">
+      Deschide DevTools → Console pentru a vedea <code>console.log()</code>.
+    </p>
   </div>
 
-  <div id="toast" class="toast"></div>
-
   <script>
-    (function () {
-      const tg = window.Telegram.WebApp;
-      if (tg && tg.expand) tg.expand();
+    // Netlify reverse proxy (HTTPS)
+    const API_BASE_URL = "https://melodic-mandazi-7a16dc.netlify.app/.netlify/functions";
+    const ADMIN_ID = 7672256597;
 
-      const ADMIN_ID = 7672256597;
-      const API_BASE = "https://melodic-mandazi-7a16dc.netlify.app/.netlify/functions";
+    const tg = window.Telegram?.WebApp;
+    const outputEl = document.getElementById("output");
+    const userInfoEl = document.getElementById("userInfo");
 
-      const elSubtitle = document.getElementById("subtitle");
-      const elUsername = document.getElementById("username");
-      const elStatus = document.getElementById("status");
-      const elCredits = document.getElementById("credits");
-      const elUserId = document.getElementById("user-id");
-      const elRoleChip = document.getElementById("role-chip");
-      const elRoleText = document.getElementById("role-text");
-      const elProfileError = document.getElementById("profile-error");
-      const elShopContainer = document.getElementById("shop-container");
-      const adminRow = document.getElementById("admin-row");
-      const btnOpenAdmin = document.getElementById("btn-open-admin");
-      const toastEl = document.getElementById("toast");
-
-      let user;
-      try {
-        user = tg.initDataUnsafe && tg.initDataUnsafe.user;
-      } catch (e) {
-        console.error(e);
-      }
-
-      function toast(msg) {
-        toastEl.textContent = msg;
-        toastEl.classList.add("show");
-        setTimeout(() => toastEl.classList.remove("show"), 2000);
-      }
-
-      function safeFetch(url) {
-        return fetch(url).then(res => {
-          if (!res.ok) return res.text().then(t => { throw new Error(t || res.status); });
-          return res.json();
-        });
-      }
-
-      if (!user) {
-        elSubtitle.textContent = "MiniApp-ul trebuie deschis din Telegram.";
-        elUsername.textContent = "necunoscut";
-        elStatus.textContent = "nu s-a putut citi utilizatorul";
-        elCredits.textContent = "–";
-        elProfileError.style.display = "block";
-        elProfileError.textContent =
-          "Deschide acest miniapp din botul Telegram, nu din browser.";
+    // 1) Informații utilizator din Telegram WebApp
+    function initUserInfo() {
+      if (!tg) {
+        userInfoEl.innerHTML =
+          "Nu ești în Telegram MiniApp. Deschide link-ul prin bot, nu direct din browser.";
         return;
       }
 
-      const fullUsername = user.username ? "@" + user.username : "(fără username)";
-      const fullName = [user.first_name || "", user.last_name || ""].join(" ").trim();
+      tg.ready();
+      tg.expand();
 
-      elUsername.textContent = fullUsername + (fullName ? " • " + fullName : "");
-      elUserId.textContent = "ID: " + user.id;
+      const user = tg.initDataUnsafe?.user;
+      if (!user) {
+        userInfoEl.innerHTML = "Nu am putut citi user-ul din initDataUnsafe.user 🤔";
+        return;
+      }
 
       const isAdmin = user.id === ADMIN_ID;
-      elStatus.textContent = isAdmin ? "Administrator" : "Utilizator normal";
-      elRoleText.textContent = isAdmin ? "ADMIN" : "USER";
-      elRoleChip.style.display = "inline-flex";
+      const usernameText = user.username
+        ? "@" + user.username
+        : `${user.first_name || ""} ${user.last_name || ""}`.trim() || "fără username";
 
-      if (isAdmin) {
-        adminRow.style.display = "flex";
+      userInfoEl.innerHTML = `
+        ID: <b>${user.id}</b><br>
+        Username: <b>${usernameText}</b><br>
+        Rol: <b style="color:${isAdmin ? "#ff5252" : "#4caf50"};">
+          ${isAdmin ? "Administrator" : "Utilizator normal"}
+        </b>
+      `;
+    }
+
+    // 2) Test /ping (Netlify → PebbleHost /api/ping)
+    async function testPing() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/ping`);
+        const data = await res.json();
+
+        console.log("Răspuns /ping:", data);
+        outputEl.textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        console.error("Eroare la /ping:", err);
+        outputEl.textContent = "Eroare la /ping: " + err;
       }
+    }
 
-      elSubtitle.textContent = "Se iau creditele & shop-ul...";
+    // 3) Test /credits (Netlify → PebbleHost /api/credits)
+    async function testCredits() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/credits`);
+        const data = await res.json();
 
-      // ====== CREDITE ======
-      safeFetch(API_BASE + "/get_credits?user_id=" + encodeURIComponent(user.id))
-        .then(data => {
-          if (data.error) throw new Error(data.error);
-          elCredits.textContent = data.credits != null ? data.credits : 0;
-          if (typeof data.is_admin === "boolean") {
-            const adminFromApi = data.is_admin;
-            elStatus.textContent = adminFromApi ? "Administrator" : "Utilizator normal";
-            elRoleText.textContent = adminFromApi ? "ADMIN" : "USER";
-          }
-          elSubtitle.textContent = "Conectat la bot.";
-        })
-        .catch(err => {
-          console.error("Eroare API credite:", err);
-          elCredits.textContent = "–";
-          elProfileError.style.display = "block";
-          elProfileError.textContent =
-            "Nu s-au putut încărca creditele. Verifică API-ul Netlify / bot-ul.";
-          elSubtitle.textContent = "Eroare la API credite.";
-        });
-
-      // ====== SHOP ======
-      let shopData = { categories: [] };
-
-      function renderShop() {
-        const data = shopData;
-        elShopContainer.innerHTML = "";
-
-        if (!data || !Array.isArray(data.categories) || data.categories.length === 0) {
-          elShopContainer.innerHTML =
-            '<div class="info-value" style="font-size:13px; color:var(--muted);">Momentan nu există produse în shop.</div>';
-          return;
-        }
-
-        data.categories.forEach(cat => {
-          const catBlock = document.createElement("div");
-          catBlock.className = "category-block";
-
-          const header = document.createElement("div");
-          header.className = "category-header";
-
-          const nameEl = document.createElement("div");
-          nameEl.className = "category-name";
-          nameEl.textContent = cat.name || "Categorie fără nume";
-
-          const descEl = document.createElement("div");
-          descEl.className = "category-desc";
-          descEl.textContent = cat.description || "";
-
-          header.appendChild(nameEl);
-          header.appendChild(descEl);
-          catBlock.appendChild(header);
-
-          if (Array.isArray(cat.products) && cat.products.length > 0) {
-            cat.products.forEach(prod => {
-              const prodDiv = document.createElement("div");
-              prodDiv.className = "product-item";
-
-              const top = document.createElement("div");
-              top.className = "product-top";
-
-              const pName = document.createElement("div");
-              pName.className = "product-name";
-              pName.textContent = prod.name || "Produs fără nume";
-
-              const pPrice = document.createElement("div");
-              pPrice.className = "product-price";
-              pPrice.textContent = (prod.price || 0) + " credite";
-
-              top.appendChild(pName);
-              top.appendChild(pPrice);
-              prodDiv.appendChild(top);
-
-              if (prod.description) {
-                const pDesc = document.createElement("div");
-                pDesc.className = "product-desc";
-                pDesc.textContent = prod.description;
-                prodDiv.appendChild(pDesc);
-              }
-
-              const limits = document.createElement("div");
-              limits.className = "product-limits";
-              limits.textContent =
-                "Cantitate: " +
-                (prod.min_qty || 1) +
-                " - " +
-                (prod.max_qty || prod.min_qty || 1);
-
-              prodDiv.appendChild(limits);
-
-              const buyRow = document.createElement("div");
-              buyRow.style.marginTop = "6px";
-              buyRow.style.display = "flex";
-              buyRow.style.justifyContent = "flex-end";
-
-              const buyBtn = document.createElement("button");
-              buyBtn.className = "btn btn-primary";
-              buyBtn.textContent =
-                "Cumpără (" + (prod.price || 0) + " cr.)";
-              buyBtn.onclick = () => buyProduct(prod);
-
-              buyRow.appendChild(buyBtn);
-              prodDiv.appendChild(buyRow);
-
-              catBlock.appendChild(prodDiv);
-            });
-          } else {
-            const empty = document.createElement("div");
-            empty.className = "product-desc";
-            empty.textContent = "Nu există produse în această categorie.";
-            catBlock.appendChild(empty);
-          }
-
-          elShopContainer.appendChild(catBlock);
-        });
+        console.log("Răspuns /credits:", data);
+        outputEl.textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        console.error("Eroare la /credits:", err);
+        outputEl.textContent = "Eroare la /credits: " + err;
       }
+    }
 
-      function buyProduct(prod) {
-        const qty = prod.min_qty || 1;
-        const payload = {
-          user_id: user.id,
-          username: user.username ? "@" + user.username : "",
-          product_id: prod.id,
-          qty: qty,
-        };
+    document.getElementById("btnPing").addEventListener("click", testPing);
+    document.getElementById("btnCredits").addEventListener("click", testCredits);
 
-        fetch(API_BASE + "/buy_product", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        })
-          .then(res => res.json())
-          .then(data => {
-            if (data.error) {
-              console.error("BUY ERROR:", data);
-              if (data.error === "not_enough_credits") {
-                toast(
-                  "Nu ai suficiente credite (ai " +
-                    data.have +
-                    ", îți trebuie " +
-                    data.need +
-                    ")."
-                );
-              } else if (data.error === "qty_out_of_range") {
-                toast(
-                  "Cantitate invalidă. Minim " +
-                    data.min_qty +
-                    ", maxim " +
-                    data.max_qty
-                );
-              } else {
-                toast("Eroare la cumpărare: " + data.error);
-              }
-              return;
-            }
-
-            toast(
-              "Cumpărare reușită! Ticket ID: " +
-                data.ticket_id
-            );
-            if (typeof data.new_balance === "number") {
-              elCredits.textContent = data.new_balance;
-            }
-          })
-          .catch(err => {
-            console.error(err);
-            toast("Eroare la cumpărare (rețea / API).");
-          });
-      }
-
-      safeFetch(API_BASE + "/get_shop")
-        .then(data => {
-          if (data.error) throw new Error(data.error);
-          shopData = data || { categories: [] };
-          renderShop();
-        })
-        .catch(err => {
-          console.error("Eroare SHOP API:", err);
-          elShopContainer.innerHTML =
-            '<div class="info-value" style="font-size:13px; color:#ff7b8c;">Eroare la încărcarea produselor.</div>';
-        });
-
-      // ====== ADMIN REDIRECT ======
-      btnOpenAdmin.addEventListener("click", () => {
-        safeFetch(
-          API_BASE + "/admin_panel_url?user_id=" + encodeURIComponent(user.id)
-        )
-          .then(data => {
-            if (!data.url) throw new Error("no_url");
-            window.open(data.url, "_blank");
-          })
-          .catch(err => {
-            console.error(err);
-            toast("Nu s-a putut obține link-ul admin.");
-          });
-      });
-    })();
+    initUserInfo();
   </script>
 </body>
 </html>
