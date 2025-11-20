@@ -11,7 +11,6 @@ document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll(".tabs").forEach((tabs) => {
     const buttons = tabs.querySelectorAll(".tab-btn");
 
-    // setează tab-ul activ inițial
     let activeBtn =
       tabs.querySelector(".tab-btn.active") || tabs.querySelector(".tab-btn");
     if (activeBtn) {
@@ -37,7 +36,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Pornește aplicația corectă
   if (pageType === "user") {
     initUserApp();
   } else if (pageType === "admin") {
@@ -246,7 +244,7 @@ function initUserApp() {
       panelStatusEl.textContent = `Comandă trimisă, tichet #${newTicket.id} creat.`;
 
       const ticketsTabBtn = document.querySelector(
-        '.tab-btn[data-tab="ticketsTab"]'
+        '.tab-btn[data-tab="chatTab"]'
       );
       if (ticketsTabBtn) ticketsTabBtn.click();
     } catch (err) {
@@ -491,19 +489,27 @@ function initAdminApp() {
   const chatMessagesEl = document.getElementById("chatMessages");
   const chatInputEl = document.getElementById("chatInput");
   const chatSendBtn = document.getElementById("chatSendBtn");
+
   const ticketDetailsEl = document.getElementById("ticketDetails");
   const ticketSummaryEl = document.getElementById("ticketSummary");
-  const ticketStatusSelect = document.getElementById("ticketStatusSelect");
-  const ticketNoteEl = document.getElementById("ticketNote");
+  const ticketNoteInlineEl = document.getElementById("ticketNoteInline");
   const ticketStatusBarEl = document.getElementById("ticketStatusBar");
+  const ticketCloseBtn = document.getElementById("ticketCloseBtn");
+  const ticketCloseWithReasonBtn = document.getElementById(
+    "ticketCloseWithReasonBtn"
+  );
 
   const shopContainerEl = document.getElementById("shopContainer");
   const shopStatusBarEl = document.getElementById("shopStatusBar");
   const addCategoryBtn = document.getElementById("addCategoryBtn");
   const saveShopBtn = document.getElementById("saveShopBtn");
-  const ticketSaveBtn = document.getElementById("ticketSaveBtn");
-  const ticketCloseBtn = document.getElementById("ticketCloseBtn");
   const shopMetricsEl = document.getElementById("shopMetrics");
+
+  // modal reason
+  const reasonModalEl = document.getElementById("reasonModal");
+  const reasonInputEl = document.getElementById("reasonInput");
+  const reasonCancelBtn = document.getElementById("reasonCancelBtn");
+  const reasonConfirmBtn = document.getElementById("reasonConfirmBtn");
 
   // filtre & statistici
   const filterStatusEl = document.getElementById("filterStatus");
@@ -672,8 +678,17 @@ function initAdminApp() {
       t.total_price
     } credite)
     `;
-    ticketStatusSelect.value = t.status || "open";
-    ticketNoteEl.value = t.note || "";
+
+    if (t.note) {
+      ticketNoteInlineEl.innerHTML =
+        '<span class="ticket-note-label">Notă internă:</span> ' +
+        `<span class="ticket-note-text">${t.note}</span>`;
+    } else {
+      ticketNoteInlineEl.innerHTML =
+        '<span class="ticket-note-label">Notă internă:</span> ' +
+        '<span class="ticket-note-text ticket-note-empty">nu există (încă)</span>';
+    }
+
     ticketStatusBarEl.textContent = "";
     ticketStatusBarEl.className = "status-bar";
   }
@@ -745,39 +760,39 @@ function initAdminApp() {
     }
   });
 
-  async function saveSelectedTicket(closed = false) {
+  /* ---------- Închidere tichet ---------- */
+
+  async function closeTicket(noteText) {
     if (!SELECTED_TICKET_ID) return;
     const t = ALL_TICKETS.find((x) => x.id === SELECTED_TICKET_ID);
     if (!t) return;
 
-    const newStatus = closed ? "closed" : ticketStatusSelect.value;
-    const note = ticketNoteEl.value || "";
-
-    ticketStatusBarEl.textContent = "Se salvează tichetul...";
+    ticketStatusBarEl.textContent = "Se închide tichetul...";
     ticketStatusBarEl.className = "status-bar";
 
     try {
       const res = await apiCall("admin_update_ticket", {
         ticket_id: t.id,
-        status: newStatus,
-        note: note,
+        status: "closed",
+        note: noteText || "",
       });
 
       if (!res.ok) {
         ticketStatusBarEl.textContent =
-          "Eroare la salvare: " + (res.error || "necunoscută");
+          "Eroare la închidere: " + (res.error || "necunoscută");
         ticketStatusBarEl.className = "status-bar status-error";
         return;
       }
 
-      t.status = newStatus;
-      t.note = note;
+      t.status = "closed";
+      t.note = noteText || "";
 
-      ticketStatusBarEl.textContent = "Tichet salvat.";
+      ticketStatusBarEl.textContent = "Tichet închis.";
       ticketStatusBarEl.className = "status-bar status-ok";
 
       updateTicketStats();
       renderTicketsList();
+      selectTicket(t.id);
     } catch (err) {
       console.error("admin_update_ticket error:", err);
       ticketStatusBarEl.textContent = "Eroare la comunicarea cu serverul.";
@@ -785,8 +800,29 @@ function initAdminApp() {
     }
   }
 
-  ticketSaveBtn?.addEventListener("click", () => saveSelectedTicket(false));
-  ticketCloseBtn?.addEventListener("click", () => saveSelectedTicket(true));
+  ticketCloseBtn?.addEventListener("click", () => {
+    if (!SELECTED_TICKET_ID) return;
+    if (confirm("Sigur vrei să închizi tichetul fără motiv?")) {
+      closeTicket("");
+    }
+  });
+
+  ticketCloseWithReasonBtn?.addEventListener("click", () => {
+    if (!SELECTED_TICKET_ID) return;
+    reasonInputEl.value = "";
+    reasonModalEl.style.display = "flex";
+    reasonInputEl.focus();
+  });
+
+  reasonCancelBtn?.addEventListener("click", () => {
+    reasonModalEl.style.display = "none";
+  });
+
+  reasonConfirmBtn?.addEventListener("click", () => {
+    const text = reasonInputEl.value.trim();
+    reasonModalEl.style.display = "none";
+    closeTicket(text);
+  });
 
   /* ---------- SHOP EDITOR ADMIN ---------- */
 
