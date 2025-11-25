@@ -1,1348 +1,1720 @@
-/* ============================
-   THEME
-   ============================ */
+// app.js – Discord-like chat + reply / edit / delete
 
-:root {
-  --bg: #020308;
-  --bg-elevated: rgba(8, 10, 24, 0.95);
-  --bg-soft: rgba(9, 12, 32, 0.96);
-  --accent: #5865f2;
-  --accent-soft: #7983ff;
-  --accent-muted: #3c45a5;
-  --accent-glow: rgba(88, 101, 242, 0.55);
-  --text: #f8f8ff;
-  --muted: #a4a7be;
-  --border-subtle: rgba(255, 255, 255, 0.05);
-  --chip-bg: rgba(255, 255, 255, 0.06);
-  --danger: #ff4b5c;
-  --success: #3ad67a;
-  --shadow-strong: 0 24px 60px rgba(0, 0, 0, 0.9);
-  --radius-lg: 20px;
-  --radius-md: 14px;
-  --radius-sm: 10px;
-  --transition-fast: 0.16s ease-out;
-  --transition-med: 0.23s ease-out;
-}
-
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
-    "Segoe UI", sans-serif;
-}
+const API_URL = "https://api.redgen.vip/";
 
 /* ============================
-   BACKGROUND / LAYOUT
+   SMART POLL
    ============================ */
 
-body {
-  margin: 0;
-  padding: 0;
-  min-height: 100vh;
-  background:
-    radial-gradient(circle at 0% 0%, rgba(88, 101, 242, 0.2), transparent 55%),
-    radial-gradient(circle at 100% 0%, rgba(77, 0, 153, 0.26), transparent 55%),
-    radial-gradient(circle at 50% 100%, rgba(88, 101, 242, 0.18), transparent 60%),
-    linear-gradient(160deg, #020308 0%, #050411 40%, #030308 100%);
-  color: var(--text);
-}
+function createSmartPoll(fetchFn, isEnabledFn, options = {}) {
+  const minInterval = options.minInterval ?? 3000;
+  const maxInterval = options.maxInterval ?? 8000;
+  const backoffStep = options.backoffStep ?? 2000;
+  const idleThreshold = options.idleThreshold ?? 4;
 
-/* blur doar pe ecrane mari */
-@media (min-width: 900px) {
-  body::before,
-  body::after {
-    content: "";
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    mix-blend-mode: screen;
-    opacity: 0.7;
-    z-index: -1;
+  let timeoutId = null;
+  let active = false;
+  let currentInterval = minInterval;
+  let idleCount = 0;
+  let lastSnapshot = null;
+
+  async function tick() {
+    if (!active) return;
+
+    if (!isEnabledFn || !isEnabledFn()) {
+      schedule(maxInterval);
+      return;
+    }
+
+    try {
+      const data = await fetchFn();
+      if (!active) return;
+
+      if (data !== undefined) {
+        const snap = JSON.stringify(data);
+        if (lastSnapshot === null || snap !== lastSnapshot) {
+          lastSnapshot = snap;
+          idleCount = 0;
+          currentInterval = minInterval;
+        } else {
+          idleCount += 1;
+          if (idleCount >= idleThreshold) {
+            currentInterval = Math.min(maxInterval, currentInterval + backoffStep);
+          }
+        }
+      }
+    } catch (e) {
+      console.error("[smartPoll] error:", e);
+      currentInterval = Math.min(maxInterval, currentInterval + backoffStep);
+    }
+
+    schedule(currentInterval);
   }
 
-  body::before {
-    background: radial-gradient(circle at 15% 0%, rgba(88, 101, 242, 0.4), transparent 60%);
-    filter: blur(60px);
+  function schedule(delay) {
+    if (!active) return;
+    if (timeoutId) clearTimeout(timeoutId);
+    timeoutId = setTimeout(tick, delay);
   }
 
-  body::after {
-    background: radial-gradient(circle at 90% 100%, rgba(92, 24, 255, 0.35), transparent 55%);
-    filter: blur(80px);
-  }
-}
-
-/* container general */
-
-.container {
-  max-width: 1180px;
-  margin: 0 auto;
-  padding: 12px 14px 20px;
-}
-
-/* MiniApp user mai compact pe orizontală, dar full height */
-body[data-page="user"] .container {
-  max-width: 560px;
-}
-
-/* Admin – ocupă aproape tot ecranul */
-body[data-page="admin"] .container {
-  max-width: 1180px;
-  min-height: 100vh;
-  display: flex;
+  return {
+    start() {
+      if (active) return;
+      active = true;
+      idleCount = 0;
+      currentInterval = minInterval;
+      tick();
+    },
+    stop() {
+      active = false;
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = null;
+    },
+    bumpFast() {
+      if (!active) return;
+      idleCount = 0;
+      currentInterval = minInterval;
+      schedule(currentInterval);
+    },
+  };
 }
 
 /* ============================
-   CARD PRINCIPAL
+   BOOTSTRAP
    ============================ */
 
-.card {
-  position: relative;
-  border-radius: var(--radius-lg);
-  padding: 14px 14px 16px;
-  background: linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.04),
-      rgba(255, 255, 255, 0.01)
-    )
-    border-box;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow: var(--shadow-strong);
-  backdrop-filter: blur(22px) saturate(140%);
-  -webkit-backdrop-filter: blur(22px) saturate(140%);
-  overflow: hidden;
+document.addEventListener("DOMContentLoaded", () => {
+  const pageType = document.body.dataset.page;
+
+  // Tabs
+  document.querySelectorAll(".tabs").forEach((tabs) => {
+    const buttons = tabs.querySelectorAll(".tab-btn");
+    let activeBtn =
+      tabs.querySelector(".tab-btn.active") || tabs.querySelector(".tab-btn");
+    if (activeBtn) {
+      tabs.setAttribute("data-active", activeBtn.dataset.tab);
+    }
+
+    buttons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        buttons.forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+
+        const target = btn.getAttribute("data-tab");
+        tabs.setAttribute("data-active", target || "");
+
+        if (target) {
+          document
+            .querySelectorAll(".tab-section")
+            .forEach((s) => s.classList.remove("active"));
+          const section = document.getElementById(target);
+          if (section) section.classList.add("active");
+        }
+
+        if (pageType === "user" && typeof window.onUserTabChange === "function") {
+          window.onUserTabChange(target);
+        }
+        if (
+          pageType === "admin" &&
+          typeof window.onAdminTabChange === "function"
+        ) {
+          window.onAdminTabChange(target);
+        }
+      });
+    });
+  });
+
+  if (pageType === "user") initUserApp();
+  if (pageType === "admin") initAdminApp();
+});
+
+/* ============================
+   UTIL
+   ============================ */
+
+function formatTimestamp(ts) {
+  if (!ts) return "";
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return "";
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = String(d.getFullYear()).slice(-2);
+  const h = String(d.getHours()).padStart(2, "0");
+  const m = String(d.getMinutes()).padStart(2, "0");
+  return `${day}/${month}/${year}, ${h}:${m}`;
 }
 
-.card::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(
-    135deg,
-    rgba(88, 101, 242, 0.7),
-    rgba(150, 60, 255, 0.4),
-    rgba(10, 10, 24, 0.2)
+function isNearBottom(container, thresholdPx = 80) {
+  if (!container) return true;
+  const { scrollTop, scrollHeight, clientHeight } = container;
+  return scrollHeight - (scrollTop + clientHeight) < thresholdPx;
+}
+
+function smartScrollToBottom(container, wasNearBottomOrForce) {
+  if (!container) return;
+  if (wasNearBottomOrForce) {
+    container.scrollTop = container.scrollHeight;
+  }
+}
+
+/* ============================
+   DISCORD-LIKE RENDERER
+   ============================ */
+
+function renderDiscordMessages(messages, options) {
+  const {
+    container,
+    canReply,
+    canEditDelete,
+    onReply,
+    onEdit,
+    onDelete,
+    onJumpTo,
+  } = options;
+
+  if (!container) return;
+  const wasNearBottom = isNearBottom(container);
+  container.innerHTML = "";
+
+  const msgById = {};
+  (messages || []).forEach((m) => {
+    if (m && m.id) msgById[m.id] = m;
+  });
+
+  (messages || []).forEach((m) => {
+    const row = document.createElement("div");
+    row.className = "msg-row";
+    row.dataset.messageId = m.id || "";
+
+    const avatar = document.createElement("div");
+    avatar.className = "msg-avatar";
+    const senderName = m.sender || (m.from === "system" ? "System" : "User");
+    avatar.textContent = (senderName || "?").slice(0, 1).toUpperCase();
+
+    const content = document.createElement("div");
+    content.className = "msg-content";
+
+    // header: username + time
+    const header = document.createElement("div");
+    header.className = "msg-header";
+
+    const usernameEl = document.createElement("span");
+    usernameEl.className = "msg-username";
+    if (m.from === "admin") usernameEl.classList.add("msg-username--admin");
+    usernameEl.textContent = senderName;
+
+    const tsEl = document.createElement("span");
+    tsEl.className = "msg-timestamp";
+    tsEl.textContent = formatTimestamp(m.ts);
+
+    header.appendChild(usernameEl);
+    header.appendChild(tsEl);
+
+    // bubble
+    const bubble = document.createElement("div");
+    bubble.className = "msg-bubble";
+
+    // REPLY preview (Discord style)
+    if (m.reply_to && msgById[m.reply_to]) {
+      const origin = msgById[m.reply_to];
+
+      const replyBar = document.createElement("div");
+      replyBar.className = "msg-reply-preview";
+
+      const leftBar = document.createElement("div");
+      leftBar.className = "msg-reply-bar";
+      replyBar.appendChild(leftBar);
+
+      const replyBody = document.createElement("div");
+      replyBody.className = "msg-reply-body";
+
+      const replyHeader = document.createElement("div");
+      replyHeader.className = "msg-reply-header";
+      const replyUser = document.createElement("span");
+      replyUser.className = "msg-reply-username";
+      replyUser.textContent = origin.sender || "User";
+      replyHeader.appendChild(replyUser);
+
+      const replyText = document.createElement("div");
+      replyText.className = "msg-reply-text";
+      replyText.textContent = (origin.text || "").slice(0, 120);
+
+      replyBody.appendChild(replyHeader);
+      replyBody.appendChild(replyText);
+
+      replyBar.appendChild(replyBody);
+
+      replyBar.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (typeof onJumpTo === "function") onJumpTo(origin.id);
+      });
+
+      bubble.appendChild(replyBar);
+    }
+
+    const textEl = document.createElement("div");
+    textEl.className = "msg-text";
+    if (m.deleted) {
+      textEl.classList.add("msg-text--deleted");
+      textEl.textContent = "Mesaj șters";
+    } else {
+      textEl.textContent = m.text || "";
+    }
+    bubble.appendChild(textEl);
+
+    if (m.edited && !m.deleted) {
+      const meta = document.createElement("span");
+      meta.className = "msg-meta";
+      meta.textContent = "(editat)";
+      bubble.appendChild(meta);
+    }
+
+    // actions (Reply / Edit / Del) – pe dreapta la hover
+    if (!m.deleted && (canReply || canEditDelete)) {
+      const actions = document.createElement("div");
+      actions.className = "msg-actions";
+
+      if (canReply) {
+        const btn = document.createElement("button");
+        btn.className = "msg-action-btn";
+        btn.textContent = "Reply";
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (typeof onReply === "function") onReply(m);
+        });
+        actions.appendChild(btn);
+      }
+
+      if (canEditDelete && m.from === "admin") {
+        const editBtn = document.createElement("button");
+        editBtn.className = "msg-action-btn";
+        editBtn.textContent = "Edit";
+        editBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (typeof onEdit === "function") onEdit(m);
+        });
+        actions.appendChild(editBtn);
+
+        const delBtn = document.createElement("button");
+        delBtn.className = "msg-action-btn msg-action-btn--danger";
+        delBtn.textContent = "Del";
+        delBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (typeof onDelete === "function") onDelete(m);
+        });
+        actions.appendChild(delBtn);
+      }
+
+      bubble.appendChild(actions);
+    }
+
+    content.appendChild(header);
+    content.appendChild(bubble);
+
+    row.appendChild(avatar);
+    row.appendChild(content);
+
+    container.appendChild(row);
+  });
+
+  smartScrollToBottom(container, wasNearBottom);
+}
+
+function scrollToMessageElement(container, messageId) {
+  if (!container) return;
+  const row = container.querySelector(
+    `.msg-row[data-message-id="${messageId}"]`
   );
-  -webkit-mask: linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  opacity: 0.55;
-  pointer-events: none;
-}
-
-/* user card */
-
-.card--user {
-  max-width: 560px;
-  margin: 0 auto;
-}
-
-/* admin card – full în container, layout coloană pentru tabs/chat */
-
-.card--admin {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: calc(100vh - 24px);
+  if (!row) return;
+  row.classList.add("msg-row--highlight");
+  row.scrollIntoView({ behavior: "smooth", block: "center" });
+  setTimeout(() => row.classList.remove("msg-row--highlight"), 1200);
 }
 
 /* ============================
-   HEADER
+   USER MINIAPP
    ============================ */
 
-.header-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 8px;
-}
-
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-  padding: 4px 12px;
-  border-radius: 999px;
-  background: radial-gradient(circle at 0 0, var(--accent-soft), var(--accent));
-  color: #fff;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-}
-
-.badge-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: #fff;
-  box-shadow: 0 0 12px rgba(255, 255, 255, 0.75);
-}
-
-.credits {
-  text-align: right;
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.credits .value {
-  font-weight: 700;
-  color: var(--accent-soft);
-}
-
-.env-info {
-  font-size: 11px;
-  color: var(--muted);
-  opacity: 0.8;
-}
-
-h1 {
-  margin: 4px 0 2px;
-  font-size: 20px;
-  letter-spacing: 0.01em;
-}
-
-.subtitle {
-  margin: 0 0 8px;
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.user-line {
-  font-size: 12px;
-  color: var(--muted);
-  margin: 0 0 8px;
-}
-
-.user-line b {
-  color: var(--text);
-}
-
-.admin-header-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  gap: 12px;
-  margin-bottom: 6px;
-}
-
-/* ============================
-   TABS – segmented control
-   ============================ */
-
-.tabs {
-  position: relative;
-  display: flex;
-  align-items: center;
-  padding: 3px;
-  border-radius: 999px;
-  background: rgba(8, 10, 24, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  margin-bottom: 8px;
-}
-
-.tab-btn {
-  position: relative;
-  flex: 1;
-  font-size: 12px;
-  padding: 7px 8px;
-  border-radius: 999px;
-  border: none;
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-  z-index: 1;
-  transition: color var(--transition-med), transform var(--transition-fast);
-}
-
-.tab-btn.active {
-  color: #fff;
-  transform: translateY(-0.5px);
-}
-
-.tabs::after {
-  content: "";
-  position: absolute;
-  top: 3px;
-  bottom: 3px;
-  left: 3px;
-  width: calc(50% - 4px);
-  border-radius: 999px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-soft));
-  box-shadow: 0 0 18px var(--accent-glow);
-  transition: transform var(--transition-med);
-}
-
-.tabs[data-active="shopTab"]::after {
-  transform: translateX(calc(100%));
-}
-
-.tabs[data-active="chatTab"]::after {
-  transform: translateX(0);
-}
-
-.tabs--admin[data-active="shopTab"]::after {
-  transform: translateX(calc(100%));
-}
-
-.tab-section {
-  display: none;
-}
-
-.tab-section.active {
-  display: block;
-}
-
-.section-title {
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--muted);
-  margin: 4px 0 6px;
-}
-
-/* ============================
-   FOOTER
-   ============================ */
-
-.footer {
-  margin-top: 8px;
-  font-size: 10px;
-  color: var(--muted);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  opacity: 0.8;
-}
-
-.footer--admin {
-  margin-top: 10px;
-}
-
-.dot-red {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: var(--accent);
-  box-shadow: 0 0 12px var(--accent-glow);
-}
-
-/* ============================
-   SHOP – USER LIST
-   ============================ */
-
-.categories {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 4px;
-}
-
-.category {
-  border-radius: var(--radius-md);
-  padding: 8px 10px;
-  background: radial-gradient(circle at 0 0, rgba(255, 255, 255, 0.02), transparent 65%),
-    radial-gradient(circle at 100% 100%, rgba(88, 101, 242, 0.15), transparent 65%),
-    rgba(6, 8, 24, 0.94);
-  border: 1px solid var(--border-subtle);
-  transition: border-color var(--transition-fast),
-    transform var(--transition-fast),
-    box-shadow var(--transition-fast),
-    background var(--transition-fast);
-}
-
-.category:hover {
-  border-color: rgba(88, 101, 242, 0.7);
-  transform: translateY(-1px);
-  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.55);
-  background: radial-gradient(circle at 0 0, rgba(255, 255, 255, 0.04), transparent 65%),
-    radial-gradient(circle at 100% 100%, rgba(88, 101, 242, 0.22), transparent 65%),
-    rgba(8, 10, 30, 0.96);
-}
-
-.category-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 4px;
-}
-
-.category-name {
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.category-pill {
-  font-size: 10px;
-  text-transform: uppercase;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--chip-bg);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  color: var(--muted);
-}
-
-.category-desc {
-  font-size: 11px;
-  color: var(--muted);
-  margin-bottom: 5px;
-}
-
-.products {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.product {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 7px;
-  border-radius: var(--radius-sm);
-  background: rgba(9, 10, 30, 0.96);
-  border: 1px solid rgba(255, 255, 255, 0.03);
-  transition: background var(--transition-fast), transform var(--transition-fast),
-    border-color var(--transition-fast);
-}
-
-.product:hover {
-  background: rgba(14, 16, 40, 0.98);
-  border-color: rgba(88, 101, 242, 0.45);
-  transform: translateY(-0.5px);
-}
-
-.product-main {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  max-width: 70%;
-}
-
-.product-name {
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.product-desc {
-  font-size: 11px;
-  color: var(--muted);
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  overflow: hidden;
-}
-
-.product-price {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--accent-soft);
-  text-align: right;
-}
-
-.product-btn {
-  font-size: 11px;
-  padding: 5px 9px;
-}
-
-/* ============================
-   PRODUCT PANEL (USER)
-   ============================ */
-
-.product-panel {
-  margin-top: 10px;
-  border-radius: var(--radius-md);
-  padding: 10px;
-  background: linear-gradient(
-      135deg,
-      rgba(88, 101, 242, 0.18),
-      rgba(0, 0, 0, 0.2)
-    ),
-    rgba(5, 5, 18, 0.98);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  animation: panelIn 0.22s ease-out;
-}
-
-@keyframes panelIn {
-  from {
-    opacity: 0;
-    transform: translateY(-4px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-.product-panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 4px;
-}
-
-.product-panel-name {
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.product-panel-close {
-  border: none;
-  background: transparent;
-  color: var(--muted);
-  font-size: 18px;
-  cursor: pointer;
-  padding: 0 4px;
-}
-
-.product-panel-desc {
-  font-size: 12px;
-  color: var(--muted);
-  margin-bottom: 4px;
-}
-
-.product-panel-price {
-  font-size: 12px;
-  margin-bottom: 6px;
-}
-
-.qty-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.qty-label {
-  font-size: 12px;
-}
-
-.qty-row input {
-  width: 70px;
-  padding: 5px 6px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(4, 4, 14, 0.95);
-  color: var(--text);
-  font-size: 12px;
-  text-align: center;
-}
-
-.qty-range {
-  font-size: 11px;
-  color: var(--muted);
-}
-
-.product-panel-buy {
-  width: 100%;
-}
-
-/* ============================
-   CHAT LAYOUT (USER & ADMIN)
-   ============================ */
-
-/* user */
-.chat-layout {
-  display: grid;
-  grid-template-columns: 0.9fr 1.6fr;
-  gap: 8px;
-  max-height: 360px;
-}
-
-/* admin */
-.chat-admin-layout {
-  display: grid;
-  grid-template-columns: minmax(260px, 0.8fr) minmax(0, 1.7fr);
-  gap: 10px;
-  margin-top: 4px;
-  min-height: 0;
-}
-
-/* coloana stânga – listă tichete */
-.chat-sidebar {
-  border-radius: var(--radius-md);
-  background: var(--bg-soft);
-  border: 1px solid var(--border-subtle);
-  overflow: hidden;
-  font-size: 12px;
-
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  max-height: 420px;
-  overflow-y: auto;
-}
-
-/* chat item */
-
-.chat-item {
-  padding: 8px 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-  cursor: pointer;
-  transition: background var(--transition-fast), border-color var(--transition-fast),
-    transform var(--transition-fast);
-}
-
-.chat-item:hover {
-  background: rgba(255, 255, 255, 0.02);
-  transform: translateY(-0.5px);
-}
-
-.chat-item.active {
-  background: radial-gradient(circle at 0 0, rgba(88, 101, 242, 0.34), transparent 70%);
-  border-left: 3px solid var(--accent-soft);
-}
-
-.chat-item-title {
-  font-weight: 600;
-  font-size: 12px;
-}
-
-.chat-item-line {
-  font-size: 11px;
-  color: var(--muted);
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  overflow: hidden;
-}
-
-/* chat main – coloana dreaptă */
-
-.chat-main {
-  border-radius: var(--radius-md);
-  background: var(--bg-soft);
-  border: 1px solid var(--border-subtle);
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  max-height: 420px;
-}
-
-.chat-header {
-  padding: 7px 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-  font-size: 12px;
-}
-
-.chat-header span {
-  color: var(--muted);
-}
-
-.chat-messages {
-  flex: 1;
-  padding: 4px 8px 6px;
-  overflow-y: auto;
-}
-
-/* bar pentru mode (reply / edit) ca Discord */
-
-.chat-mode-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 4px 10px;
-  margin: 4px 8px 2px;
-  border-radius: 8px;
-  background: rgba(88, 101, 242, 0.18);
-  border: 1px solid rgba(88, 101, 242, 0.45);
-  font-size: 11px;
-}
-
-.chat-mode-text {
-  color: #dfe3ff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* tickets info (user) */
-
-.tickets-info {
-  margin-top: 6px;
-  font-size: 11px;
-  color: var(--muted);
-}
-
-/* chat input */
-
-.chat-input {
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
-  padding: 6px;
-  display: flex;
-  gap: 6px;
-  align-items: center;
-}
-
-.chat-input input {
-  flex: 1;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(4, 4, 14, 0.95);
-  color: var(--text);
-  padding: 6px 10px;
-  font-size: 12px;
-}
-
-.chat-input button {
-  white-space: nowrap;
-}
-
-/* ============================
-   MESAJE – DISCORD STYLE
-   ============================ */
-
-.msg-row {
-  display: flex;
-  gap: 8px;
-  padding: 6px 10px;
-  border-radius: 8px;
-  transition: background 0.15s ease-out;
-}
-
-.msg-row:hover {
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.msg-row--highlight {
-  background: rgba(88, 101, 242, 0.25);
-}
-
-/* avatar */
-
-.msg-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 999px;
-  background: linear-gradient(135deg, #ff7a55, #ffb347);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  font-weight: 700;
-  color: #111;
-  flex-shrink: 0;
-}
-
-/* conținut */
-
-.msg-content {
-  flex: 1;
-}
-
-/* header line (nume + timp) */
-
-.msg-header-line {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  margin-bottom: 2px;
-}
-
-.msg-username {
-  font-size: 13px;
-  font-weight: 600;
-  color: #f5f5ff;
-}
-
-.msg-username--admin {
-  color: #3ba55d;
-}
-
-.msg-timestamp {
-  font-size: 11px;
-  color: var(--muted);
-}
-
-/* bubble */
-
-.msg-bubble {
-  position: relative;
-  padding: 2px 0 2px 0;
-  font-size: 13px;
-}
-
-/* text */
-
-.msg-text {
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.msg-text--deleted {
-  font-style: italic;
-  color: rgba(255, 255, 255, 0.6);
-}
-
-/* meta (editat) */
-
-.msg-meta {
-  margin-top: 2px;
-  font-size: 10px;
-  color: var(--muted);
-}
-
-/* acțiuni (Reply/Edit/Del) – dreapta sus la hover */
-
-.msg-actions {
-  position: absolute;
-  top: -6px;
-  right: 0;
-  display: flex;
-  gap: 4px;
-  opacity: 0;
-  transform: translateY(-4px);
-  transition: opacity 0.12s ease-out, transform 0.12s ease-out;
-  pointer-events: none;
-}
-
-.msg-row:hover .msg-actions {
-  opacity: 1;
-  transform: translateY(0);
-  pointer-events: auto;
-}
-
-.msg-action-btn {
-  border: none;
-  border-radius: 6px;
-  padding: 2px 6px;
-  font-size: 10px;
-  background: rgba(32, 34, 37, 0.9);
-  color: #f5f5f5;
-  cursor: pointer;
-}
-
-.msg-action-btn:hover {
-  background: rgba(54, 57, 63, 0.95);
-}
-
-.msg-action-btn--danger {
-  color: #ff4b5c;
-}
-
-/* reply preview în mesaj */
-
-.msg-reply-preview {
-  margin-bottom: 2px;
-  padding: 2px 6px;
-  border-left: 2px solid rgba(88, 101, 242, 0.85);
-  border-radius: 4px;
-  background: rgba(32, 34, 37, 0.85);
-  font-size: 11px;
-  color: var(--muted);
-  max-width: 100%;
-  cursor: pointer;
-}
-
-.msg-reply-preview strong {
-  margin-right: 4px;
-  color: #dfe3ff;
-}
-
-/* ============================
-   ADMIN – TICKET DETAILS
-   ============================ */
-
-.ticket-details {
-  margin-top: 10px;
-  border-radius: var(--radius-md);
-  background: rgba(6, 8, 24, 0.96);
-  border: 1px solid var(--border-subtle);
-  padding: 8px 10px;
-  font-size: 12px;
-}
-
-.ticket-summary {
-  margin-bottom: 4px;
-}
-
-.ticket-actions {
-  margin-top: 6px;
-  display: flex;
-  gap: 6px;
-}
-
-/* Notă internă */
-
-.ticket-note-inline {
-  margin-top: 4px;
-  font-size: 11px;
-  color: var(--muted);
-}
-
-.ticket-note-label {
-  font-weight: 600;
-  margin-right: 4px;
-}
-
-.ticket-note-text {
-  opacity: 0.9;
-}
-
-.ticket-note-empty {
-  font-style: italic;
-  opacity: 0.7;
-}
-
-/* ============================
-   ADMIN – SHOP EDITOR
-   ============================ */
-
-.shop-flex {
-  display: grid;
-  grid-template-columns: minmax(0, 2.1fr) minmax(260px, 0.9fr);
-  gap: 10px;
-  margin-top: 4px;
-  min-height: 0;
-}
-
-.shop-container {
-  max-height: 460px;
-  overflow: auto;
-  border-radius: var(--radius-md);
-  background: var(--bg-soft);
-  border: 1px solid var(--border-subtle);
-  padding: 8px;
-}
-
-.shop-sidepanel {
-  border-radius: var(--radius-md);
-  background: rgba(7, 7, 22, 0.96);
-  border: 1px solid var(--border-subtle);
-  padding: 10px;
-  font-size: 12px;
-}
-
-.shop-sidepanel-title {
-  font-size: 14px;
-  margin: 0 0 4px;
-}
-
-.shop-sidepanel-text {
-  font-size: 11px;
-  color: var(--muted);
-  margin: 0 0 8px;
-}
-
-/* category editor */
-
-.cat-card {
-  border-radius: var(--radius-md);
-  padding: 8px;
-  margin-bottom: 8px;
-  background: rgba(10, 11, 30, 0.96);
-  border: 1px solid var(--border-subtle);
-}
-
-.cat-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
-}
-
-.cat-header-left {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: 1;
-}
-
-.cat-header-right {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.cat-header input {
-  flex: 1;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(4, 4, 14, 0.96);
-  color: var(--text);
-  padding: 6px 10px;
-  font-size: 12px;
-}
-
-.cat-desc textarea {
-  width: 100%;
-  margin-top: 4px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(3, 3, 15, 0.96);
-  color: var(--text);
-  padding: 6px 8px;
-  font-size: 12px;
-  resize: vertical;
-}
-
-.cat-toggle {
-  padding-inline: 6px;
-  min-width: 30px;
-}
-
-/* product rows */
-
-.products-list {
-  margin-top: 6px;
-  border-radius: var(--radius-sm);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  padding: 6px;
-  background: rgba(5, 6, 20, 0.96);
-}
-
-.product-row {
-  display: grid;
-  grid-template-columns: 1.6fr 0.7fr 0.7fr 0.7fr auto;
-  gap: 4px;
-  align-items: center;
-  margin-bottom: 4px;
-}
-
-.product-row input {
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(4, 4, 14, 0.96);
-  color: var(--text);
-  padding: 4px 6px;
-  font-size: 11px;
-}
-
-.products-list input[type="text"] {
-  width: 100%;
-}
-
-.product-mini-actions {
-  display: flex;
-  gap: 4px;
-}
-
-.small-input-label {
-  font-size: 10px;
-  color: var(--muted);
-  margin-top: 2px;
-}
-
-/* shop metrics */
-
-.shop-metrics {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin-bottom: 8px;
-}
-
-/* ============================
-   STATUS BARS
-   ============================ */
-
-.status-bar {
-  margin-top: 6px;
-  font-size: 11px;
-  min-height: 14px;
-  color: var(--muted);
-}
-
-.status-ok {
-  color: var(--success);
-}
-
-.status-error {
-  color: var(--danger);
-}
-
-/* ============================
-   BUTTONS
-   ============================ */
-
-.btn-primary,
-.product-panel-buy,
-.chat-input button,
-.product-btn {
-  border: none;
-  border-radius: 999px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-soft));
-  color: #fff;
-  font-size: 12px;
-  padding: 7px 12px;
-  cursor: pointer;
-  box-shadow: 0 10px 25px var(--accent-glow);
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast),
-    filter var(--transition-fast);
-}
-
-.btn-primary:hover,
-.product-panel-buy:hover,
-.chat-input button:hover,
-.product-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 28px var(--accent-glow);
-  filter: brightness(1.05);
-}
-
-.btn-ghost {
-  border-radius: 999px;
-  padding: 6px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(5, 5, 15, 0.98);
-  font-size: 11px;
-  color: var(--muted);
-  cursor: pointer;
-  transition: background var(--transition-fast), border-color var(--transition-fast),
-    transform var(--transition-fast), color var(--transition-fast);
-}
-
-.btn-ghost:hover {
-  background: rgba(10, 10, 26, 0.98);
-  border-color: rgba(255, 255, 255, 0.16);
-  color: var(--text);
-  transform: translateY(-0.5px);
-}
-
-.full-width {
-  width: 100%;
-}
-
-/* ============================
-   ADMIN TOOLBAR & STATS
-   ============================ */
-
-.admin-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 8px;
-  padding: 6px 8px;
-  border-radius: 14px;
-  background: rgba(5, 6, 20, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-}
-
-.toolbar-group {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: 1;
-  min-width: 0;
-}
-
-.toolbar-select {
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(4, 4, 14, 0.96);
-  color: var(--text);
-  padding: 5px 10px;
-  font-size: 12px;
-}
-
-.toolbar-search {
-  flex: 1;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(4, 4, 14, 0.96);
-  color: var(--text);
-  padding: 6px 10px;
-  font-size: 12px;
-}
-
-.toolbar-stats {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-/* stat pills */
-
-.stat-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 10px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  font-size: 11px;
-}
-
-.stat-pill--open {
-  background: rgba(58, 214, 122, 0.08);
-  border-color: rgba(58, 214, 122, 0.35);
-}
-
-.stat-pill--closed {
-  background: rgba(255, 75, 92, 0.08);
-  border-color: rgba(255, 75, 92, 0.35);
-}
-
-.stat-pill--soft {
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.stat-label {
-  color: var(--muted);
-}
-
-.stat-value {
-  font-weight: 600;
-}
-
-/* status pills în listă tichete */
-
-.chat-item-header-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 6px;
-}
-
-.ticket-status-pill {
-  position: relative;
-  font-size: 10px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-}
-
-.ticket-status-pill.open {
-  background: rgba(58, 214, 122, 0.1);
-  border-color: rgba(58, 214, 122, 0.6);
-  color: #9bffb9;
-}
-
-.ticket-status-pill.closed {
-  background: rgba(255, 75, 92, 0.08);
-  border-color: rgba(255, 75, 92, 0.6);
-  color: #ff9ba4;
-}
-
-/* badge pentru mesaje noi */
-
-.ticket-unread-badge {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  border-radius: 999px;
-  background: #f04747;
-  color: #fff;
-  font-size: 9px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 0 8px rgba(240, 71, 71, 0.8);
-}
-
-/* ============================
-   MODAL – Închide cu motiv
-   ============================ */
-
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(2, 3, 10, 0.78);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  z-index: 40;
-}
-
-.modal {
-  width: min(420px, 92vw);
-  border-radius: 18px;
-  background: radial-gradient(circle at 0 0, rgba(88, 101, 242, 0.3), transparent 65%),
-    rgba(6, 6, 20, 0.98);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85);
-  padding: 12px 14px 14px;
-  animation: panelIn 0.18s ease-out;
-}
-
-.modal h3 {
-  margin: 0 0 4px;
-  font-size: 15px;
-}
-
-.modal-text {
-  margin: 0 0 8px;
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.modal textarea {
-  width: 100%;
-  min-height: 80px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(3, 3, 15, 0.98);
-  color: var(--text);
-  padding: 6px 8px;
-  font-size: 12px;
-  resize: vertical;
-  margin-bottom: 8px;
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 6px;
-}
-
-/* ============================
-   SCROLLBARS CUSTOM – chat
-   ============================ */
-
-.chat-sidebar,
-.chat-messages {
-  scrollbar-width: thin;
-  scrollbar-color: var(--accent-soft) rgba(255, 255, 255, 0.04);
-}
-
-.chat-sidebar::-webkit-scrollbar,
-.chat-messages::-webkit-scrollbar {
-  width: 6px;
-}
-
-.chat-sidebar::-webkit-scrollbar-track,
-.chat-messages::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.chat-sidebar::-webkit-scrollbar-thumb,
-.chat-messages::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, var(--accent), var(--accent-soft));
-  border-radius: 999px;
-}
-
-/* ============================
-   RESPONSIVE
-   ============================ */
-
-@media (max-width: 900px) {
-  .chat-layout,
-  .chat-admin-layout,
-  .shop-flex {
-    grid-template-columns: 1fr;
-    max-height: none;
+function initUserApp() {
+  const tg = window.Telegram?.WebApp;
+
+  let CURRENT_USER = null;
+  let CURRENT_SHOP = null;
+  let CURRENT_TICKETS = [];
+  let SELECTED_TICKET_ID = null;
+
+  let userActiveUntil = 0;
+  function bumpUserActive(extraMs = 25000) {
+    const now = Date.now();
+    userActiveUntil = Math.max(userActiveUntil, now + extraMs);
   }
 
-  .chat-sidebar,
-  .chat-main {
-    max-height: none;
+  const creditsValueEl = document.getElementById("creditsValue");
+  const userLineEl = document.getElementById("userLine");
+
+  const categoriesContainer = document.getElementById("categoriesContainer");
+  const productPanelEl = document.getElementById("productPanel");
+  const panelNameEl = document.getElementById("panelName");
+  const panelDescEl = document.getElementById("panelDesc");
+  const panelPriceEl = document.getElementById("panelPrice");
+  const panelQtyEl = document.getElementById("panelQty");
+  const panelQtyRangeEl = document.getElementById("panelQtyRange");
+  const panelBuyBtn = document.getElementById("panelBuyBtn");
+  const panelCloseBtn = document.getElementById("panelCloseBtn");
+  const panelStatusEl = document.getElementById("panelStatus");
+  let SELECTED_PRODUCT = null;
+
+  const chatListEl = document.getElementById("chatList");
+  const chatHeaderEl = document.getElementById("chatHeader");
+  const chatMessagesEl = document.getElementById("chatMessages");
+  const chatInputEl = document.getElementById("chatInput");
+  const chatSendBtn = document.getElementById("chatSendBtn");
+  const ticketsInfoEl = document.getElementById("ticketsInfo");
+
+  // bară mod (reply) – user
+  const chatInputContainer = document.querySelector(
+    '#ticketsTab .chat-input'
+  );
+  let userModeBar = null;
+  let userMode = null; // { type: "reply", messageId, sender, text }
+
+  if (chatInputContainer) {
+    userModeBar = document.createElement("div");
+    userModeBar.className = "chat-mode-bar";
+    userModeBar.style.display = "none";
+
+    const span = document.createElement("div");
+    span.className = "chat-mode-text";
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.className = "btn-ghost chat-mode-cancel";
+    cancelBtn.textContent = "Cancel";
+    cancelBtn.onclick = () => clearUserMode();
+
+    userModeBar.appendChild(span);
+    userModeBar.appendChild(cancelBtn);
+    chatInputContainer.prepend(userModeBar);
   }
 
-  .container {
-    padding-inline: 10px;
+  function setUserReplyMode(msg) {
+    if (!userModeBar) return;
+    userMode = {
+      type: "reply",
+      messageId: msg.id,
+      sender: msg.sender || "User",
+      text: msg.text || "",
+    };
+    const span = userModeBar.querySelector(".chat-mode-text");
+    span.textContent = `Răspunzi lui ${userMode.sender}: "${userMode.text.slice(
+      0,
+      80
+    )}"`;
+    userModeBar.style.display = "flex";
+    chatInputEl.focus();
   }
+
+  function clearUserMode() {
+    userMode = null;
+    if (userModeBar) userModeBar.style.display = "none";
+  }
+
+  function apiCall(action, extraPayload = {}) {
+    const payload = { action, user: CURRENT_USER, ...extraPayload };
+    return fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }).then((r) => r.json());
+  }
+
+  function isTicketsTabActive() {
+    const tab = document.getElementById("ticketsTab");
+    return tab && tab.classList.contains("active");
+  }
+
+  function renderUserHeader() {
+    if (!CURRENT_USER) return;
+    creditsValueEl.textContent = CURRENT_USER.credits;
+    const name =
+      CURRENT_USER.username && CURRENT_USER.username !== "fara_username"
+        ? "@" + CURRENT_USER.username
+        : `ID ${CURRENT_USER.id}`;
+    userLineEl.innerHTML = `Utilizator: <b>${name}</b>`;
+  }
+
+  /* SHOP USER */
+
+  function renderShop(shop) {
+    categoriesContainer.innerHTML = "";
+    if (!shop || !shop.categories) return;
+
+    shop.categories.forEach((cat) => {
+      const catDiv = document.createElement("div");
+      catDiv.className = "category";
+
+      const header = document.createElement("div");
+      header.className = "category-header";
+
+      const nameSpan = document.createElement("div");
+      nameSpan.className = "category-name";
+      nameSpan.textContent = cat.name;
+
+      const pill = document.createElement("div");
+      pill.className = "category-pill";
+      pill.textContent = "categorie";
+
+      header.appendChild(nameSpan);
+      header.appendChild(pill);
+
+      const desc = document.createElement("div");
+      desc.className = "category-desc";
+      desc.textContent = cat.description || "";
+
+      const productsDiv = document.createElement("div");
+      productsDiv.className = "products";
+
+      (cat.products || []).forEach((prod) => {
+        const prodDiv = document.createElement("div");
+        prodDiv.className = "product";
+
+        const main = document.createElement("div");
+        main.className = "product-main";
+
+        const title = document.createElement("div");
+        title.className = "product-name";
+        title.textContent = prod.name;
+
+        const pdesc = document.createElement("div");
+        pdesc.className = "product-desc";
+        pdesc.textContent = prod.description || "";
+
+        main.appendChild(title);
+        main.appendChild(pdesc);
+
+        const right = document.createElement("div");
+        right.className = "product-right";
+
+        const price = document.createElement("div");
+        price.className = "product-price";
+        price.textContent = prod.price + " credite";
+
+        const btn = document.createElement("button");
+        btn.className = "product-btn";
+        btn.textContent = "Detalii";
+        btn.onclick = () => openProductPanel(prod);
+
+        right.appendChild(price);
+        right.appendChild(btn);
+
+        prodDiv.appendChild(main);
+        prodDiv.appendChild(right);
+
+        productsDiv.appendChild(prodDiv);
+      });
+
+      catDiv.appendChild(header);
+      catDiv.appendChild(desc);
+      catDiv.appendChild(productsDiv);
+
+      categoriesContainer.appendChild(catDiv);
+    });
+  }
+
+  function openProductPanel(prod) {
+    SELECTED_PRODUCT = prod;
+    panelStatusEl.textContent = "";
+    panelStatusEl.className = "status-bar";
+
+    panelNameEl.textContent = prod.name;
+    panelDescEl.textContent = prod.description || "";
+    panelPriceEl.textContent = `Preț: ${prod.price} credite / buc.`;
+
+    const min = prod.min_qty || 1;
+    const max = prod.max_qty || min;
+
+    panelQtyEl.min = min;
+    panelQtyEl.max = max;
+    panelQtyEl.value = min;
+    panelQtyRangeEl.textContent = `(min ${min}, max ${max})`;
+
+    productPanelEl.style.display = "block";
+  }
+
+  function closeProductPanel() {
+    SELECTED_PRODUCT = null;
+    productPanelEl.style.display = "none";
+  }
+
+  async function buySelectedProduct() {
+    if (!SELECTED_PRODUCT || !CURRENT_USER) return;
+
+    const qty = Number(panelQtyEl.value || 0);
+    const prod = SELECTED_PRODUCT;
+
+    panelStatusEl.textContent = "Se trimite comanda...";
+    panelStatusEl.className = "status-bar";
+
+    try {
+      const res = await apiCall("buy_product", {
+        product_id: prod.id,
+        qty,
+      });
+
+      if (!res.ok) {
+        panelStatusEl.className = "status-bar status-error";
+        if (res.error === "not_enough_credits") {
+          panelStatusEl.textContent = `Nu ai suficiente credite (ai ${res.have}, ai nevoie de ${res.need}).`;
+        } else if (res.error === "qty_out_of_range") {
+          panelStatusEl.textContent = `Cantitate invalidă. Min ${res.min_qty}, max ${res.max_qty}.`;
+        } else {
+          panelStatusEl.textContent =
+            "Eroare la cumpărare: " + (res.error || "necunoscută");
+        }
+        return;
+      }
+
+      CURRENT_USER.credits = res.new_balance;
+      creditsValueEl.textContent = CURRENT_USER.credits;
+
+      const newTicket = res.ticket;
+      CURRENT_TICKETS.push(newTicket);
+      renderTicketsList();
+      selectTicket(newTicket.id);
+      renderTicketsInfo();
+
+      panelStatusEl.className = "status-bar status-ok";
+      panelStatusEl.textContent = `Comandă trimisă, tichet #${newTicket.id} creat.`;
+
+      const ticketsTabBtn = document.querySelector(
+        '.tab-btn[data-tab="ticketsTab"]'
+      );
+      if (ticketsTabBtn) ticketsTabBtn.click();
+
+      bumpUserActive();
+
+      const snap = await pollTicketsUserCore();
+      userTicketsPoller.bumpFast();
+      return snap;
+    } catch (err) {
+      console.error("buy_product error:", err);
+      panelStatusEl.className = "status-bar status-error";
+      panelStatusEl.textContent = "Eroare la comunicarea cu serverul.";
+    }
+  }
+
+  panelCloseBtn?.addEventListener("click", closeProductPanel);
+  panelBuyBtn?.addEventListener("click", buySelectedProduct);
+
+  /* CHAT USER */
+
+  function renderTicketsInfo() {
+    if (!CURRENT_TICKETS || CURRENT_TICKETS.length === 0) {
+      ticketsInfoEl.textContent =
+        "Nu ai tichete încă. Când cumperi un produs se creează automat un tichet.";
+    } else {
+      const openCount = CURRENT_TICKETS.filter((t) => t.status === "open")
+        .length;
+      ticketsInfoEl.innerHTML = `Ai <b>${CURRENT_TICKETS.length}</b> tichete, dintre care <b>${openCount}</b> deschise.`;
+    }
+  }
+
+  function getTicketLastMessage(t) {
+    const msgs = t.messages || [];
+    if (msgs.length === 0) return "";
+    return msgs[msgs.length - 1].text || "";
+  }
+
+  function renderTicketsList() {
+    chatListEl.innerHTML = "";
+    if (!CURRENT_TICKETS || CURRENT_TICKETS.length === 0) {
+      chatListEl.innerHTML =
+        '<div style="padding:8px;font-size:12px;color:var(--muted);">Nu ai tichete încă.</div>';
+      return;
+    }
+
+    CURRENT_TICKETS.sort((a, b) => {
+      if (a.status !== b.status) {
+        return a.status === "open" ? -1 : 1;
+      }
+      return (b.id || 0) - (a.id || 0);
+    });
+
+    CURRENT_TICKETS.forEach((t) => {
+      const item = document.createElement("div");
+      item.className = "chat-item";
+      if (t.id === SELECTED_TICKET_ID) item.classList.add("active");
+
+      const title = document.createElement("div");
+      title.className = "chat-item-title";
+      title.textContent = t.product_name || "Produs";
+
+      const statusText = t.status === "open" ? "DESCHIS" : "ÎNCHIS";
+      const lastMsg = getTicketLastMessage(t);
+
+      const line = document.createElement("div");
+      line.className = "chat-item-line";
+      line.textContent = `[${statusText}] ${lastMsg}`;
+
+      item.appendChild(title);
+      item.appendChild(line);
+
+      item.addEventListener("click", async () => {
+        selectTicket(t.id);
+        bumpUserActive();
+        const snap = await pollTicketsUserCore();
+        userTicketsPoller.bumpFast();
+        return snap;
+      });
+
+      chatListEl.appendChild(item);
+    });
+  }
+
+  function selectTicket(ticketId) {
+    SELECTED_TICKET_ID = ticketId;
+    renderTicketsList();
+
+    const t = CURRENT_TICKETS.find((x) => x.id === ticketId);
+    if (!t) {
+      chatHeaderEl.innerHTML = "<span>Niciun tichet selectat</span>";
+      chatMessagesEl.innerHTML = "";
+      return;
+    }
+
+    chatHeaderEl.innerHTML = `
+      <b>Tichet #${t.id}</b><br/>
+      <span>${t.product_name} · ${t.qty} buc · total ${t.total_price} credite · status: ${t.status}</span>
+    `;
+
+    renderDiscordMessages(t.messages || [], {
+      container: chatMessagesEl,
+      canReply: true,
+      canEditDelete: false,
+      onReply: (msg) => setUserReplyMode(msg),
+      onEdit: null,
+      onDelete: null,
+      onJumpTo: (messageId) =>
+        scrollToMessageElement(chatMessagesEl, messageId),
+    });
+  }
+
+  async function sendChatMessage() {
+    const text = chatInputEl.value.trim();
+    if (!text || !SELECTED_TICKET_ID) return;
+
+    const reply_to =
+      userMode && userMode.type === "reply" ? userMode.messageId : null;
+
+    chatInputEl.value = "";
+
+    try {
+      const res = await apiCall("user_send_message", {
+        ticket_id: SELECTED_TICKET_ID,
+        text,
+        reply_to,
+      });
+
+      if (!res.ok) {
+        console.error("user_send_message error:", res);
+        return;
+      }
+
+      const updated = res.ticket;
+      const idx = CURRENT_TICKETS.findIndex((t) => t.id === updated.id);
+      if (idx >= 0) CURRENT_TICKETS[idx] = updated;
+      else CURRENT_TICKETS.push(updated);
+
+      renderTicketsList();
+      selectTicket(updated.id);
+      renderTicketsInfo();
+
+      clearUserMode();
+      bumpUserActive();
+
+      const snap = await pollTicketsUserCore();
+      userTicketsPoller.bumpFast();
+      return snap;
+    } catch (err) {
+      console.error("user_send_message error:", err);
+    }
+  }
+
+  chatSendBtn?.addEventListener("click", sendChatMessage);
+  chatInputEl?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendChatMessage();
+    }
+  });
+
+  async function pollTicketsUserCore() {
+    if (!CURRENT_USER) return CURRENT_TICKETS;
+    try {
+      const res = await apiCall("user_get_tickets", {});
+      if (!res.ok) return CURRENT_TICKETS;
+      CURRENT_TICKETS = res.tickets || [];
+      renderTicketsList();
+      renderTicketsInfo();
+
+      if (SELECTED_TICKET_ID) {
+        const t = CURRENT_TICKETS.find((x) => x.id === SELECTED_TICKET_ID);
+        if (t) selectTicket(t.id);
+      }
+      return CURRENT_TICKETS;
+    } catch (err) {
+      console.error("user_get_tickets error:", err);
+      return CURRENT_TICKETS;
+    }
+  }
+
+  const userTicketsPoller = createSmartPoll(
+    pollTicketsUserCore,
+    () => {
+      if (!isTicketsTabActive()) return false;
+      if (!CURRENT_TICKETS || CURRENT_TICKETS.length === 0) return false;
+
+      const now = Date.now();
+      if (now > userActiveUntil) return false;
+
+      const hasOpen = CURRENT_TICKETS.some((t) => t.status === "open");
+      const hasSelected = !!SELECTED_TICKET_ID;
+      return hasOpen || hasSelected;
+    },
+    {
+      minInterval: 3000,
+      maxInterval: 8000,
+      backoffStep: 2000,
+      idleThreshold: 4,
+    }
+  );
+
+  window.onUserTabChange = (tabId) => {
+    if (tabId === "ticketsTab") {
+      bumpUserActive();
+      userTicketsPoller.start();
+    } else {
+      userTicketsPoller.stop();
+    }
+  };
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      if (isTicketsTabActive()) {
+        bumpUserActive();
+        userTicketsPoller.start();
+      }
+    } else {
+      userTicketsPoller.stop();
+    }
+  });
+
+  async function initApp() {
+    if (!tg) {
+      userLineEl.textContent =
+        "Nu ești în Telegram MiniApp. Deschide link-ul prin bot.";
+      return;
+    }
+
+    tg.ready();
+    tg.expand();
+
+    const user = tg.initDataUnsafe?.user;
+    if (!user) {
+      userLineEl.textContent =
+        "Telegram nu a trimis datele userului. Deschide MiniApp-ul din butonul inline al botului.";
+      return;
+    }
+
+    CURRENT_USER = {
+      id: user.id,
+      username: user.username || null,
+      first_name: user.first_name || null,
+      last_name: user.last_name || null,
+      credits: 0,
+    };
+
+    try {
+      const res = await apiCall("init", {});
+      if (!res.ok) {
+        userLineEl.textContent =
+          "Eroare la inițializare (server nu a răspuns ok).";
+        return;
+      }
+
+      CURRENT_USER.credits = res.user.credits;
+      CURRENT_USER.username = res.user.username;
+
+      CURRENT_SHOP = res.shop;
+      CURRENT_TICKETS = res.tickets || [];
+
+      renderUserHeader();
+      renderShop(CURRENT_SHOP);
+      renderTicketsList();
+      renderTicketsInfo();
+
+      if (isTicketsTabActive()) {
+        bumpUserActive();
+        userTicketsPoller.start();
+      }
+    } catch (err) {
+      console.error("init error:", err);
+      userLineEl.textContent = "Eroare la inițializare (network).";
+    }
+  }
+
+  initApp();
+}
+
+/* ============================
+   ADMIN MINIAPP
+   ============================ */
+
+function initAdminApp() {
+  const params = new URLSearchParams(window.location.search);
+  const ADMIN_TOKEN = params.get("token") || "";
+
+  const userLineEl = document.getElementById("userLine");
+
+  const ticketsListEl = document.getElementById("ticketsList");
+  const chatHeaderEl = document.getElementById("chatHeader");
+  const chatMessagesEl = document.getElementById("chatMessages");
+  const chatInputEl = document.getElementById("chatInput");
+  const chatSendBtn = document.getElementById("chatSendBtn");
+
+  const ticketDetailsEl = document.getElementById("ticketDetails");
+  const ticketSummaryEl = document.getElementById("ticketSummary");
+  const ticketNoteInlineEl = document.getElementById("ticketNoteInline");
+  const ticketStatusBarEl = document.getElementById("ticketStatusBar");
+  const ticketCloseBtn = document.getElementById("ticketCloseBtn");
+  const ticketCloseWithReasonBtn = document.getElementById(
+    "ticketCloseWithReasonBtn"
+  );
+
+  const shopContainerEl = document.getElementById("shopContainer");
+  const shopStatusBarEl = document.getElementById("shopStatusBar");
+  const addCategoryBtn = document.getElementById("addCategoryBtn");
+  const saveShopBtn = document.getElementById("saveShopBtn");
+  const shopMetricsEl = document.getElementById("shopMetrics");
+
+  const reasonModalEl = document.getElementById("reasonModal");
+  const reasonInputEl = document.getElementById("reasonInput");
+  const reasonCancelBtn = document.getElementById("reasonCancelBtn");
+  const reasonConfirmBtn = document.getElementById("reasonConfirmBtn");
+
+  const filterStatusEl = document.getElementById("filterStatus");
+  const filterSearchEl = document.getElementById("filterSearch");
+  const statTotalEl = document.getElementById("statTotal");
+  const statOpenEl = document.getElementById("statOpen");
+  const statClosedEl = document.getElementById("statClosed");
+
+  // bară mod (reply / edit) – admin
+  const chatInputContainer = document.querySelector("#chatTab .chat-input");
+  let adminModeBar = null;
+  let adminMode = null; // { type: "reply"|"edit", ticketId, messageId, sender, text }
+
+  if (chatInputContainer) {
+    adminModeBar = document.createElement("div");
+    adminModeBar.className = "chat-mode-bar";
+    adminModeBar.style.display = "none";
+
+    const span = document.createElement("div");
+    span.className = "chat-mode-text";
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.className = "btn-ghost chat-mode-cancel";
+    cancelBtn.textContent = "Cancel";
+    cancelBtn.onclick = () => clearAdminMode();
+
+    adminModeBar.appendChild(span);
+    adminModeBar.appendChild(cancelBtn);
+    chatInputContainer.prepend(adminModeBar);
+  }
+
+  function setAdminReplyMode(ticketId, msg) {
+    if (!adminModeBar) return;
+    adminMode = {
+      type: "reply",
+      ticketId,
+      messageId: msg.id,
+      sender: msg.sender || "User",
+      text: msg.text || "",
+    };
+    const span = adminModeBar.querySelector(".chat-mode-text");
+    span.textContent = `Răspunzi lui ${adminMode.sender}: "${adminMode.text.slice(
+      0,
+      80
+    )}"`;
+    adminModeBar.style.display = "flex";
+    chatInputEl.focus();
+  }
+
+  function setAdminEditMode(ticketId, msg) {
+    if (!adminModeBar) return;
+    adminMode = {
+      type: "edit",
+      ticketId,
+      messageId: msg.id,
+      sender: msg.sender || "Admin",
+      text: msg.text || "",
+    };
+    const span = adminModeBar.querySelector(".chat-mode-text");
+    span.textContent = `Editezi mesajul: "${adminMode.text.slice(0, 80)}"`;
+    adminModeBar.style.display = "flex";
+    chatInputEl.value = msg.text || "";
+    chatInputEl.focus();
+  }
+
+  function clearAdminMode() {
+    adminMode = null;
+    if (adminModeBar) adminModeBar.style.display = "none";
+  }
+
+  let ALL_TICKETS = [];
+  let CURRENT_SHOP = null;
+  let SELECTED_TICKET_ID = null;
+
+  let adminActiveUntil = 0;
+  function bumpAdminActive(extraMs = 30000) {
+    const now = Date.now();
+    adminActiveUntil = Math.max(adminActiveUntil, now + extraMs);
+  }
+
+  function apiCall(action, extraPayload = {}) {
+    const payload = { action, token: ADMIN_TOKEN, ...extraPayload };
+    return fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }).then((r) => r.json());
+  }
+
+  function renderTokenInfo() {
+    if (!ADMIN_TOKEN) {
+      userLineEl.innerHTML =
+        "<span style='color:#ff5252;'>Token lipsă în URL.</span> Deschide admin.html?token=TOKENUL_TĂU.";
+    } else {
+      const short = ADMIN_TOKEN.slice(0, 4) + "..." + ADMIN_TOKEN.slice(-4);
+      userLineEl.innerHTML = "Acces cu token: <b>" + short + "</b>";
+    }
+  }
+
+  function isAnyAdminTabActive() {
+    const chatTab = document.getElementById("chatTab");
+    const shopTab = document.getElementById("shopTab");
+    return (
+      (chatTab && chatTab.classList.contains("active")) ||
+      (shopTab && shopTab.classList.contains("active"))
+    );
+  }
+
+  /* STATISTICI & FILTRE */
+
+  function updateTicketStats() {
+    const total = ALL_TICKETS.length;
+    const open = ALL_TICKETS.filter((t) => t.status === "open").length;
+    const closed = ALL_TICKETS.filter((t) => t.status === "closed").length;
+
+    if (statTotalEl) statTotalEl.textContent = total;
+    if (statOpenEl) statOpenEl.textContent = open;
+    if (statClosedEl) statClosedEl.textContent = closed;
+  }
+
+  function getFilteredTickets() {
+    let list = ALL_TICKETS.slice();
+    const statusFilter = filterStatusEl?.value || "all";
+    const query = (filterSearchEl?.value || "").toLowerCase().trim();
+
+    if (statusFilter !== "all") {
+      list = list.filter((t) => (t.status || "") === statusFilter);
+    }
+
+    if (query) {
+      list = list.filter((t) => {
+        const user = (t.username || t.user_id || "").toString().toLowerCase();
+        const product = (t.product_name || "").toLowerCase();
+        const idStr = ("#" + t.id).toLowerCase();
+        return (
+          user.includes(query) ||
+          product.includes(query) ||
+          idStr.includes(query)
+        );
+      });
+    }
+
+    return list;
+  }
+
+  /* CHAT ADMIN */
+
+  function getTicketLastMessage(t) {
+    const msgs = t.messages || [];
+    if (msgs.length === 0) return "";
+    return msgs[msgs.length - 1].text || "";
+  }
+
+  function renderTicketsList() {
+    ticketsListEl.innerHTML = "";
+    const list = getFilteredTickets();
+
+    if (!list || list.length === 0) {
+      ticketsListEl.innerHTML =
+        '<div style="padding:8px;font-size:12px;color:var(--muted);">Nu există tichete pentru filtrele curente.</div>';
+      if (!SELECTED_TICKET_ID) {
+        ticketDetailsEl.style.display = "none";
+        chatHeaderEl.innerHTML = "<span>Niciun tichet selectat</span>";
+        chatMessagesEl.innerHTML = "";
+      }
+      return;
+    }
+
+    list.sort((a, b) => {
+      if (a.status !== b.status) {
+        return a.status === "open" ? -1 : 1;
+      }
+      return (b.id || 0) - (a.id || 0);
+    });
+
+    list.forEach((t) => {
+      const item = document.createElement("div");
+      item.className = "chat-item";
+      if (t.id === SELECTED_TICKET_ID) item.classList.add("active");
+
+      const headerRow = document.createElement("div");
+      headerRow.className = "chat-item-header-row";
+
+      const title = document.createElement("div");
+      title.className = "chat-item-title";
+      title.textContent =
+        (t.username || t.user_id) + " · " + (t.product_name || "");
+
+      const statusChip = document.createElement("span");
+      statusChip.className =
+        "ticket-status-pill " + (t.status === "open" ? "open" : "closed");
+      statusChip.textContent = t.status === "open" ? "DESCHIS" : "ÎNCHIS";
+
+      headerRow.appendChild(title);
+      headerRow.appendChild(statusChip);
+
+      const lastMsg = getTicketLastMessage(t);
+      const line = document.createElement("div");
+      line.className = "chat-item-line";
+      line.textContent = lastMsg ? lastMsg : "Fără mesaje încă.";
+
+      item.appendChild(headerRow);
+      item.appendChild(line);
+
+      item.addEventListener("click", async () => {
+        selectTicket(t.id);
+        bumpAdminActive();
+        const snap = await pollAdminCore();
+        adminPoller.bumpFast();
+        return snap;
+      });
+
+      ticketsListEl.appendChild(item);
+    });
+  }
+
+  function selectTicket(ticketId) {
+    SELECTED_TICKET_ID = ticketId;
+    renderTicketsList();
+
+    const t = ALL_TICKETS.find((x) => x.id === ticketId);
+    if (!t) {
+      ticketDetailsEl.style.display = "none";
+      chatHeaderEl.innerHTML = "<span>Niciun tichet selectat</span>";
+      chatMessagesEl.innerHTML = "";
+      return;
+    }
+
+    chatHeaderEl.innerHTML = `
+      <b>Tichet #${t.id}</b><br/>
+      <span>User: ${t.username || t.user_id} · Produs: ${
+      t.product_name
+    } · ${t.qty} buc · total ${t.total_price} credite · status: ${
+      t.status
+    }</span>
+    `;
+
+    renderDiscordMessages(t.messages || [], {
+      container: chatMessagesEl,
+      canReply: true,
+      canEditDelete: true,
+      onReply: (msg) => setAdminReplyMode(t.id, msg),
+      onEdit: (msg) => setAdminEditMode(t.id, msg),
+      onDelete: (msg) => deleteAdminMessage(t.id, msg.id),
+      onJumpTo: (messageId) =>
+        scrollToMessageElement(chatMessagesEl, messageId),
+    });
+
+    ticketDetailsEl.style.display = "block";
+    ticketSummaryEl.innerHTML = `
+      <b>Tichet #${t.id}</b><br/>
+      User: <b>${t.username || t.user_id}</b><br/>
+      Produs: <b>${t.product_name}</b> (${t.qty} buc, total ${
+      t.total_price
+    } credite)
+    `;
+
+    if (t.note) {
+      ticketNoteInlineEl.innerHTML =
+        '<span class="ticket-note-label">Notă internă:</span> ' +
+        `<span class="ticket-note-text">${t.note}</span>`;
+    } else {
+      ticketNoteInlineEl.innerHTML =
+        '<span class="ticket-note-label">Notă internă:</span> ' +
+        '<span class="ticket-note-text ticket-note-empty">nu există (încă)</span>';
+    }
+
+    ticketStatusBarEl.textContent = "";
+    ticketStatusBarEl.className = "status-bar";
+  }
+
+  async function sendAdminMessage() {
+    const text = chatInputEl.value.trim();
+    if (!text || !SELECTED_TICKET_ID) return;
+
+    try {
+      let res;
+
+      if (
+        adminMode &&
+        adminMode.type === "edit" &&
+        adminMode.ticketId === SELECTED_TICKET_ID
+      ) {
+        // EDIT EXISTENT
+        res = await apiCall("admin_edit_message", {
+          ticket_id: SELECTED_TICKET_ID,
+          message_id: adminMode.messageId,
+          text,
+        });
+      } else {
+        // NEW sau REPLY
+        const reply_to =
+          adminMode &&
+          adminMode.type === "reply" &&
+          adminMode.ticketId === SELECTED_TICKET_ID
+            ? adminMode.messageId
+            : null;
+
+        res = await apiCall("admin_send_message", {
+          ticket_id: SELECTED_TICKET_ID,
+          text,
+          sender: "Admin",
+          reply_to,
+        });
+      }
+
+      if (!res || !res.ok) {
+        console.error("admin_send / admin_edit error:", res);
+        return;
+      }
+
+      const updated = res.ticket;
+      const idx = ALL_TICKETS.findIndex((t) => t.id === updated.id);
+      if (idx >= 0) ALL_TICKETS[idx] = updated;
+      else ALL_TICKETS.push(updated);
+
+      updateTicketStats();
+      renderTicketsList();
+      selectTicket(updated.id);
+
+      chatInputEl.value = "";
+      clearAdminMode();
+      bumpAdminActive();
+
+      const snap = await pollAdminCore();
+      adminPoller.bumpFast();
+      return snap;
+    } catch (err) {
+      console.error("admin_send / admin_edit error:", err);
+    }
+  }
+
+  chatSendBtn?.addEventListener("click", sendAdminMessage);
+  chatInputEl?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendAdminMessage();
+    }
+  });
+
+  async function deleteAdminMessage(ticketId, messageId) {
+    if (!confirm("Sigur vrei să marchezi acest mesaj ca șters?")) return;
+
+    try {
+      const res = await apiCall("admin_delete_message", {
+        ticket_id: ticketId,
+        message_id: messageId,
+      });
+
+      if (!res.ok) {
+        console.error("admin_delete_message error:", res);
+        return;
+      }
+
+      const updated = res.ticket;
+      const idx = ALL_TICKETS.findIndex((t) => t.id === updated.id);
+      if (idx >= 0) ALL_TICKETS[idx] = updated;
+
+      updateTicketStats();
+      renderTicketsList();
+      if (SELECTED_TICKET_ID === updated.id) {
+        selectTicket(updated.id);
+      }
+
+      bumpAdminActive();
+
+      const snap = await pollAdminCore();
+      adminPoller.bumpFast();
+      return snap;
+    } catch (err) {
+      console.error("admin_delete_message error:", err);
+    }
+  }
+
+  /* ÎNCHIDERE TICHET */
+
+  async function closeTicket(noteText) {
+    if (!SELECTED_TICKET_ID) return;
+    const t = ALL_TICKETS.find((x) => x.id === SELECTED_TICKET_ID);
+    if (!t) return;
+
+    ticketStatusBarEl.textContent = "Se închide tichetul...";
+    ticketStatusBarEl.className = "status-bar";
+
+    try {
+      const res = await apiCall("admin_update_ticket", {
+        ticket_id: t.id,
+        status: "closed",
+        note: noteText || "",
+      });
+
+      if (!res.ok) {
+        ticketStatusBarEl.textContent =
+          "Eroare la închidere: " + (res.error || "necunoscută");
+        ticketStatusBarEl.className = "status-bar status-error";
+        return;
+      }
+
+      t.status = "closed";
+      t.note = noteText || "";
+
+      ticketStatusBarEl.textContent = "Tichet închis.";
+      ticketStatusBarEl.className = "status-bar status-ok";
+
+      updateTicketStats();
+      renderTicketsList();
+      selectTicket(t.id);
+
+      bumpAdminActive();
+
+      const snap = await pollAdminCore();
+      adminPoller.bumpFast();
+      return snap;
+    } catch (err) {
+      console.error("admin_update_ticket error:", err);
+      ticketStatusBarEl.textContent = "Eroare la comunicarea cu serverul.";
+      ticketStatusBarEl.className = "status-bar status-error";
+    }
+  }
+
+  ticketCloseBtn?.addEventListener("click", () => {
+    if (!SELECTED_TICKET_ID) return;
+    if (confirm("Sigur vrei să închizi tichetul fără motiv?")) {
+      closeTicket("");
+    }
+  });
+
+  ticketCloseWithReasonBtn?.addEventListener("click", () => {
+    if (!SELECTED_TICKET_ID) return;
+    reasonInputEl.value = "";
+    reasonModalEl.style.display = "flex";
+    reasonInputEl.focus();
+  });
+
+  reasonCancelBtn?.addEventListener("click", () => {
+    reasonModalEl.style.display = "none";
+  });
+
+  reasonConfirmBtn?.addEventListener("click", () => {
+    const text = reasonInputEl.value.trim();
+    reasonModalEl.style.display = "none";
+    closeTicket(text);
+  });
+
+  /* SHOP EDITOR (admin) – logic neschimbată, doar UI */
+
+  function updateShopMetrics() {
+    if (!shopMetricsEl) return;
+    if (!CURRENT_SHOP || !CURRENT_SHOP.categories) {
+      shopMetricsEl.innerHTML =
+        '<div class="stat-pill stat-pill--soft"><span class="stat-label">Categorii</span><span class="stat-value">0</span></div>' +
+        '<div class="stat-pill stat-pill--soft"><span class="stat-label">Produse</span><span class="stat-value">0</span></div>';
+      return;
+    }
+
+    const catCount = CURRENT_SHOP.categories.length;
+    let prodCount = 0;
+    CURRENT_SHOP.categories.forEach((c) => {
+      prodCount += (c.products || []).length;
+    });
+
+    shopMetricsEl.innerHTML = `
+      <div class="stat-pill stat-pill--soft">
+        <span class="stat-label">Categorii</span>
+        <span class="stat-value">${catCount}</span>
+      </div>
+      <div class="stat-pill stat-pill--soft">
+        <span class="stat-label">Produse</span>
+        <span class="stat-value">${prodCount}</span>
+      </div>
+    `;
+  }
+
+  function renderShopEditor() {
+    shopContainerEl.innerHTML = "";
+    if (!CURRENT_SHOP || !CURRENT_SHOP.categories) {
+      shopContainerEl.innerHTML =
+        '<div style="font-size:12px;color:var(--muted);">Nu există categorii. Adaugă una nouă.</div>';
+      updateShopMetrics();
+      return;
+    }
+
+    CURRENT_SHOP.categories.forEach((cat, catIndex) => {
+      const catDiv = document.createElement("div");
+      catDiv.className = "cat-card";
+
+      const header = document.createElement("div");
+      header.className = "cat-header";
+
+      const left = document.createElement("div");
+      left.className = "cat-header-left";
+
+      const toggleBtn = document.createElement("button");
+      toggleBtn.className = "btn-ghost cat-toggle";
+      toggleBtn.textContent = cat._collapsed ? "▸" : "▾";
+      toggleBtn.onclick = () => {
+        cat._collapsed = !cat._collapsed;
+        renderShopEditor();
+      };
+
+      const nameInput = document.createElement("input");
+      nameInput.placeholder = "Nume categorie";
+      nameInput.value = cat.name || "";
+      nameInput.addEventListener("input", () => {
+        cat.name = nameInput.value;
+      });
+
+      left.appendChild(toggleBtn);
+      left.appendChild(nameInput);
+
+      const right = document.createElement("div");
+      right.className = "cat-header-right";
+
+      const countBadge = document.createElement("div");
+      countBadge.className = "ticket-status-pill open";
+      countBadge.textContent = `${(cat.products || []).length} produse`;
+
+      const deleteBtn = document.createElement("button");
+      deleteBtn.className = "btn-ghost";
+      deleteBtn.textContent = "Șterge";
+      deleteBtn.style.fontSize = "11px";
+      deleteBtn.onclick = () => {
+        if (confirm("Ștergi categoria?")) {
+          CURRENT_SHOP.categories.splice(catIndex, 1);
+          renderShopEditor();
+        }
+      };
+
+      right.appendChild(countBadge);
+      right.appendChild(deleteBtn);
+
+      header.appendChild(left);
+      header.appendChild(right);
+
+      catDiv.appendChild(header);
+
+      if (!cat._collapsed) {
+        const descDiv = document.createElement("div");
+        descDiv.className = "cat-desc";
+        const descArea = document.createElement("textarea");
+        descArea.placeholder = "Descriere categorie";
+        descArea.value = cat.description || "";
+        descArea.addEventListener("input", () => {
+          cat.description = descArea.value;
+        });
+        descDiv.appendChild(descArea);
+
+        const productsWrap = document.createElement("div");
+        productsWrap.className = "products-list";
+
+        (cat.products = cat.products || []).forEach((prod, prodIndex) => {
+          const row = document.createElement("div");
+          row.className = "product-row";
+
+          const colName = document.createElement("div");
+          const nameInputProd = document.createElement("input");
+          nameInputProd.placeholder = "Nume produs";
+          nameInputProd.value = prod.name || "";
+          nameInputProd.addEventListener("input", () => {
+            prod.name = nameInputProd.value;
+          });
+          const nameLabel = document.createElement("div");
+          nameLabel.className = "small-input-label";
+          nameLabel.textContent = "Nume";
+          colName.appendChild(nameInputProd);
+          colName.appendChild(nameLabel);
+
+          const colPrice = document.createElement("div");
+          const priceInput = document.createElement("input");
+          priceInput.type = "number";
+          priceInput.placeholder = "Preț";
+          priceInput.value = prod.price || 0;
+          priceInput.addEventListener("input", () => {
+            prod.price = Number(priceInput.value || 0);
+          });
+          const priceLabel = document.createElement("div");
+          priceLabel.className = "small-input-label";
+          priceLabel.textContent = "Preț";
+          colPrice.appendChild(priceInput);
+          colPrice.appendChild(priceLabel);
+
+          const colMin = document.createElement("div");
+          const minInput = document.createElement("input");
+          minInput.type = "number";
+          minInput.placeholder = "Min";
+          minInput.value = prod.min_qty || 1;
+          minInput.addEventListener("input", () => {
+            prod.min_qty = Number(minInput.value || 1);
+          });
+          const minLabel = document.createElement("div");
+          minLabel.className = "small-input-label";
+          minLabel.textContent = "Min";
+          colMin.appendChild(minInput);
+          colMin.appendChild(minLabel);
+
+          const colMax = document.createElement("div");
+          const maxInput = document.createElement("input");
+          maxInput.type = "number";
+          maxInput.placeholder = "Max";
+          maxInput.value = prod.max_qty || prod.min_qty || 1;
+          maxInput.addEventListener("input", () => {
+            prod.max_qty = Number(maxInput.value || prod.min_qty || 1);
+          });
+          const maxLabel = document.createElement("div");
+          maxLabel.className = "small-input-label";
+          maxLabel.textContent = "Max";
+          colMax.appendChild(maxInput);
+          colMax.appendChild(maxLabel);
+
+          const colActions = document.createElement("div");
+          colActions.className = "product-mini-actions";
+          const delProdBtn = document.createElement("button");
+          delProdBtn.className = "btn-ghost";
+          delProdBtn.style.fontSize = "10px";
+          delProdBtn.textContent = "X";
+          delProdBtn.onclick = () => {
+            if (confirm("Ștergi produsul?")) {
+              cat.products.splice(prodIndex, 1);
+              renderShopEditor();
+            }
+          };
+          colActions.appendChild(delProdBtn);
+
+          row.appendChild(colName);
+          row.appendChild(colPrice);
+          row.appendChild(colMin);
+          row.appendChild(colMax);
+          row.appendChild(colActions);
+
+          productsWrap.appendChild(row);
+
+          const descRow = document.createElement("div");
+          descRow.style.gridColumn = "1 / -1";
+          descRow.style.marginBottom = "4px";
+          const descInput = document.createElement("input");
+          descInput.placeholder = "Descriere produs";
+          descInput.value = prod.description || "";
+          descInput.addEventListener("input", () => {
+            prod.description = descInput.value;
+          });
+          descRow.appendChild(descInput);
+
+          const extraInfo = document.createElement("div");
+          extraInfo.className = "small-input-label";
+          extraInfo.textContent = "ID: " + (prod.id || "(auto)");
+
+          descRow.appendChild(extraInfo);
+          productsWrap.appendChild(descRow);
+        });
+
+        const addProdBtn = document.createElement("button");
+        addProdBtn.className = "btn-ghost";
+        addProdBtn.style.fontSize = "11px";
+        addProdBtn.textContent = "+ Produs";
+        addProdBtn.onclick = () => {
+          cat.products.push({
+            id: "prod_" + Date.now(),
+            name: "Produs nou",
+            price: 0,
+            description: "",
+            min_qty: 1,
+            max_qty: 1,
+          });
+          renderShopEditor();
+        };
+
+        productsWrap.appendChild(addProdBtn);
+
+        catDiv.appendChild(descDiv);
+        catDiv.appendChild(productsWrap);
+      }
+
+      shopContainerEl.appendChild(catDiv);
+    });
+
+    updateShopMetrics();
+  }
+
+  async function saveShop() {
+    if (!CURRENT_SHOP) return;
+    shopStatusBarEl.textContent = "Se salvează shop-ul...";
+    shopStatusBarEl.className = "status-bar";
+
+    try {
+      const res = await apiCall("admin_save_shop", { shop: CURRENT_SHOP });
+      if (!res.ok) {
+        shopStatusBarEl.textContent =
+          "Eroare la salvare: " + (res.error || "necunoscută");
+        shopStatusBarEl.className = "status-bar status-error";
+        return;
+      }
+      shopStatusBarEl.textContent = "Shop salvat.";
+      shopStatusBarEl.className = "status-bar status-ok";
+
+      bumpAdminActive();
+
+      const snap = await pollAdminCore();
+      adminPoller.bumpFast();
+      return snap;
+    } catch (err) {
+      console.error("admin_save_shop error:", err);
+      shopStatusBarEl.textContent = "Eroare la comunicarea cu serverul.";
+      shopStatusBarEl.className = "status-bar status-error";
+    }
+  }
+
+  function addCategory() {
+    if (!CURRENT_SHOP) CURRENT_SHOP = { categories: [] };
+    CURRENT_SHOP.categories.push({
+      id: "cat_" + Date.now(),
+      name: "Categorie nouă",
+      description: "",
+      products: [],
+    });
+    renderShopEditor();
+  }
+
+  addCategoryBtn?.addEventListener("click", addCategory);
+  saveShopBtn?.addEventListener("click", saveShop);
+
+  /* POLL ADMIN */
+
+  async function pollAdminCore() {
+    if (!ADMIN_TOKEN) return { tickets: ALL_TICKETS, shop: CURRENT_SHOP };
+
+    try {
+      const res = await apiCall("admin_get_tickets", {});
+      if (!res.ok) {
+        if (res.error === "forbidden") {
+          userLineEl.innerHTML =
+            "<span style='color:#ff5252;'>Token invalid.</span>";
+        }
+        return { tickets: ALL_TICKETS, shop: CURRENT_SHOP };
+      }
+
+      ALL_TICKETS = res.tickets || [];
+      CURRENT_SHOP = res.shop || { categories: [] };
+
+      updateTicketStats();
+      renderTicketsList();
+      renderShopEditor();
+
+      if (SELECTED_TICKET_ID) {
+        const t = ALL_TICKETS.find((x) => x.id === SELECTED_TICKET_ID);
+        if (t) selectTicket(t.id);
+      }
+
+      return { tickets: ALL_TICKETS, shop: CURRENT_SHOP };
+    } catch (err) {
+      console.error("admin_get_tickets error:", err);
+      userLineEl.innerHTML =
+        "<span style='color:#ff5252;'>Eroare la rețea.</span>";
+      return { tickets: ALL_TICKETS, shop: CURRENT_SHOP };
+    }
+  }
+
+  const adminPoller = createSmartPoll(
+    pollAdminCore,
+    () => {
+      if (!ADMIN_TOKEN) return false;
+      if (!isAnyAdminTabActive()) return false;
+
+      const now = Date.now();
+      if (now > adminActiveUntil) return false;
+
+      const hasTickets = ALL_TICKETS.length > 0;
+      const hasOpen = ALL_TICKETS.some((t) => t.status === "open");
+      return hasTickets || hasOpen;
+    },
+    {
+      minInterval: 2000,
+      maxInterval: 8000,
+      backoffStep: 2000,
+      idleThreshold: 4,
+    }
+  );
+
+  function onFilterChange() {
+    renderTicketsList();
+  }
+
+  let searchTimeout = null;
+  filterStatusEl?.addEventListener("change", onFilterChange);
+  filterSearchEl?.addEventListener("input", () => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(onFilterChange, 150);
+  });
+
+  window.onAdminTabChange = () => {
+    if (isAnyAdminTabActive()) {
+      bumpAdminActive();
+      adminPoller.start();
+    } else {
+      adminPoller.stop();
+    }
+  };
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      if (isAnyAdminTabActive()) {
+        bumpAdminActive();
+        adminPoller.start();
+      }
+    } else {
+      adminPoller.stop();
+    }
+  });
+
+  async function initAdmin() {
+    renderTokenInfo();
+    if (!ADMIN_TOKEN) return;
+
+    await pollAdminCore();
+    bumpAdminActive();
+    adminPoller.start();
+  }
+
+  initAdmin();
 }
