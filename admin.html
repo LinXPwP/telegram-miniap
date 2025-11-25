@@ -9,48 +9,91 @@
 <body data-page="admin">
   <div class="container">
     <div class="card card--admin">
-      <div class="header-top">
-        <div class="badge">
+      <header class="header-top" aria-label="Informații admin și mediu">
+        <div class="badge" aria-label="Admin dashboard">
           <span class="badge-dot"></span>
           <span>Admin dashboard</span>
         </div>
         <div class="env-info" id="envInfo">
           MiniApp Admin (token)
         </div>
-      </div>
+      </header>
 
       <div class="admin-header-row">
         <div>
           <h1>Panou administrator</h1>
           <p class="subtitle">
-            Gestionează tichetele și structura shop-ului.
+            Gestionează tichetele, conversațiile și structura shop-ului.
           </p>
         </div>
         <p class="user-line" id="userLine">Verific token...</p>
       </div>
 
-      <div class="tabs tabs--admin" data-active="chatTab">
-        <button class="tab-btn active" data-tab="chatTab">Chat tichete</button>
-        <button class="tab-btn" data-tab="shopTab">Shop</button>
-      </div>
+      <nav
+        class="tabs tabs--admin"
+        data-active="chatTab"
+        aria-label="Comutator secțiuni admin"
+      >
+        <button
+          class="tab-btn active"
+          data-tab="chatTab"
+          type="button"
+          aria-controls="chatTab"
+          aria-selected="true"
+        >
+          Chat tichete
+        </button>
+        <button
+          class="tab-btn"
+          data-tab="shopTab"
+          type="button"
+          aria-controls="shopTab"
+          aria-selected="false"
+        >
+          Shop
+        </button>
+      </nav>
 
       <!-- CHAT TAB -->
-      <div id="chatTab" class="tab-section active">
+      <section
+        id="chatTab"
+        class="tab-section active"
+        aria-label="Administrare tichete și chat"
+      >
         <!-- BARĂ FILTRE + STATISTICI -->
         <div class="admin-toolbar">
           <div class="toolbar-group">
-            <select id="filterStatus" class="toolbar-select">
+            <select
+              id="filterStatus"
+              class="toolbar-select"
+              aria-label="Filtrează după statusul tichetelor"
+            >
               <option value="all">Toate statusurile</option>
               <option value="open">Doar deschise</option>
               <option value="closed">Doar închise</option>
             </select>
+
             <input
               id="filterSearch"
               class="toolbar-search"
               placeholder="Caută user, produs sau #id..."
+              aria-label="Caută tichete după user, produs sau ID"
               autocomplete="off"
             />
+
+            <select
+              id="sortTickets"
+              class="toolbar-select toolbar-select--compact"
+              aria-label="Sortează lista de tichete"
+            >
+              <option value="recent">Cele mai noi</option>
+              <option value="oldest">Cele mai vechi</option>
+              <option value="value_desc">Valoare mare</option>
+              <option value="value_asc">Valoare mică</option>
+              <option value="user">După utilizator</option>
+            </select>
           </div>
+
           <div class="toolbar-stats">
             <div class="stat-pill">
               <span class="stat-label">Total</span>
@@ -64,12 +107,25 @@
               <span class="stat-label">Închise</span>
               <span class="stat-value" id="statClosed">0</span>
             </div>
+            <button
+              class="btn-ghost btn-ghost--small"
+              id="adminRefreshBtn"
+              type="button"
+              title="Reîncarcă manual datele"
+            >
+              ⟳ Refresh
+            </button>
           </div>
         </div>
 
-        <div class="chat-admin-layout">
-          <div class="chat-sidebar" id="ticketsList"></div>
-          <div class="chat-main">
+        <div class="chat-admin-layout" aria-label="Conversații tichete">
+          <aside
+            class="chat-sidebar"
+            id="ticketsList"
+            aria-label="Listă tichete"
+          ></aside>
+
+          <section class="chat-main" aria-label="Chat tichet selectat">
             <div class="chat-header" id="chatHeader">
               <span>Niciun tichet selectat</span>
             </div>
@@ -79,67 +135,112 @@
                 id="chatInput"
                 placeholder="Răspunde utilizatorului..."
                 autocomplete="off"
+                aria-label="Mesaj către utilizator"
               />
-              <button id="chatSendBtn">Trimite</button>
+              <button id="chatSendBtn" type="button">Trimite</button>
             </div>
-          </div>
+          </section>
         </div>
 
-        <!-- Detalii tichet (doar info + butoane închidere) -->
-        <div class="ticket-details" id="ticketDetails" style="display:none;">
+        <!-- Detalii tichet (info + acțiuni) -->
+        <section
+          class="ticket-details"
+          id="ticketDetails"
+          style="display:none;"
+          aria-label="Detalii tichet"
+        >
           <div id="ticketSummary" class="ticket-summary"></div>
           <div id="ticketNoteInline" class="ticket-note-inline"></div>
           <div class="ticket-actions">
-            <button class="btn-ghost" id="ticketCloseBtn">Închide tichet</button>
-            <button class="btn-primary" id="ticketCloseWithReasonBtn">
+            <button
+              class="btn-ghost"
+              id="ticketCloseBtn"
+              type="button"
+            >
+              Închide tichet
+            </button>
+            <button
+              class="btn-primary"
+              id="ticketCloseWithReasonBtn"
+              type="button"
+            >
               Închide cu motiv
             </button>
           </div>
           <div class="status-bar" id="ticketStatusBar"></div>
-        </div>
-      </div>
+        </section>
+      </section>
 
       <!-- SHOP TAB -->
-      <div id="shopTab" class="tab-section">
+      <section
+        id="shopTab"
+        class="tab-section"
+        aria-label="Editor structură shop"
+      >
         <div class="shop-flex">
-          <div class="shop-container" id="shopContainer"></div>
-          <div class="shop-sidepanel">
+          <div
+            class="shop-container"
+            id="shopContainer"
+            aria-label="Structură categorii și produse"
+          ></div>
+
+          <aside class="shop-sidepanel">
             <h2 class="shop-sidepanel-title">Acțiuni Shop</h2>
             <p class="shop-sidepanel-text">
-              Modificările se aplică instant doar aici. Apasă <b>Salvează shop</b> ca să scrii în fișier.
+              Modificările se aplică instant doar aici. Apasă
+              <b>Salvează shop</b> ca să scrii în fișier.
             </p>
 
             <div class="shop-metrics" id="shopMetrics"></div>
 
-            <button class="btn-ghost full-width" id="addCategoryBtn">
+            <button
+              class="btn-ghost full-width"
+              id="addCategoryBtn"
+              type="button"
+            >
               + Adaugă categorie
             </button>
-            <button class="btn-primary full-width" id="saveShopBtn">
+            <button
+              class="btn-primary full-width"
+              id="saveShopBtn"
+              type="button"
+            >
               💾 Salvează shop
             </button>
             <div class="status-bar" id="shopStatusBar"></div>
-          </div>
+          </aside>
         </div>
-      </div>
+      </section>
 
-      <div class="footer footer--admin">
+      <footer class="footer footer--admin">
         <span>MiniApp · admin</span>
         <span class="dot-red"></span>
-      </div>
+      </footer>
     </div>
   </div>
 
   <!-- MODAL pentru "închide cu motiv" -->
-  <div class="modal-backdrop" id="reasonModal" style="display:none;">
-    <div class="modal">
-      <h3>Închide tichet cu motiv</h3>
+  <div
+    class="modal-backdrop"
+    id="reasonModal"
+    style="display:none;"
+    aria-hidden="true"
+  >
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="reasonTitle">
+      <h3 id="reasonTitle">Închide tichet cu motiv</h3>
       <p class="modal-text">
         Motivul va fi salvat ca <b>notă internă</b> pentru acest tichet.
       </p>
-      <textarea id="reasonInput" placeholder="Scrie motivul de închidere..."></textarea>
+      <textarea
+        id="reasonInput"
+        placeholder="Scrie motivul de închidere..."
+        aria-label="Motiv închidere tichet"
+      ></textarea>
       <div class="modal-actions">
-        <button class="btn-ghost" id="reasonCancelBtn">Anulează</button>
-        <button class="btn-primary" id="reasonConfirmBtn">
+        <button class="btn-ghost" id="reasonCancelBtn" type="button">
+          Anulează
+        </button>
+        <button class="btn-primary" id="reasonConfirmBtn" type="button">
           Confirmă și închide
         </button>
       </div>
