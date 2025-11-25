@@ -179,7 +179,7 @@ body[data-page="user"] .container {
 .env-info {
   font-size: 11px;
   color: var(--muted);
-  opacity: 0.8;
+  opacity: 0.9;
 }
 
 /* titluri */
@@ -923,6 +923,11 @@ h1 {
   transform: translateY(-0.5px);
 }
 
+.btn-ghost--small {
+  padding: 4px 8px;
+  font-size: 10px;
+}
+
 .full-width {
   width: 100%;
 }
@@ -949,6 +954,11 @@ h1 {
   gap: 6px;
   flex: 1;
   min-width: 0;
+  flex-wrap: wrap;
+}
+
+.toolbar-group > * {
+  min-width: 0;
 }
 
 .toolbar-select {
@@ -958,6 +968,10 @@ h1 {
   color: var(--text);
   padding: 5px 10px;
   font-size: 12px;
+}
+
+.toolbar-select--compact {
+  max-width: 150px;
 }
 
 .toolbar-search {
@@ -1194,7 +1208,17 @@ h1 {
   .container {
     padding-inline: 10px;
   }
+
+  .admin-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .toolbar-stats {
+    justify-content: flex-start;
+  }
 }
+
 /* ============================
    ADMIN LAYOUT FIX – HEIGHT & SCROLL
    ============================ */
@@ -1204,14 +1228,14 @@ body[data-page="admin"] .card--admin .tab-section.active {
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 0; /* foarte important pentru ca overflow-ul intern să funcționeze */
+  min-height: 0; /* pentru overflow intern */
 }
 
 /* În Chat tab: gridul cu sidebar + chat trebuie să întindă tabul, dar să nu iasă din el */
 body[data-page="admin"] .card--admin #chatTab .chat-admin-layout {
   flex: 1;
   min-height: 0;
-  overflow: hidden; /* tăiem overflow-ul aici, scroll-ul va fi doar în child-uri */
+  overflow: hidden; /* scroll doar în child-uri */
 }
 
 /* În Shop tab: editorul folosește restul spațiului disponibil */
@@ -1225,15 +1249,15 @@ body[data-page="admin"] .card--admin .chat-main,
 body[data-page="admin"] .card--admin .chat-sidebar {
   min-height: 0;
 }
-/* === FIX 1: card admin să nu mai blocheze scroll-ul paginii === */
 
+/* card admin să nu blocheze scroll-ul paginii */
 body[data-page="admin"] .card--admin {
-  display: block;      /* nu mai e flex full-screen */
+  display: block;
   max-height: none;
-  overflow: visible;   /* lăsăm pagina să crească și să aibă scroll */
+  overflow: visible;
 }
-/* === FIX 2: layout chat admin – scroll separat listă / mesaje === */
 
+/* layout chat admin – scroll separat listă / mesaje */
 body[data-page="admin"] .chat-admin-layout {
   display: grid;
   grid-template-columns: minmax(240px, 0.85fr) minmax(0, 1.7fr);
@@ -1243,7 +1267,7 @@ body[data-page="admin"] .chat-admin-layout {
 
 /* stânga: listă tichete – scroll doar aici */
 body[data-page="admin"] .chat-admin-layout .chat-sidebar {
-  max-height: 400px;     /* cât vrei să fie „fereastra” de chat */
+  max-height: 400px;
   overflow-y: auto;
 }
 
@@ -1256,6 +1280,5 @@ body[data-page="admin"] .chat-admin-layout .chat-main {
 
 body[data-page="admin"] .chat-admin-layout .chat-messages {
   flex: 1;
-  overflow-y: auto;      /* scroll DOAR pe mesaje */
+  overflow-y: auto; /* scroll DOAR pe mesaje */
 }
-
