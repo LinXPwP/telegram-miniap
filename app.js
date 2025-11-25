@@ -1,8 +1,7 @@
 // app.js
 
 // URL-ul Netlify function (proxy către bot.py)
-const API_URL =
-  "https://api.redgen.vip/";
+const API_URL = "https://api.redgen.vip/";
 
 /* ============================
    HELPER – SMART POLLING
@@ -674,6 +673,7 @@ function initAdminApp() {
   const ADMIN_TOKEN = params.get("token") || "";
 
   const userLineEl = document.getElementById("userLine");
+  const envInfoEl = document.getElementById("envInfo");
 
   const ticketsListEl = document.getElementById("ticketsList");
   const chatHeaderEl = document.getElementById("chatHeader");
@@ -703,6 +703,9 @@ function initAdminApp() {
 
   const filterStatusEl = document.getElementById("filterStatus");
   const filterSearchEl = document.getElementById("filterSearch");
+  const sortTicketsEl = document.getElementById("sortTickets");
+  const adminRefreshBtn = document.getElementById("adminRefreshBtn");
+
   const statTotalEl = document.getElementById("statTotal");
   const statOpenEl = document.getElementById("statOpen");
   const statClosedEl = document.getElementById("statClosed");
@@ -735,9 +738,15 @@ function initAdminApp() {
     if (!ADMIN_TOKEN) {
       userLineEl.innerHTML =
         "<span style='color:#ff5252;'>Token lipsă în URL.</span> Deschide admin.html?token=TOKENUL_TĂU.";
+      if (envInfoEl) {
+        envInfoEl.textContent = "MiniApp Admin · fără token";
+      }
     } else {
       const short = ADMIN_TOKEN.slice(0, 4) + "..." + ADMIN_TOKEN.slice(-4);
       userLineEl.innerHTML = "Acces cu token: <b>" + short + "</b>";
+      if (envInfoEl) {
+        envInfoEl.textContent = "MiniApp Admin · conectat";
+      }
     }
   }
 
@@ -760,6 +769,10 @@ function initAdminApp() {
     if (statTotalEl) statTotalEl.textContent = total;
     if (statOpenEl) statOpenEl.textContent = open;
     if (statClosedEl) statClosedEl.textContent = closed;
+
+    if (envInfoEl) {
+      envInfoEl.textContent = `MiniApp Admin · ${open} deschise / ${total} tichete`;
+    }
   }
 
   function getFilteredTickets() {
@@ -787,6 +800,38 @@ function initAdminApp() {
     return list;
   }
 
+  // sortare avansată a tichetelor (Ultra Upgrade)
+  function sortTickets(list) {
+    const mode = sortTicketsEl?.value || "recent";
+
+    return list.sort((a, b) => {
+      // open înainte de closed, indiferent de sort
+      if (a.status !== b.status) {
+        return a.status === "open" ? -1 : 1;
+      }
+
+      switch (mode) {
+        case "oldest":
+          return (a.id || 0) - (b.id || 0);
+        case "value_desc":
+          return (b.total_price || 0) - (a.total_price || 0);
+        case "value_asc":
+          return (a.total_price || 0) - (b.total_price || 0);
+        case "user": {
+          const ua = (a.username || a.user_id || "").toString().toLowerCase();
+          const ub = (b.username || b.user_id || "").toString().toLowerCase();
+          if (ua < ub) return -1;
+          if (ua > ub) return 1;
+          // fallback pe id
+          return (b.id || 0) - (a.id || 0);
+        }
+        case "recent":
+        default:
+          return (b.id || 0) - (a.id || 0);
+      }
+    });
+  }
+
   /* ---------- CHAT ADMIN ---------- */
 
   function getTicketLastMessage(t) {
@@ -797,7 +842,19 @@ function initAdminApp() {
 
   function renderTicketsList() {
     ticketsListEl.innerHTML = "";
-    const list = getFilteredTickets();
+    let list = getFilteredTickets();
+
+    if (sortTicketsEl) {
+      list = sortTickets(list);
+    } else {
+      // fallback vechi
+      list.sort((a, b) => {
+        if (a.status !== b.status) {
+          return a.status === "open" ? -1 : 1;
+        }
+        return (b.id || 0) - (a.id || 0);
+      });
+    }
 
     if (!list || list.length === 0) {
       ticketsListEl.innerHTML =
@@ -809,13 +866,6 @@ function initAdminApp() {
       }
       return;
     }
-
-    list.sort((a, b) => {
-      if (a.status !== b.status) {
-        return a.status === "open" ? -1 : 1;
-      }
-      return (b.id || 0) - (a.id || 0);
-    });
 
     list.forEach((t) => {
       const item = document.createElement("div");
@@ -1034,16 +1084,19 @@ function initAdminApp() {
     if (!SELECTED_TICKET_ID) return;
     reasonInputEl.value = "";
     reasonModalEl.style.display = "flex";
+    reasonModalEl.setAttribute("aria-hidden", "false");
     reasonInputEl.focus();
   });
 
   reasonCancelBtn?.addEventListener("click", () => {
     reasonModalEl.style.display = "none";
+    reasonModalEl.setAttribute("aria-hidden", "true");
   });
 
   reasonConfirmBtn?.addEventListener("click", () => {
     const text = reasonInputEl.value.trim();
     reasonModalEl.style.display = "none";
+    reasonModalEl.setAttribute("aria-hidden", "true");
     closeTicket(text);
   });
 
@@ -1098,6 +1151,7 @@ function initAdminApp() {
       const toggleBtn = document.createElement("button");
       toggleBtn.className = "btn-ghost cat-toggle";
       toggleBtn.textContent = cat._collapsed ? "▸" : "▾";
+      toggleBtn.type = "button";
       toggleBtn.onclick = () => {
         cat._collapsed = !cat._collapsed;
         renderShopEditor();
@@ -1124,6 +1178,7 @@ function initAdminApp() {
       deleteBtn.className = "btn-ghost";
       deleteBtn.textContent = "Șterge";
       deleteBtn.style.fontSize = "11px";
+      deleteBtn.type = "button";
       deleteBtn.onclick = () => {
         if (confirm("Ștergi categoria?")) {
           CURRENT_SHOP.categories.splice(catIndex, 1);
@@ -1218,6 +1273,7 @@ function initAdminApp() {
           delProdBtn.className = "btn-ghost";
           delProdBtn.style.fontSize = "10px";
           delProdBtn.textContent = "X";
+          delProdBtn.type = "button";
           delProdBtn.onclick = () => {
             if (confirm("Ștergi produsul?")) {
               cat.products.splice(prodIndex, 1);
@@ -1257,6 +1313,7 @@ function initAdminApp() {
         addProdBtn.className = "btn-ghost";
         addProdBtn.style.fontSize = "11px";
         addProdBtn.textContent = "+ Produs";
+        addProdBtn.type = "button";
         addProdBtn.onclick = () => {
           cat.products.push({
             id: "prod_" + Date.now(),
@@ -1326,7 +1383,9 @@ function initAdminApp() {
   /* ---------- CORE POLL ADMIN (folosit de smartPoll) ---------- */
 
   async function pollAdminCore() {
-    if (!ADMIN_TOKEN) return { tickets: ALL_TICKETS, shop: CURRENT_SHOP };
+    if (!ADMIN_TOKEN) {
+      return { tickets: ALL_TICKETS, shop: CURRENT_SHOP };
+    }
 
     try {
       const res = await apiCall("admin_get_tickets", {});
@@ -1334,6 +1393,9 @@ function initAdminApp() {
         if (res.error === "forbidden") {
           userLineEl.innerHTML =
             "<span style='color:#ff5252;'>Token invalid.</span>";
+          if (envInfoEl) {
+            envInfoEl.textContent = "MiniApp Admin · token invalid";
+          }
         }
         return { tickets: ALL_TICKETS, shop: CURRENT_SHOP };
       }
@@ -1357,6 +1419,9 @@ function initAdminApp() {
       console.error("admin_get_tickets error:", err);
       userLineEl.innerHTML =
         "<span style='color:#ff5252;'>Eroare la rețea.</span>";
+      if (envInfoEl) {
+        envInfoEl.textContent = "MiniApp Admin · eroare rețea";
+      }
       return { tickets: ALL_TICKETS, shop: CURRENT_SHOP };
     }
   }
@@ -1384,6 +1449,20 @@ function initAdminApp() {
     }
   );
 
+  // buton refresh manual (Ultra Upgrade)
+  adminRefreshBtn?.addEventListener("click", async () => {
+    bumpAdminActive();
+    adminRefreshBtn.disabled = true;
+    adminRefreshBtn.textContent = "…";
+    try {
+      await pollAdminCore();
+      adminPoller.bumpFast();
+    } finally {
+      adminRefreshBtn.disabled = false;
+      adminRefreshBtn.textContent = "⟳ Refresh";
+    }
+  });
+
   // filtre – doar redesenează din datele existente, fără request nou
   function onFilterChange() {
     renderTicketsList();
@@ -1391,6 +1470,7 @@ function initAdminApp() {
 
   let searchTimeout = null;
   filterStatusEl?.addEventListener("change", onFilterChange);
+  sortTicketsEl?.addEventListener("change", onFilterChange);
   filterSearchEl?.addEventListener("input", () => {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(onFilterChange, 150);
