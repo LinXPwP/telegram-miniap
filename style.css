@@ -1361,3 +1361,142 @@ textarea:focus-visible {
 .footer--admin {
   gap: 8px;
 }
+/* ============================
+   MSG ACTIONS (reply / edit / delete)
+   ============================ */
+
+.msg-bubble {
+  position: relative;
+}
+
+.msg-actions {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  display: flex;
+  gap: 3px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition-fast);
+}
+
+.msg-row:hover .msg-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.msg-action-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 2px 6px;
+  font-size: 10px;
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+}
+
+.msg-action-btn--danger {
+  background: rgba(255, 75, 92, 0.5);
+}
+
+.msg-action-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.msg-action-btn--danger:hover {
+  background: rgba(255, 75, 92, 0.8);
+}
+
+/* reply preview în bubble */
+
+.msg-reply-preview {
+  font-size: 10px;
+  padding: 4px 6px;
+  margin-bottom: 4px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.35);
+  border-left: 2px solid rgba(255, 255, 255, 0.35);
+  color: var(--muted);
+}
+
+.msg-reply-preview strong {
+  color: #fff;
+}
+
+.msg-text {
+  margin-bottom: 2px;
+}
+
+.msg-text--deleted {
+  font-style: italic;
+  opacity: 0.7;
+}
+
+/* ============================
+   CHAT CONTEXT BAR (reply / edit)
+   ============================ */
+
+.chat-context {
+  padding: 6px 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  background: rgba(6, 8, 24, 0.96);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.chat-context-text {
+  flex: 1;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.chat-context-clear {
+  font-size: 10px;
+  padding-inline: 8px;
+}
+
+/* mici îmbunătățiri header chat */
+
+.chat-header-status {
+  margin-top: 4px;
+}
+
+/* ============================
+   SHOP – polish vizual
+   ============================ */
+
+.shop-container {
+  background:
+    radial-gradient(circle at 0 0, rgba(255, 255, 255, 0.02), transparent 65%),
+    radial-gradient(circle at 100% 100%, rgba(255, 24, 67, 0.15), transparent 65%),
+    rgba(5, 6, 20, 0.96);
+}
+
+.cat-card {
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.65);
+  background: radial-gradient(circle at 0 0, rgba(255, 255, 255, 0.03), transparent 60%),
+    rgba(8, 9, 28, 0.98);
+}
+
+.products-list {
+  background: radial-gradient(circle at 0 0, rgba(255, 255, 255, 0.02), transparent 60%),
+    rgba(4, 5, 18, 0.98);
+}
+
+.product-row:hover {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 10px;
+}
+
+/* shop status bar mai vizibil când e dirty */
+
+#shopStatusBar.status-bar {
+  transition: color 0.2s ease-out;
+}
+
