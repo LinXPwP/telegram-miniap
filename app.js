@@ -1,24 +1,11 @@
 // app.js
 
 // URL-ul Netlify function (proxy către bot.py)
-const API_URL =
-  "https://api.redgen.vip/";
+const API_URL = "https://api.redgen.vip/";
 
 /* ============================
    HELPER – SMART POLLING
    ============================ */
-/**
- * createSmartPoll:
- *  - fetchFn: async () => snapshot (or undefined). Trebuie să facă și update de UI.
- *  - isEnabledFn: () => boolean – dacă e false, nu se face request (tab închis, fereastră inactivă etc.)
- *  - options:
- *      minInterval   – ms, ex 3000
- *      maxInterval   – ms, ex 8000
- *      backoffStep   – ms, ex 2000
- *      idleThreshold – de câte ori la rând fără schimbări până creștem intervalul
- *
- *  snapshot-ul e comparat (JSON.stringify) cu cel anterior ca să vedem dacă s-a schimbat ceva.
- */
 function createSmartPoll(fetchFn, isEnabledFn, options = {}) {
   const minInterval = options.minInterval ?? 3000;
   const maxInterval = options.maxInterval ?? 8000;
@@ -35,7 +22,6 @@ function createSmartPoll(fetchFn, isEnabledFn, options = {}) {
     if (!active) return;
 
     if (!isEnabledFn || !isEnabledFn()) {
-      // nimic de urmărit acum -> mai încercăm peste un interval „rece”
       schedule(maxInterval);
       return;
     }
@@ -47,12 +33,10 @@ function createSmartPoll(fetchFn, isEnabledFn, options = {}) {
       if (data !== undefined) {
         const snap = JSON.stringify(data);
         if (lastSnapshot === null || snap !== lastSnapshot) {
-          // ceva s-a schimbat => resetăm backoff
           lastSnapshot = snap;
           idleCount = 0;
           currentInterval = minInterval;
         } else {
-          // nimic nou
           idleCount += 1;
           if (idleCount >= idleThreshold) {
             currentInterval = Math.min(maxInterval, currentInterval + backoffStep);
@@ -79,7 +63,7 @@ function createSmartPoll(fetchFn, isEnabledFn, options = {}) {
       active = true;
       idleCount = 0;
       currentInterval = minInterval;
-      tick(); // pornim imediat
+      tick();
     },
     stop() {
       active = false;
@@ -102,7 +86,6 @@ function createSmartPoll(fetchFn, isEnabledFn, options = {}) {
 document.addEventListener("DOMContentLoaded", () => {
   const pageType = document.body.dataset.page;
 
-  // Tabs – segmented control, sincronizat cu CSS (data-active)
   document.querySelectorAll(".tabs").forEach((tabs) => {
     const buttons = tabs.querySelectorAll(".tab-btn");
 
@@ -149,6 +132,20 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 /* ============================
+   UTILS comune
+   ============================ */
+
+function isNearBottom(el, threshold = 64) {
+  if (!el) return true;
+  return el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+}
+
+function scrollToBottom(el) {
+  if (!el) return;
+  el.scrollTop = el.scrollHeight;
+}
+
+/* ============================
    USER MINIAPP (index.html)
    ============================ */
 
@@ -160,10 +157,8 @@ function initUserApp() {
   let CURRENT_TICKETS = [];
   let SELECTED_TICKET_ID = null;
 
-  // hash pentru anti-flick la polling tichete
   let lastUserTicketsHash = null;
 
-  // fereastră activă user (în ms) – doar atunci poll-uim
   let userActiveUntil = 0;
   function bumpUserActive(extraMs = 25000) {
     const now = Date.now();
@@ -363,13 +358,11 @@ function initUserApp() {
       panelStatusEl.className = "status-bar status-ok";
       panelStatusEl.textContent = `Comandă trimisă, tichet #${newTicket.id} creat.`;
 
-      // mergem automat pe tab-ul de tichete
       const ticketsTabBtn = document.querySelector(
         '.tab-btn[data-tab="ticketsTab"]'
       );
       if (ticketsTabBtn) ticketsTabBtn.click();
 
-      // sesiune activă de chat încă ~25s
       bumpUserActive();
       userTicketsPoller.bumpFast();
     } catch (err) {
@@ -447,6 +440,48 @@ function initUserApp() {
     });
   }
 
+  function renderChatMessages(ticket, options = {}) {
+    const container = chatMessagesEl;
+    const scrollMode = options.scrollMode || "auto"; // auto / force / none
+    const wasNearBottom = isNearBottom(container);
+
+    const msgs = ticket.messages || [];
+    container.innerHTML = "";
+
+    msgs.forEach((m) => {
+      const row = document.createElement("div");
+      row.className = "msg-row " + (m.from || "system");
+
+      const bubble = document.createElement("div");
+      bubble.className = "msg-bubble " + (m.from || "system");
+
+      const textNode = document.createElement("div");
+      textNode.className = "msg-text";
+      if (m.deleted) {
+        textNode.classList.add("msg-text--deleted");
+        textNode.textContent = "[mesaj șters]";
+      } else {
+        textNode.textContent = m.text || "";
+      }
+      bubble.appendChild(textNode);
+
+      const meta = document.createElement("div");
+      meta.className = "msg-meta";
+      const parts = [];
+      if (m.sender) parts.push(m.sender);
+      if (m.edited) parts.push("editat");
+      meta.textContent = parts.join(" · ");
+      bubble.appendChild(meta);
+
+      row.appendChild(bubble);
+      container.appendChild(row);
+    });
+
+    if (scrollMode === "force" || (scrollMode === "auto" && wasNearBottom)) {
+      scrollToBottom(container);
+    }
+  }
+
   function selectTicket(ticketId) {
     SELECTED_TICKET_ID = ticketId;
     renderTicketsList();
@@ -463,43 +498,7 @@ function initUserApp() {
       <span>${t.product_name} · ${t.qty} buc · total ${t.total_price} credite · status: ${t.status}</span>
     `;
 
-    renderChatMessages(t);
-  }
-
-  function renderChatMessages(ticket) {
-    const msgs = ticket.messages || [];
-    chatMessagesEl.innerHTML = "";
-
-    msgs.forEach((m) => {
-      const row = document.createElement("div");
-      row.className = "msg-row " + (m.from || "system");
-
-      const bubble = document.createElement("div");
-      bubble.className = "msg-bubble " + (m.from || "system");
-
-      const textNode = document.createElement("div");
-      textNode.className = "msg-text";
-      if (m.deleted) {
-        textNode.classList.add("msg-text--deleted");
-        textNode.textContent = "[mesaj șters]";
-      } else {
-        textNode.textContent = m.text;
-      }
-      bubble.appendChild(textNode);
-
-      const meta = document.createElement("div");
-      meta.className = "msg-meta";
-      const parts = [];
-      if (m.sender) parts.push(m.sender);
-      if (m.edited) parts.push("editat");
-      meta.textContent = parts.join(" · ");
-      bubble.appendChild(meta);
-
-      row.appendChild(bubble);
-      chatMessagesEl.appendChild(row);
-    });
-
-    chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+    renderChatMessages(t, { scrollMode: "force" });
   }
 
   async function sendChatMessage() {
@@ -546,7 +545,6 @@ function initUserApp() {
     }
   });
 
-  // funcția folosită de smartPoll – face refresh și întoarce snapshot
   async function pollTicketsUserCore() {
     if (!CURRENT_USER) return CURRENT_TICKETS;
     try {
@@ -556,7 +554,6 @@ function initUserApp() {
       const newTickets = res.tickets || [];
       const snapStr = JSON.stringify(newTickets);
 
-      // dacă nu s-a schimbat nimic -> nu rerender, no flick
       if (snapStr === lastUserTicketsHash) {
         return CURRENT_TICKETS;
       }
@@ -569,7 +566,7 @@ function initUserApp() {
       if (SELECTED_TICKET_ID) {
         const t = CURRENT_TICKETS.find((x) => x.id === SELECTED_TICKET_ID);
         if (t) {
-          selectTicket(t.id);
+          renderChatMessages(t, { scrollMode: "auto" });
         }
       }
       return CURRENT_TICKETS;
@@ -582,10 +579,6 @@ function initUserApp() {
   const userTicketsPoller = createSmartPoll(
     pollTicketsUserCore,
     () => {
-      // activ doar când:
-      // - tab-ul de tichete e deschis
-      // - există tichete
-      // - suntem în fereastra activă (25s după ultima acțiune)
       if (!isTicketsTabActive()) return false;
       if (!CURRENT_TICKETS || CURRENT_TICKETS.length === 0) return false;
 
@@ -604,7 +597,6 @@ function initUserApp() {
     }
   );
 
-  // tab change (user)
   window.onUserTabChange = (tabId) => {
     if (tabId === "ticketsTab") {
       bumpUserActive();
@@ -614,7 +606,6 @@ function initUserApp() {
     }
   };
 
-  // când fereastra nu e vizibilă, oprim polling-ul
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
       if (isTicketsTabActive()) {
@@ -699,10 +690,6 @@ function initAdminApp() {
   const chatInputEl = document.getElementById("chatInput");
   const chatSendBtn = document.getElementById("chatSendBtn");
 
-  const chatContextEl = document.getElementById("chatContext");
-  const chatContextTextEl = document.getElementById("chatContextText");
-  const chatContextClearBtn = document.getElementById("chatContextClear");
-
   const ticketDetailsEl = document.getElementById("ticketDetails");
   const ticketSummaryEl = document.getElementById("ticketSummary");
   const ticketNoteInlineEl = document.getElementById("ticketNoteInline");
@@ -733,14 +720,13 @@ function initAdminApp() {
   let CURRENT_SHOP = null;
   let SELECTED_TICKET_ID = null;
 
-  // context acțiuni mesaje (discord-like)
+  // pentru reply / edit
   let ACTIVE_REPLY = null; // { ticketId, msgId, sender, text }
-  let ACTIVE_EDIT = null;  // { ticketId, msgId }
+  let ACTIVE_EDIT = null; // { ticketId, msgId }
 
-  // shop edit mode – dacă true, nu mai rescriem editorul din polling (fără flick & fără pierdere de text)
+  // când editezi shop, nu mai suprascriem UI din polling
   let SHOP_EDIT_MODE = false;
 
-  // anti-flick pentru polling admin
   let adminActiveUntil = 0;
   let lastAdminSnapshotJSON = null;
 
@@ -781,38 +767,35 @@ function initAdminApp() {
     );
   }
 
-  /* ---------- CONTEXT (reply / edit) ---------- */
+  /* ---------- Input mode (normal / reply / edit) ---------- */
 
-  function updateChatContext() {
-    if (!chatContextEl) return;
+  function refreshInputMode() {
+    if (!chatInputEl || !chatSendBtn) return;
 
     if (ACTIVE_EDIT) {
-      chatContextEl.style.display = "flex";
-      chatContextTextEl.textContent = "Editezi un mesaj trimis de tine.";
       chatSendBtn.textContent = "Salvează";
+      chatInputEl.placeholder = "Editezi un mesaj trimis de tine...";
     } else if (ACTIVE_REPLY) {
-      chatContextEl.style.display = "flex";
-      const preview = (ACTIVE_REPLY.text || "").slice(0, 80);
-      const more = ACTIVE_REPLY.text && ACTIVE_REPLY.text.length > 80 ? "…" : "";
-      chatContextTextEl.innerHTML =
-        'Răspunzi lui <b>' +
-        (ACTIVE_REPLY.sender || "user") +
-        '</b>: „' +
-        (preview || "") +
-        more +
-        '”';
-      chatSendBtn.textContent = "Trimite";
+      chatSendBtn.textContent = "Răspunde";
+      chatInputEl.placeholder =
+        "Răspunzi lui " + (ACTIVE_REPLY.sender || "user") + "...";
     } else {
-      chatContextEl.style.display = "none";
-      chatContextTextEl.textContent = "";
       chatSendBtn.textContent = "Trimite";
+      chatInputEl.placeholder = "Răspunde utilizatorului...";
     }
   }
 
-  chatContextClearBtn?.addEventListener("click", () => {
-    ACTIVE_REPLY = null;
+  function clearInputMode() {
     ACTIVE_EDIT = null;
-    updateChatContext();
+    ACTIVE_REPLY = null;
+    refreshInputMode();
+  }
+
+  chatInputEl?.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      clearInputMode();
+      chatInputEl.value = "";
+    }
   });
 
   /* ---------- STATISTICI & FILTRE ---------- */
@@ -913,12 +896,10 @@ function initAdminApp() {
       item.appendChild(headerRow);
       item.appendChild(line);
 
-      // fără pollAdminCore aici -> fără flick dublu
       item.addEventListener("click", () => {
         if (SELECTED_TICKET_ID !== t.id) {
-          ACTIVE_REPLY = null;
-          ACTIVE_EDIT = null;
-          updateChatContext();
+          clearInputMode();
+          chatInputEl.value = "";
         }
         selectTicket(t.id);
         bumpAdminActive();
@@ -927,6 +908,147 @@ function initAdminApp() {
 
       ticketsListEl.appendChild(item);
     });
+  }
+
+  function scrollToMessageById(msgId) {
+    if (!msgId || !chatMessagesEl) return;
+    let selectorId = msgId;
+    if (window.CSS && CSS.escape) {
+      selectorId = CSS.escape(msgId);
+    } else {
+      selectorId = msgId.replace(/"/g, '\\"');
+    }
+    const target = chatMessagesEl.querySelector(
+      `.msg-row[data-msg-id="${selectorId}"]`
+    );
+    if (!target) return;
+
+    const top = target.offsetTop - 20;
+    chatMessagesEl.scrollTo({
+      top,
+      behavior: "smooth",
+    });
+
+    target.classList.add("msg-row--highlight");
+    setTimeout(() => {
+      target.classList.remove("msg-row--highlight");
+    }, 1600);
+  }
+
+  function renderChatMessages(ticket, options = {}) {
+    const container = chatMessagesEl;
+    const scrollMode = options.scrollMode || "auto"; // auto / force / none
+    const wasNearBottom = isNearBottom(container);
+
+    const msgs = ticket.messages || [];
+    container.innerHTML = "";
+
+    msgs.forEach((m) => {
+      const row = document.createElement("div");
+      row.className = "msg-row " + (m.from || "system");
+      if (m.id) row.dataset.msgId = m.id;
+
+      const bubble = document.createElement("div");
+      bubble.className = "msg-bubble " + (m.from || "system");
+
+      // reply preview
+      if (m.reply_to) {
+        const replied = msgs.find((mm) => mm.id === m.reply_to);
+        if (replied) {
+          const rp = document.createElement("button");
+          rp.type = "button";
+          rp.className = "msg-reply-preview";
+          const textPreview = (replied.text || "").slice(0, 80);
+          const more = replied.text && replied.text.length > 80 ? "…" : "";
+          rp.innerHTML =
+            "<strong>" +
+            (replied.sender || "user") +
+            ":</strong> " +
+            (textPreview || "") +
+            more;
+          rp.addEventListener("click", () => {
+            scrollToMessageById(m.reply_to);
+          });
+          bubble.appendChild(rp);
+        }
+      }
+
+      const textSpan = document.createElement("div");
+      textSpan.className = "msg-text";
+      if (m.deleted) {
+        textSpan.classList.add("msg-text--deleted");
+        textSpan.textContent = "[mesaj șters]";
+      } else {
+        textSpan.textContent = m.text || "";
+      }
+      bubble.appendChild(textSpan);
+
+      const meta = document.createElement("div");
+      meta.className = "msg-meta";
+      const metaParts = [];
+      if (m.sender) metaParts.push(m.sender);
+      if (m.edited) metaParts.push("editat");
+      meta.textContent = metaParts.join(" · ");
+      bubble.appendChild(meta);
+
+      // acțiuni (reply / edit / delete)
+      const actions = document.createElement("div");
+      actions.className = "msg-actions";
+
+      const replyBtn = document.createElement("button");
+      replyBtn.className = "msg-action-btn";
+      replyBtn.title = "Răspunde";
+      replyBtn.textContent = "↩";
+      replyBtn.addEventListener("click", () => {
+        ACTIVE_REPLY = {
+          ticketId: ticket.id,
+          msgId: m.id,
+          sender: m.sender,
+          text: m.text || "",
+        };
+        ACTIVE_EDIT = null;
+        refreshInputMode();
+        chatInputEl.focus();
+      });
+      actions.appendChild(replyBtn);
+
+      const canEdit = m.from === "admin" && !m.deleted && m.id;
+      const editBtn = document.createElement("button");
+      editBtn.className = "msg-action-btn";
+      editBtn.title = "Editează";
+      editBtn.textContent = "✎";
+      editBtn.disabled = !canEdit;
+      editBtn.addEventListener("click", () => {
+        if (!canEdit) return;
+        ACTIVE_EDIT = { ticketId: ticket.id, msgId: m.id };
+        ACTIVE_REPLY = null;
+        chatInputEl.value = m.text || "";
+        refreshInputMode();
+        chatInputEl.focus();
+      });
+      actions.appendChild(editBtn);
+
+      const canDelete = !!m.id && !m.deleted;
+      const deleteBtn = document.createElement("button");
+      deleteBtn.className = "msg-action-btn msg-action-btn--danger";
+      deleteBtn.title = "Șterge";
+      deleteBtn.textContent = "🗑";
+      deleteBtn.disabled = !canDelete;
+      deleteBtn.addEventListener("click", () => {
+        if (!canDelete) return;
+        if (!confirm("Sigur ștergi acest mesaj?")) return;
+        deleteAdminMessage(ticket.id, m.id);
+      });
+      actions.appendChild(deleteBtn);
+
+      bubble.appendChild(actions);
+      row.appendChild(bubble);
+      container.appendChild(row);
+    });
+
+    if (scrollMode === "force" || (scrollMode === "auto" && wasNearBottom)) {
+      scrollToBottom(container);
+    }
   }
 
   function selectTicket(ticketId) {
@@ -954,7 +1076,7 @@ function initAdminApp() {
       </div>
     `;
 
-    renderChatMessages(t);
+    renderChatMessages(t, { scrollMode: "force" });
 
     ticketDetailsEl.style.display = "block";
     ticketSummaryEl.innerHTML = `
@@ -979,112 +1101,6 @@ function initAdminApp() {
     ticketStatusBarEl.className = "status-bar";
   }
 
-  function renderChatMessages(ticket) {
-    const msgs = ticket.messages || [];
-    chatMessagesEl.innerHTML = "";
-
-    msgs.forEach((m) => {
-      const row = document.createElement("div");
-      row.className = "msg-row " + (m.from || "system");
-      row.dataset.msgId = m.id || "";
-
-      const bubble = document.createElement("div");
-      bubble.className = "msg-bubble " + (m.from || "system");
-
-      // preview pentru reply
-      if (m.reply_to) {
-        const replied = (ticket.messages || []).find(
-          (mm) => mm.id === m.reply_to
-        );
-        if (replied) {
-          const rp = document.createElement("div");
-          rp.className = "msg-reply-preview";
-          const textPreview = (replied.text || "").slice(0, 80);
-          const more = replied.text && replied.text.length > 80 ? "…" : "";
-          rp.innerHTML =
-            "<strong>" +
-            (replied.sender || "user") +
-            ":</strong> " +
-            (textPreview || "") +
-            more;
-          bubble.appendChild(rp);
-        }
-      }
-
-      const textSpan = document.createElement("div");
-      textSpan.className = "msg-text";
-      if (m.deleted) {
-        textSpan.classList.add("msg-text--deleted");
-        textSpan.textContent = "[mesaj șters]";
-      } else {
-        textSpan.textContent = m.text || "";
-      }
-      bubble.appendChild(textSpan);
-
-      const meta = document.createElement("div");
-      meta.className = "msg-meta";
-      const metaParts = [];
-      if (m.sender) metaParts.push(m.sender);
-      if (m.edited) metaParts.push("editat");
-      meta.textContent = metaParts.join(" · ");
-      bubble.appendChild(meta);
-
-      // acțiuni mesaj (reply / edit / delete)
-      const actions = document.createElement("div");
-      actions.className = "msg-actions";
-
-      const replyBtn = document.createElement("button");
-      replyBtn.className = "msg-action-btn";
-      replyBtn.title = "Răspunde";
-      replyBtn.textContent = "↩";
-      replyBtn.addEventListener("click", () => {
-        ACTIVE_REPLY = {
-          ticketId: ticket.id,
-          msgId: m.id,
-          sender: m.sender,
-          text: m.text || "",
-        };
-        ACTIVE_EDIT = null;
-        updateChatContext();
-        chatInputEl.focus();
-      });
-      actions.appendChild(replyBtn);
-
-      const canEdit = m.from === "admin" && !m.deleted;
-      const editBtn = document.createElement("button");
-      editBtn.className = "msg-action-btn";
-      editBtn.title = "Editează";
-      editBtn.textContent = "✎";
-      editBtn.disabled = !canEdit;
-      editBtn.addEventListener("click", () => {
-        if (!canEdit) return;
-        ACTIVE_EDIT = { ticketId: ticket.id, msgId: m.id };
-        ACTIVE_REPLY = null;
-        chatInputEl.value = m.text || "";
-        chatInputEl.focus();
-        updateChatContext();
-      });
-      actions.appendChild(editBtn);
-
-      const deleteBtn = document.createElement("button");
-      deleteBtn.className = "msg-action-btn msg-action-btn--danger";
-      deleteBtn.title = "Șterge";
-      deleteBtn.textContent = "🗑";
-      deleteBtn.disabled = m.deleted === true;
-      deleteBtn.addEventListener("click", () => {
-        if (!confirm("Sigur ștergi acest mesaj?")) return;
-        deleteAdminMessage(ticket.id, m.id);
-      });
-      actions.appendChild(deleteBtn);
-
-      bubble.appendChild(actions);
-      row.appendChild(bubble);
-      chatMessagesEl.appendChild(row);
-    });
-
-    chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
-  }
-
   async function deleteAdminMessage(ticketId, messageId) {
     try {
       const res = await apiCall("admin_delete_message", {
@@ -1107,7 +1123,7 @@ function initAdminApp() {
       updateTicketStats();
       renderTicketsList();
       if (SELECTED_TICKET_ID === updated.id) {
-        selectTicket(updated.id);
+        renderChatMessages(updated, { scrollMode: "auto" });
       }
     } catch (err) {
       console.error("admin_delete_message error:", err);
@@ -1119,24 +1135,20 @@ function initAdminApp() {
     if (!text || !SELECTED_TICKET_ID) return;
 
     const currentTicketId = SELECTED_TICKET_ID;
-    const isEditing =
-      ACTIVE_EDIT && ACTIVE_EDIT.ticketId === currentTicketId
-        ? true
-        : false;
+    const editingThisTicket =
+      ACTIVE_EDIT && ACTIVE_EDIT.ticketId === currentTicketId;
 
     chatInputEl.value = "";
 
     try {
       let res;
-      if (isEditing) {
-        // editare mesaj
+      if (editingThisTicket) {
         res = await apiCall("admin_edit_message", {
           ticket_id: ACTIVE_EDIT.ticketId,
           message_id: ACTIVE_EDIT.msgId,
           text,
         });
       } else {
-        // mesaj nou
         const payload = {
           ticket_id: currentTicketId,
           text,
@@ -1167,13 +1179,10 @@ function initAdminApp() {
 
       updateTicketStats();
       renderTicketsList();
-      selectTicket(updated.id);
+      SELECTED_TICKET_ID = updated.id;
+      renderChatMessages(updated, { scrollMode: "force" });
 
-      // reset context
-      ACTIVE_EDIT = null;
-      ACTIVE_REPLY = null;
-      updateChatContext();
-
+      clearInputMode();
       bumpAdminActive();
       adminPoller.bumpFast();
     } catch (err) {
@@ -1221,7 +1230,7 @@ function initAdminApp() {
 
       updateTicketStats();
       renderTicketsList();
-      selectTicket(t.id);
+      renderChatMessages(t, { scrollMode: "auto" });
 
       bumpAdminActive();
       adminPoller.bumpFast();
@@ -1525,7 +1534,6 @@ function initAdminApp() {
       shopStatusBarEl.className = "status-bar status-ok";
 
       SHOP_EDIT_MODE = false;
-
       bumpAdminActive();
       adminPoller.bumpFast();
     } catch (err) {
@@ -1550,7 +1558,7 @@ function initAdminApp() {
   addCategoryBtn?.addEventListener("click", addCategory);
   saveShopBtn?.addEventListener("click", saveShop);
 
-  /* ---------- CORE POLL ADMIN (folosit de smartPoll) ---------- */
+  /* ---------- CORE POLL ADMIN ---------- */
 
   async function pollAdminCore() {
     if (!ADMIN_TOKEN) return { tickets: ALL_TICKETS, shop: CURRENT_SHOP };
@@ -1577,7 +1585,6 @@ function initAdminApp() {
       if (changed) {
         ALL_TICKETS = newTickets;
 
-        // shop-ul îl actualizăm doar dacă nu editezi local (fără flick în timp ce tastezi)
         if (!SHOP_EDIT_MODE) {
           CURRENT_SHOP = newShop;
         }
@@ -1591,7 +1598,7 @@ function initAdminApp() {
         if (SELECTED_TICKET_ID) {
           const t = ALL_TICKETS.find((x) => x.id === SELECTED_TICKET_ID);
           if (t) {
-            selectTicket(t.id);
+            renderChatMessages(t, { scrollMode: "auto" });
           }
         }
       }
@@ -1652,7 +1659,6 @@ function initAdminApp() {
     }
   };
 
-  // când fereastra nu e vizibilă, oprim polling-ul
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
       if (isAnyAdminTabActive()) {
@@ -1668,6 +1674,7 @@ function initAdminApp() {
 
   async function initAdmin() {
     renderTokenInfo();
+    refreshInputMode();
     if (!ADMIN_TOKEN) return;
 
     await pollAdminCore();
