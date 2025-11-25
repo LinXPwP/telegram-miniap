@@ -1,7 +1,8 @@
 // app.js
 
 // URL-ul Netlify function (proxy către bot.py)
-const API_URL = "https://api.redgen.vip/";
+const API_URL =
+  "https://api.redgen.vip/";
 
 /* ============================
    HELPER – SMART POLLING
@@ -158,6 +159,9 @@ function initUserApp() {
   let CURRENT_SHOP = null;
   let CURRENT_TICKETS = [];
   let SELECTED_TICKET_ID = null;
+
+  // hash pentru anti-flick la polling tichete
+  let lastUserTicketsHash = null;
 
   // fereastră activă user (în ms) – doar atunci poll-uim
   let userActiveUntil = 0;
@@ -367,10 +371,7 @@ function initUserApp() {
 
       // sesiune activă de chat încă ~25s
       bumpUserActive();
-
-      const snap = await pollTicketsUserCore();
       userTicketsPoller.bumpFast();
-      return snap;
     } catch (err) {
       console.error("buy_product error:", err);
       panelStatusEl.className = "status-bar status-error";
@@ -397,7 +398,9 @@ function initUserApp() {
   function getTicketLastMessage(t) {
     const msgs = t.messages || [];
     if (msgs.length === 0) return "";
-    return msgs[msgs.length - 1].text || "";
+    const last = msgs[msgs.length - 1];
+    if (last.deleted) return "[mesaj șters]";
+    return last.text || "";
   }
 
   function renderTicketsList() {
@@ -434,12 +437,10 @@ function initUserApp() {
       item.appendChild(title);
       item.appendChild(line);
 
-      item.addEventListener("click", async () => {
+      item.addEventListener("click", () => {
         selectTicket(t.id);
         bumpUserActive();
-        const snap = await pollTicketsUserCore();
         userTicketsPoller.bumpFast();
-        return snap;
       });
 
       chatListEl.appendChild(item);
@@ -471,19 +472,30 @@ function initUserApp() {
 
     msgs.forEach((m) => {
       const row = document.createElement("div");
-      row.className = "msg-row " + m.from;
+      row.className = "msg-row " + (m.from || "system");
 
       const bubble = document.createElement("div");
-      bubble.className = "msg-bubble " + m.from;
-      bubble.textContent = m.text;
+      bubble.className = "msg-bubble " + (m.from || "system");
+
+      const textNode = document.createElement("div");
+      textNode.className = "msg-text";
+      if (m.deleted) {
+        textNode.classList.add("msg-text--deleted");
+        textNode.textContent = "[mesaj șters]";
+      } else {
+        textNode.textContent = m.text;
+      }
+      bubble.appendChild(textNode);
 
       const meta = document.createElement("div");
       meta.className = "msg-meta";
-      meta.textContent = m.sender || "";
-
+      const parts = [];
+      if (m.sender) parts.push(m.sender);
+      if (m.edited) parts.push("editat");
+      meta.textContent = parts.join(" · ");
       bubble.appendChild(meta);
-      row.appendChild(bubble);
 
+      row.appendChild(bubble);
       chatMessagesEl.appendChild(row);
     });
 
@@ -520,10 +532,7 @@ function initUserApp() {
       renderTicketsInfo();
 
       bumpUserActive();
-
-      const snap = await pollTicketsUserCore();
       userTicketsPoller.bumpFast();
-      return snap;
     } catch (err) {
       console.error("user_send_message error:", err);
     }
@@ -543,7 +552,17 @@ function initUserApp() {
     try {
       const res = await apiCall("user_get_tickets", {});
       if (!res.ok) return CURRENT_TICKETS;
-      CURRENT_TICKETS = res.tickets || [];
+
+      const newTickets = res.tickets || [];
+      const snapStr = JSON.stringify(newTickets);
+
+      // dacă nu s-a schimbat nimic -> nu rerender, no flick
+      if (snapStr === lastUserTicketsHash) {
+        return CURRENT_TICKETS;
+      }
+      lastUserTicketsHash = snapStr;
+
+      CURRENT_TICKETS = newTickets;
       renderTicketsList();
       renderTicketsInfo();
 
@@ -673,17 +692,16 @@ function initAdminApp() {
   const ADMIN_TOKEN = params.get("token") || "";
 
   const userLineEl = document.getElementById("userLine");
-  const envInfoEl = document.getElementById("envInfo");
-  const liveDotEl = document.getElementById("liveDot");
-  const liveTextEl = document.getElementById("liveText");
-  const syncLineEl = document.getElementById("syncLine");
-  const themeToggleBtn = document.getElementById("themeToggle");
 
   const ticketsListEl = document.getElementById("ticketsList");
   const chatHeaderEl = document.getElementById("chatHeader");
   const chatMessagesEl = document.getElementById("chatMessages");
   const chatInputEl = document.getElementById("chatInput");
   const chatSendBtn = document.getElementById("chatSendBtn");
+
+  const chatContextEl = document.getElementById("chatContext");
+  const chatContextTextEl = document.getElementById("chatContextText");
+  const chatContextClearBtn = document.getElementById("chatContextClear");
 
   const ticketDetailsEl = document.getElementById("ticketDetails");
   const ticketSummaryEl = document.getElementById("ticketSummary");
@@ -694,18 +712,11 @@ function initAdminApp() {
     "ticketCloseWithReasonBtn"
   );
 
-  const ticketNoteEditEl = document.getElementById("ticketNoteEdit");
-  const ticketNoteTextareaEl = document.getElementById("ticketNoteTextarea");
-  const ticketNoteCancelBtn = document.getElementById("ticketNoteCancelBtn");
-  const ticketNoteSaveBtn = document.getElementById("ticketNoteSaveBtn");
-
   const shopContainerEl = document.getElementById("shopContainer");
   const shopStatusBarEl = document.getElementById("shopStatusBar");
   const addCategoryBtn = document.getElementById("addCategoryBtn");
   const saveShopBtn = document.getElementById("saveShopBtn");
   const shopMetricsEl = document.getElementById("shopMetrics");
-  const collapseAllBtn = document.getElementById("collapseAllBtn");
-  const expandAllBtn = document.getElementById("expandAllBtn");
 
   const reasonModalEl = document.getElementById("reasonModal");
   const reasonInputEl = document.getElementById("reasonInput");
@@ -714,20 +725,25 @@ function initAdminApp() {
 
   const filterStatusEl = document.getElementById("filterStatus");
   const filterSearchEl = document.getElementById("filterSearch");
-  const filterSortEl = document.getElementById("filterSort");
   const statTotalEl = document.getElementById("statTotal");
   const statOpenEl = document.getElementById("statOpen");
   const statClosedEl = document.getElementById("statClosed");
 
-  const quickRepliesEl = document.getElementById("quickReplies");
-
   let ALL_TICKETS = [];
   let CURRENT_SHOP = null;
   let SELECTED_TICKET_ID = null;
-  let lastSyncAt = null;
 
-  // fereastră activă admin (în ms)
+  // context acțiuni mesaje (discord-like)
+  let ACTIVE_REPLY = null; // { ticketId, msgId, sender, text }
+  let ACTIVE_EDIT = null;  // { ticketId, msgId }
+
+  // shop edit mode – dacă true, nu mai rescriem editorul din polling (fără flick & fără pierdere de text)
+  let SHOP_EDIT_MODE = false;
+
+  // anti-flick pentru polling admin
   let adminActiveUntil = 0;
+  let lastAdminSnapshotJSON = null;
+
   function bumpAdminActive(extraMs = 30000) {
     const now = Date.now();
     adminActiveUntil = Math.max(adminActiveUntil, now + extraMs);
@@ -746,75 +762,13 @@ function initAdminApp() {
     }).then((r) => r.json());
   }
 
-  function setLiveIndicator(isLive) {
-    if (!liveDotEl || !liveTextEl) return;
-    liveDotEl.classList.toggle("live-dot--on", isLive);
-    liveDotEl.classList.toggle("live-dot--off", !isLive);
-    liveTextEl.textContent = isLive ? "Live" : "Oprit";
-  }
-
-  function updateSyncLine() {
-    if (!syncLineEl) return;
-    if (!lastSyncAt) {
-      syncLineEl.textContent = "Ultimul refresh: -";
-      return;
-    }
-    const hh = String(lastSyncAt.getHours()).padStart(2, "0");
-    const mm = String(lastSyncAt.getMinutes()).padStart(2, "0");
-    const ss = String(lastSyncAt.getSeconds()).padStart(2, "0");
-    syncLineEl.textContent = `Ultimul refresh: ${hh}:${mm}:${ss}`;
-  }
-
-  function applyAdminThemeFromStorage() {
-    if (!themeToggleBtn) return;
-    let stored = null;
-    try {
-      stored = window.localStorage?.getItem("admin_theme") || null;
-    } catch {
-      stored = null;
-    }
-    const isLight = stored === "light";
-    document.body.classList.toggle("theme-light", isLight);
-    themeToggleBtn.textContent = isLight ? "🌙" : "☀️";
-    themeToggleBtn.setAttribute(
-      "aria-label",
-      isLight ? "Comută pe tema închisă" : "Comută pe tema deschisă"
-    );
-  }
-
-  function toggleAdminTheme() {
-    const willBeLight = !document.body.classList.contains("theme-light");
-    document.body.classList.toggle("theme-light", willBeLight);
-    try {
-      window.localStorage?.setItem("admin_theme", willBeLight ? "light" : "dark");
-    } catch {
-      // ignore
-    }
-    if (themeToggleBtn) {
-      themeToggleBtn.textContent = willBeLight ? "🌙" : "☀️";
-      themeToggleBtn.setAttribute(
-        "aria-label",
-        willBeLight ? "Comută pe tema închisă" : "Comută pe tema deschisă"
-      );
-    }
-  }
-
-  applyAdminThemeFromStorage();
-  themeToggleBtn?.addEventListener("click", toggleAdminTheme);
-
   function renderTokenInfo() {
     if (!ADMIN_TOKEN) {
       userLineEl.innerHTML =
         "<span style='color:#ff5252;'>Token lipsă în URL.</span> Deschide admin.html?token=TOKENUL_TĂU.";
-      if (envInfoEl) {
-        envInfoEl.textContent = "MiniApp Admin – fără token";
-      }
     } else {
       const short = ADMIN_TOKEN.slice(0, 4) + "..." + ADMIN_TOKEN.slice(-4);
       userLineEl.innerHTML = "Acces cu token: <b>" + short + "</b>";
-      if (envInfoEl) {
-        envInfoEl.textContent = "MiniApp Admin";
-      }
     }
   }
 
@@ -826,6 +780,40 @@ function initAdminApp() {
       (shopTab && shopTab.classList.contains("active"))
     );
   }
+
+  /* ---------- CONTEXT (reply / edit) ---------- */
+
+  function updateChatContext() {
+    if (!chatContextEl) return;
+
+    if (ACTIVE_EDIT) {
+      chatContextEl.style.display = "flex";
+      chatContextTextEl.textContent = "Editezi un mesaj trimis de tine.";
+      chatSendBtn.textContent = "Salvează";
+    } else if (ACTIVE_REPLY) {
+      chatContextEl.style.display = "flex";
+      const preview = (ACTIVE_REPLY.text || "").slice(0, 80);
+      const more = ACTIVE_REPLY.text && ACTIVE_REPLY.text.length > 80 ? "…" : "";
+      chatContextTextEl.innerHTML =
+        'Răspunzi lui <b>' +
+        (ACTIVE_REPLY.sender || "user") +
+        '</b>: „' +
+        (preview || "") +
+        more +
+        '”';
+      chatSendBtn.textContent = "Trimite";
+    } else {
+      chatContextEl.style.display = "none";
+      chatContextTextEl.textContent = "";
+      chatSendBtn.textContent = "Trimite";
+    }
+  }
+
+  chatContextClearBtn?.addEventListener("click", () => {
+    ACTIVE_REPLY = null;
+    ACTIVE_EDIT = null;
+    updateChatContext();
+  });
 
   /* ---------- STATISTICI & FILTRE ---------- */
 
@@ -869,7 +857,9 @@ function initAdminApp() {
   function getTicketLastMessage(t) {
     const msgs = t.messages || [];
     if (msgs.length === 0) return "";
-    return msgs[msgs.length - 1].text || "";
+    const last = msgs[msgs.length - 1];
+    if (last.deleted) return "[mesaj șters]";
+    return last.text || "";
   }
 
   function renderTicketsList() {
@@ -887,35 +877,11 @@ function initAdminApp() {
       return;
     }
 
-    const sortMode = filterSortEl?.value || "recent_desc";
-
     list.sort((a, b) => {
       if (a.status !== b.status) {
         return a.status === "open" ? -1 : 1;
       }
-
-      const aId = a.id || 0;
-      const bId = b.id || 0;
-      const aTotal = a.total_price || 0;
-      const bTotal = b.total_price || 0;
-      const aUser = ((a.username || a.user_id || "") + "").toLowerCase();
-      const bUser = ((b.username || b.user_id || "") + "").toLowerCase();
-
-      switch (sortMode) {
-        case "recent_asc":
-          return aId - bId;
-        case "value_desc":
-          return bTotal - aTotal;
-        case "value_asc":
-          return aTotal - bTotal;
-        case "user_asc":
-          if (aUser < bUser) return -1;
-          if (aUser > bUser) return 1;
-          return bId - aId;
-        case "recent_desc":
-        default:
-          return bId - aId;
-      }
+      return (b.id || 0) - (a.id || 0);
     });
 
     list.forEach((t) => {
@@ -947,22 +913,20 @@ function initAdminApp() {
       item.appendChild(headerRow);
       item.appendChild(line);
 
-      item.addEventListener("click", async () => {
+      // fără pollAdminCore aici -> fără flick dublu
+      item.addEventListener("click", () => {
+        if (SELECTED_TICKET_ID !== t.id) {
+          ACTIVE_REPLY = null;
+          ACTIVE_EDIT = null;
+          updateChatContext();
+        }
         selectTicket(t.id);
         bumpAdminActive();
-        const snap = await pollAdminCore();
         adminPoller.bumpFast();
-        return snap;
       });
 
       ticketsListEl.appendChild(item);
     });
-  }
-
-  function hideNoteEditor() {
-    if (ticketNoteEditEl) {
-      ticketNoteEditEl.style.display = "none";
-    }
   }
 
   function selectTicket(ticketId) {
@@ -974,17 +938,20 @@ function initAdminApp() {
       ticketDetailsEl.style.display = "none";
       chatHeaderEl.innerHTML = "<span>Niciun tichet selectat</span>";
       chatMessagesEl.innerHTML = "";
-      hideNoteEditor();
       return;
     }
+
+    const statusClass = t.status === "open" ? "open" : "closed";
+    const statusLabel = t.status === "open" ? "DESCHIS" : "ÎNCHIS";
 
     chatHeaderEl.innerHTML = `
       <b>Tichet #${t.id}</b><br/>
       <span>User: ${t.username || t.user_id} · Produs: ${
       t.product_name
-    } · ${t.qty} buc · total ${t.total_price} credite · status: ${
-      t.status
-    }</span>
+    } · ${t.qty} buc · total ${t.total_price} credite</span>
+      <div class="chat-header-status">
+        <span class="ticket-status-pill ${statusClass}">${statusLabel}</span>
+      </div>
     `;
 
     renderChatMessages(t);
@@ -998,36 +965,15 @@ function initAdminApp() {
     } credite)
     `;
 
-    // Notă internă + buton edit
-    ticketNoteInlineEl.innerHTML = "";
-    const label = document.createElement("span");
-    label.className = "ticket-note-label";
-    label.textContent = "Notă internă:";
-    ticketNoteInlineEl.appendChild(label);
-
-    const noteSpan = document.createElement("span");
-    noteSpan.className = "ticket-note-text";
     if (t.note) {
-      noteSpan.textContent = " " + t.note;
+      ticketNoteInlineEl.innerHTML =
+        '<span class="ticket-note-label">Notă internă:</span> ' +
+        `<span class="ticket-note-text">${t.note}</span>`;
     } else {
-      noteSpan.textContent = " nu există (încă)";
-      noteSpan.classList.add("ticket-note-empty");
+      ticketNoteInlineEl.innerHTML =
+        '<span class="ticket-note-label">Notă internă:</span> ' +
+        '<span class="ticket-note-text ticket-note-empty">nu există (încă)</span>';
     }
-    ticketNoteInlineEl.appendChild(noteSpan);
-
-    const editBtn = document.createElement("button");
-    editBtn.type = "button";
-    editBtn.className = "link-button";
-    editBtn.textContent = t.note ? "Editează" : "Adaugă";
-    editBtn.addEventListener("click", () => {
-      if (!ticketNoteEditEl || !ticketNoteTextareaEl) return;
-      ticketNoteEditEl.style.display = "block";
-      ticketNoteTextareaEl.value = t.note || "";
-      ticketNoteTextareaEl.focus();
-    });
-    ticketNoteInlineEl.appendChild(editBtn);
-
-    hideNoteEditor();
 
     ticketStatusBarEl.textContent = "";
     ticketStatusBarEl.className = "status-bar";
@@ -1039,40 +985,175 @@ function initAdminApp() {
 
     msgs.forEach((m) => {
       const row = document.createElement("div");
-      row.className = "msg-row " + m.from;
+      row.className = "msg-row " + (m.from || "system");
+      row.dataset.msgId = m.id || "";
 
       const bubble = document.createElement("div");
-      bubble.className = "msg-bubble " + m.from;
-      bubble.textContent = m.text;
+      bubble.className = "msg-bubble " + (m.from || "system");
+
+      // preview pentru reply
+      if (m.reply_to) {
+        const replied = (ticket.messages || []).find(
+          (mm) => mm.id === m.reply_to
+        );
+        if (replied) {
+          const rp = document.createElement("div");
+          rp.className = "msg-reply-preview";
+          const textPreview = (replied.text || "").slice(0, 80);
+          const more = replied.text && replied.text.length > 80 ? "…" : "";
+          rp.innerHTML =
+            "<strong>" +
+            (replied.sender || "user") +
+            ":</strong> " +
+            (textPreview || "") +
+            more;
+          bubble.appendChild(rp);
+        }
+      }
+
+      const textSpan = document.createElement("div");
+      textSpan.className = "msg-text";
+      if (m.deleted) {
+        textSpan.classList.add("msg-text--deleted");
+        textSpan.textContent = "[mesaj șters]";
+      } else {
+        textSpan.textContent = m.text || "";
+      }
+      bubble.appendChild(textSpan);
 
       const meta = document.createElement("div");
       meta.className = "msg-meta";
-      meta.textContent = m.sender || "";
-
+      const metaParts = [];
+      if (m.sender) metaParts.push(m.sender);
+      if (m.edited) metaParts.push("editat");
+      meta.textContent = metaParts.join(" · ");
       bubble.appendChild(meta);
-      row.appendChild(bubble);
 
+      // acțiuni mesaj (reply / edit / delete)
+      const actions = document.createElement("div");
+      actions.className = "msg-actions";
+
+      const replyBtn = document.createElement("button");
+      replyBtn.className = "msg-action-btn";
+      replyBtn.title = "Răspunde";
+      replyBtn.textContent = "↩";
+      replyBtn.addEventListener("click", () => {
+        ACTIVE_REPLY = {
+          ticketId: ticket.id,
+          msgId: m.id,
+          sender: m.sender,
+          text: m.text || "",
+        };
+        ACTIVE_EDIT = null;
+        updateChatContext();
+        chatInputEl.focus();
+      });
+      actions.appendChild(replyBtn);
+
+      const canEdit = m.from === "admin" && !m.deleted;
+      const editBtn = document.createElement("button");
+      editBtn.className = "msg-action-btn";
+      editBtn.title = "Editează";
+      editBtn.textContent = "✎";
+      editBtn.disabled = !canEdit;
+      editBtn.addEventListener("click", () => {
+        if (!canEdit) return;
+        ACTIVE_EDIT = { ticketId: ticket.id, msgId: m.id };
+        ACTIVE_REPLY = null;
+        chatInputEl.value = m.text || "";
+        chatInputEl.focus();
+        updateChatContext();
+      });
+      actions.appendChild(editBtn);
+
+      const deleteBtn = document.createElement("button");
+      deleteBtn.className = "msg-action-btn msg-action-btn--danger";
+      deleteBtn.title = "Șterge";
+      deleteBtn.textContent = "🗑";
+      deleteBtn.disabled = m.deleted === true;
+      deleteBtn.addEventListener("click", () => {
+        if (!confirm("Sigur ștergi acest mesaj?")) return;
+        deleteAdminMessage(ticket.id, m.id);
+      });
+      actions.appendChild(deleteBtn);
+
+      bubble.appendChild(actions);
+      row.appendChild(bubble);
       chatMessagesEl.appendChild(row);
     });
 
     chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
   }
 
+  async function deleteAdminMessage(ticketId, messageId) {
+    try {
+      const res = await apiCall("admin_delete_message", {
+        ticket_id: ticketId,
+        message_id: messageId,
+      });
+      if (!res.ok) {
+        console.error("admin_delete_message error:", res);
+        return;
+      }
+
+      const updated = res.ticket;
+      const idx = ALL_TICKETS.findIndex((t) => t.id === updated.id);
+      if (idx >= 0) {
+        ALL_TICKETS[idx] = updated;
+      } else {
+        ALL_TICKETS.push(updated);
+      }
+
+      updateTicketStats();
+      renderTicketsList();
+      if (SELECTED_TICKET_ID === updated.id) {
+        selectTicket(updated.id);
+      }
+    } catch (err) {
+      console.error("admin_delete_message error:", err);
+    }
+  }
+
   async function sendAdminMessage() {
     const text = chatInputEl.value.trim();
     if (!text || !SELECTED_TICKET_ID) return;
 
+    const currentTicketId = SELECTED_TICKET_ID;
+    const isEditing =
+      ACTIVE_EDIT && ACTIVE_EDIT.ticketId === currentTicketId
+        ? true
+        : false;
+
     chatInputEl.value = "";
 
     try {
-      const res = await apiCall("admin_send_message", {
-        ticket_id: SELECTED_TICKET_ID,
-        text,
-        sender: "Admin",
-      });
+      let res;
+      if (isEditing) {
+        // editare mesaj
+        res = await apiCall("admin_edit_message", {
+          ticket_id: ACTIVE_EDIT.ticketId,
+          message_id: ACTIVE_EDIT.msgId,
+          text,
+        });
+      } else {
+        // mesaj nou
+        const payload = {
+          ticket_id: currentTicketId,
+          text,
+          sender: "Admin",
+        };
+        if (
+          ACTIVE_REPLY &&
+          ACTIVE_REPLY.ticketId === currentTicketId &&
+          ACTIVE_REPLY.msgId
+        ) {
+          payload.reply_to = ACTIVE_REPLY.msgId;
+        }
+        res = await apiCall("admin_send_message", payload);
+      }
 
       if (!res.ok) {
-        console.error("admin_send_message error:", res);
+        console.error("admin_send_message/admin_edit_message error:", res);
         return;
       }
 
@@ -1088,13 +1169,15 @@ function initAdminApp() {
       renderTicketsList();
       selectTicket(updated.id);
 
-      bumpAdminActive();
+      // reset context
+      ACTIVE_EDIT = null;
+      ACTIVE_REPLY = null;
+      updateChatContext();
 
-      const snap = await pollAdminCore();
+      bumpAdminActive();
       adminPoller.bumpFast();
-      return snap;
     } catch (err) {
-      console.error("admin_send_message error:", err);
+      console.error("admin_send_message/admin_edit_message error:", err);
     }
   }
 
@@ -1105,76 +1188,6 @@ function initAdminApp() {
       sendAdminMessage();
     }
   });
-
-  // Răspunsuri rapide – doar pun text în input
-  if (quickRepliesEl) {
-    quickRepliesEl.addEventListener("click", (e) => {
-      const btn = e.target.closest("button[data-reply]");
-      if (!btn) return;
-      const text = btn.getAttribute("data-reply") || "";
-      if (!text) return;
-      if (chatInputEl.value.trim()) {
-        chatInputEl.value = `${chatInputEl.value.trim()} ${text}`;
-      } else {
-        chatInputEl.value = text;
-      }
-      chatInputEl.focus();
-    });
-  }
-
-  /* ---------- Notă internă tichet ---------- */
-
-  ticketNoteCancelBtn?.addEventListener("click", () => {
-    hideNoteEditor();
-  });
-
-  async function saveTicketNote() {
-    if (!SELECTED_TICKET_ID) return;
-    const t = ALL_TICKETS.find((x) => x.id === SELECTED_TICKET_ID);
-    if (!t) return;
-
-    const newNote = ticketNoteTextareaEl
-      ? ticketNoteTextareaEl.value.trim()
-      : "";
-
-    ticketStatusBarEl.textContent = "Se salvează nota internă...";
-    ticketStatusBarEl.className = "status-bar";
-
-    try {
-      const res = await apiCall("admin_update_ticket", {
-        ticket_id: t.id,
-        status: t.status,
-        note: newNote,
-      });
-
-      if (!res.ok) {
-        ticketStatusBarEl.textContent =
-          "Eroare la salvarea notei: " + (res.error || "necunoscută");
-        ticketStatusBarEl.className = "status-bar status-error";
-        return;
-      }
-
-      t.note = newNote;
-      ticketStatusBarEl.textContent = "Notă internă actualizată.";
-      ticketStatusBarEl.className = "status-bar status-ok";
-
-      updateTicketStats();
-      renderTicketsList();
-      selectTicket(t.id);
-      hideNoteEditor();
-
-      bumpAdminActive();
-      const snap = await pollAdminCore();
-      adminPoller.bumpFast();
-      return snap;
-    } catch (err) {
-      console.error("admin_update_ticket note error:", err);
-      ticketStatusBarEl.textContent = "Eroare la comunicarea cu serverul.";
-      ticketStatusBarEl.className = "status-bar status-error";
-    }
-  }
-
-  ticketNoteSaveBtn?.addEventListener("click", saveTicketNote);
 
   /* ---------- Închidere tichet ---------- */
 
@@ -1209,13 +1222,9 @@ function initAdminApp() {
       updateTicketStats();
       renderTicketsList();
       selectTicket(t.id);
-      hideNoteEditor();
 
       bumpAdminActive();
-
-      const snap = await pollAdminCore();
       adminPoller.bumpFast();
-      return snap;
     } catch (err) {
       console.error("admin_update_ticket error:", err);
       ticketStatusBarEl.textContent = "Eroare la comunicarea cu serverul.";
@@ -1248,6 +1257,14 @@ function initAdminApp() {
   });
 
   /* ---------- SHOP EDITOR ADMIN ---------- */
+
+  function markShopDirty() {
+    SHOP_EDIT_MODE = true;
+    if (shopStatusBarEl) {
+      shopStatusBarEl.textContent = "Ai modificări nesalvate în shop.";
+      shopStatusBarEl.className = "status-bar";
+    }
+  }
 
   function updateShopMetrics() {
     if (!shopMetricsEl) return;
@@ -1286,10 +1303,6 @@ function initAdminApp() {
     }
 
     CURRENT_SHOP.categories.forEach((cat, catIndex) => {
-      if (typeof cat._collapsed === "undefined") {
-        cat._collapsed = false;
-      }
-
       const catDiv = document.createElement("div");
       catDiv.className = "cat-card";
 
@@ -1301,7 +1314,6 @@ function initAdminApp() {
 
       const toggleBtn = document.createElement("button");
       toggleBtn.className = "btn-ghost cat-toggle";
-      toggleBtn.type = "button";
       toggleBtn.textContent = cat._collapsed ? "▸" : "▾";
       toggleBtn.onclick = () => {
         cat._collapsed = !cat._collapsed;
@@ -1313,6 +1325,7 @@ function initAdminApp() {
       nameInput.value = cat.name || "";
       nameInput.addEventListener("input", () => {
         cat.name = nameInput.value;
+        markShopDirty();
       });
 
       left.appendChild(toggleBtn);
@@ -1325,49 +1338,19 @@ function initAdminApp() {
       countBadge.className = "ticket-status-pill open";
       countBadge.textContent = `${(cat.products || []).length} produse`;
 
-      const moveUpBtn = document.createElement("button");
-      moveUpBtn.className = "btn-ghost btn-ghost--icon";
-      moveUpBtn.type = "button";
-      moveUpBtn.textContent = "↑";
-      moveUpBtn.title = "Mută categoria în sus";
-      moveUpBtn.onclick = () => {
-        if (catIndex <= 0) return;
-        const arr = CURRENT_SHOP.categories;
-        const tmp = arr[catIndex - 1];
-        arr[catIndex - 1] = arr[catIndex];
-        arr[catIndex] = tmp;
-        renderShopEditor();
-      };
-
-      const moveDownBtn = document.createElement("button");
-      moveDownBtn.className = "btn-ghost btn-ghost--icon";
-      moveDownBtn.type = "button";
-      moveDownBtn.textContent = "↓";
-      moveDownBtn.title = "Mută categoria în jos";
-      moveDownBtn.onclick = () => {
-        const arr = CURRENT_SHOP.categories;
-        if (catIndex >= arr.length - 1) return;
-        const tmp = arr[catIndex + 1];
-        arr[catIndex + 1] = arr[catIndex];
-        arr[catIndex] = tmp;
-        renderShopEditor();
-      };
-
       const deleteBtn = document.createElement("button");
       deleteBtn.className = "btn-ghost";
       deleteBtn.textContent = "Șterge";
       deleteBtn.style.fontSize = "11px";
-      deleteBtn.type = "button";
       deleteBtn.onclick = () => {
         if (confirm("Ștergi categoria?")) {
           CURRENT_SHOP.categories.splice(catIndex, 1);
+          markShopDirty();
           renderShopEditor();
         }
       };
 
       right.appendChild(countBadge);
-      right.appendChild(moveUpBtn);
-      right.appendChild(moveDownBtn);
       right.appendChild(deleteBtn);
 
       header.appendChild(left);
@@ -1383,6 +1366,7 @@ function initAdminApp() {
         descArea.value = cat.description || "";
         descArea.addEventListener("input", () => {
           cat.description = descArea.value;
+          markShopDirty();
         });
         descDiv.appendChild(descArea);
 
@@ -1399,6 +1383,7 @@ function initAdminApp() {
           nameInputProd.value = prod.name || "";
           nameInputProd.addEventListener("input", () => {
             prod.name = nameInputProd.value;
+            markShopDirty();
           });
           const nameLabel = document.createElement("div");
           nameLabel.className = "small-input-label";
@@ -1413,6 +1398,7 @@ function initAdminApp() {
           priceInput.value = prod.price || 0;
           priceInput.addEventListener("input", () => {
             prod.price = Number(priceInput.value || 0);
+            markShopDirty();
           });
           const priceLabel = document.createElement("div");
           priceLabel.className = "small-input-label";
@@ -1427,6 +1413,7 @@ function initAdminApp() {
           minInput.value = prod.min_qty || 1;
           minInput.addEventListener("input", () => {
             prod.min_qty = Number(minInput.value || 1);
+            markShopDirty();
           });
           const minLabel = document.createElement("div");
           minLabel.className = "small-input-label";
@@ -1441,6 +1428,7 @@ function initAdminApp() {
           maxInput.value = prod.max_qty || prod.min_qty || 1;
           maxInput.addEventListener("input", () => {
             prod.max_qty = Number(maxInput.value || prod.min_qty || 1);
+            markShopDirty();
           });
           const maxLabel = document.createElement("div");
           maxLabel.className = "small-input-label";
@@ -1450,64 +1438,17 @@ function initAdminApp() {
 
           const colActions = document.createElement("div");
           colActions.className = "product-mini-actions";
-
-          const moveUpProdBtn = document.createElement("button");
-          moveUpProdBtn.className = "btn-ghost btn-ghost--icon";
-          moveUpProdBtn.type = "button";
-          moveUpProdBtn.textContent = "↑";
-          moveUpProdBtn.title = "Mută produsul în sus";
-          moveUpProdBtn.onclick = () => {
-            if (prodIndex <= 0) return;
-            const arr = cat.products;
-            const tmp = arr[prodIndex - 1];
-            arr[prodIndex - 1] = arr[prodIndex];
-            arr[prodIndex] = tmp;
-            renderShopEditor();
-          };
-
-          const moveDownProdBtn = document.createElement("button");
-          moveDownProdBtn.className = "btn-ghost btn-ghost--icon";
-          moveDownProdBtn.type = "button";
-          moveDownProdBtn.textContent = "↓";
-          moveDownProdBtn.title = "Mută produsul în jos";
-          moveDownProdBtn.onclick = () => {
-            const arr = cat.products;
-            if (prodIndex >= arr.length - 1) return;
-            const tmp = arr[prodIndex + 1];
-            arr[prodIndex + 1] = arr[prodIndex];
-            arr[prodIndex] = tmp;
-            renderShopEditor();
-          };
-
-          const dupProdBtn = document.createElement("button");
-          dupProdBtn.className = "btn-ghost btn-ghost--icon";
-          dupProdBtn.type = "button";
-          dupProdBtn.textContent = "⧉";
-          dupProdBtn.title = "Duplichază produsul";
-          dupProdBtn.onclick = () => {
-            const clone = {
-              ...prod,
-              id: "prod_" + Date.now(),
-            };
-            cat.products.splice(prodIndex + 1, 0, clone);
-            renderShopEditor();
-          };
-
           const delProdBtn = document.createElement("button");
-          delProdBtn.className = "btn-ghost btn-ghost--icon";
+          delProdBtn.className = "btn-ghost";
           delProdBtn.style.fontSize = "10px";
           delProdBtn.textContent = "X";
-          delProdBtn.type = "button";
           delProdBtn.onclick = () => {
             if (confirm("Ștergi produsul?")) {
               cat.products.splice(prodIndex, 1);
+              markShopDirty();
               renderShopEditor();
             }
           };
-
-          colActions.appendChild(moveUpProdBtn);
-          colActions.appendChild(moveDownProdBtn);
-          colActions.appendChild(dupProdBtn);
           colActions.appendChild(delProdBtn);
 
           row.appendChild(colName);
@@ -1526,6 +1467,7 @@ function initAdminApp() {
           descInput.value = prod.description || "";
           descInput.addEventListener("input", () => {
             prod.description = descInput.value;
+            markShopDirty();
           });
           descRow.appendChild(descInput);
 
@@ -1541,7 +1483,6 @@ function initAdminApp() {
         addProdBtn.className = "btn-ghost";
         addProdBtn.style.fontSize = "11px";
         addProdBtn.textContent = "+ Produs";
-        addProdBtn.type = "button";
         addProdBtn.onclick = () => {
           cat.products.push({
             id: "prod_" + Date.now(),
@@ -1551,6 +1492,7 @@ function initAdminApp() {
             min_qty: 1,
             max_qty: 1,
           });
+          markShopDirty();
           renderShopEditor();
         };
 
@@ -1566,58 +1508,10 @@ function initAdminApp() {
     updateShopMetrics();
   }
 
-  function validateShop() {
-    const issues = [];
-    if (!CURRENT_SHOP || !CURRENT_SHOP.categories) return issues;
-    CURRENT_SHOP.categories.forEach((cat, ci) => {
-      const catName = (cat.name || "").trim();
-      if (!catName) {
-        issues.push(`Categoria ${ci + 1} nu are nume.`);
-      }
-      (cat.products || []).forEach((prod, pi) => {
-        const pName = (prod.name || "").trim();
-        if (!pName) {
-          issues.push(
-            `Produsul ${pi + 1} din categoria "${catName || "fără nume"}" nu are nume.`
-          );
-        }
-        if (!prod.price || prod.price <= 0) {
-          issues.push(
-            `Produsul "${pName || "#" + (pi + 1)}" din categoria "${
-              catName || "fără nume"
-            }" are preț invalid.`
-          );
-        }
-        if (!prod.min_qty || prod.min_qty <= 0) {
-          issues.push(
-            `Produsul "${pName || "#" + (pi + 1)}" are cantitate minimă invalidă.`
-          );
-        }
-        if (!prod.max_qty || prod.max_qty < prod.min_qty) {
-          issues.push(
-            `Produsul "${pName || "#" + (pi + 1)}" are max < min.`
-          );
-        }
-      });
-    });
-    return issues;
-  }
-
   async function saveShop() {
     if (!CURRENT_SHOP) return;
-    shopStatusBarEl.textContent = "Se verifică și se salvează shop-ul...";
+    shopStatusBarEl.textContent = "Se salvează shop-ul...";
     shopStatusBarEl.className = "status-bar";
-
-    const issues = validateShop();
-    if (issues.length > 0) {
-      const msg =
-        issues.slice(0, 3).join(" · ") +
-        (issues.length > 3 ? ` · și încă ${issues.length - 3} probleme.` : "");
-      shopStatusBarEl.textContent =
-        "Verifică shop-ul înainte de salvare: " + msg;
-      shopStatusBarEl.className = "status-bar status-error";
-      return;
-    }
 
     try {
       const res = await apiCall("admin_save_shop", { shop: CURRENT_SHOP });
@@ -1630,11 +1524,10 @@ function initAdminApp() {
       shopStatusBarEl.textContent = "Shop salvat.";
       shopStatusBarEl.className = "status-bar status-ok";
 
-      bumpAdminActive();
+      SHOP_EDIT_MODE = false;
 
-      const snap = await pollAdminCore();
+      bumpAdminActive();
       adminPoller.bumpFast();
-      return snap;
     } catch (err) {
       console.error("admin_save_shop error:", err);
       shopStatusBarEl.textContent = "Eroare la comunicarea cu serverul.";
@@ -1649,37 +1542,18 @@ function initAdminApp() {
       name: "Categorie nouă",
       description: "",
       products: [],
-      _collapsed: false,
     });
+    markShopDirty();
     renderShopEditor();
   }
 
   addCategoryBtn?.addEventListener("click", addCategory);
   saveShopBtn?.addEventListener("click", saveShop);
 
-  collapseAllBtn?.addEventListener("click", () => {
-    if (!CURRENT_SHOP || !CURRENT_SHOP.categories) return;
-    CURRENT_SHOP.categories.forEach((c) => {
-      c._collapsed = true;
-    });
-    renderShopEditor();
-  });
-
-  expandAllBtn?.addEventListener("click", () => {
-    if (!CURRENT_SHOP || !CURRENT_SHOP.categories) return;
-    CURRENT_SHOP.categories.forEach((c) => {
-      c._collapsed = false;
-    });
-    renderShopEditor();
-  });
-
   /* ---------- CORE POLL ADMIN (folosit de smartPoll) ---------- */
 
   async function pollAdminCore() {
-    if (!ADMIN_TOKEN) {
-      setLiveIndicator(false);
-      return { tickets: ALL_TICKETS, shop: CURRENT_SHOP };
-    }
+    if (!ADMIN_TOKEN) return { tickets: ALL_TICKETS, shop: CURRENT_SHOP };
 
     try {
       const res = await apiCall("admin_get_tickets", {});
@@ -1688,34 +1562,45 @@ function initAdminApp() {
           userLineEl.innerHTML =
             "<span style='color:#ff5252;'>Token invalid.</span>";
         }
-        setLiveIndicator(false);
         return { tickets: ALL_TICKETS, shop: CURRENT_SHOP };
       }
 
-      setLiveIndicator(true);
-      lastSyncAt = new Date();
-      updateSyncLine();
+      const newTickets = res.tickets || [];
+      const newShop = res.shop || { categories: [] };
 
-      ALL_TICKETS = res.tickets || [];
-      CURRENT_SHOP = res.shop || { categories: [] };
+      const snapshot = { tickets: newTickets, shop: newShop };
+      const snapshotStr = JSON.stringify(snapshot);
 
-      updateTicketStats();
-      renderTicketsList();
-      renderShopEditor();
+      const changed = snapshotStr !== lastAdminSnapshotJSON;
+      lastAdminSnapshotJSON = snapshotStr;
 
-      if (SELECTED_TICKET_ID) {
-        const t = ALL_TICKETS.find((x) => x.id === SELECTED_TICKET_ID);
-        if (t) {
-          selectTicket(t.id);
+      if (changed) {
+        ALL_TICKETS = newTickets;
+
+        // shop-ul îl actualizăm doar dacă nu editezi local (fără flick în timp ce tastezi)
+        if (!SHOP_EDIT_MODE) {
+          CURRENT_SHOP = newShop;
+        }
+
+        updateTicketStats();
+        renderTicketsList();
+        if (!SHOP_EDIT_MODE) {
+          renderShopEditor();
+        }
+
+        if (SELECTED_TICKET_ID) {
+          const t = ALL_TICKETS.find((x) => x.id === SELECTED_TICKET_ID);
+          if (t) {
+            selectTicket(t.id);
+          }
         }
       }
 
-      return { tickets: ALL_TICKETS, shop: CURRENT_SHOP };
+      return snapshot;
     } catch (err) {
       console.error("admin_get_tickets error:", err);
       userLineEl.innerHTML =
         "<span style='color:#ff5252;'>Eroare la rețea.</span>";
-      setLiveIndicator(false);
       return { tickets: ALL_TICKETS, shop: CURRENT_SHOP };
     }
   }
@@ -1743,20 +1628,21 @@ function initAdminApp() {
     }
   );
 
-  // filtre – doar redesenează din datele existente, fără request nou
+  /* ---------- FILTRE ---------- */
+
   function onFilterChange() {
     renderTicketsList();
   }
 
   let searchTimeout = null;
   filterStatusEl?.addEventListener("change", onFilterChange);
-  filterSortEl?.addEventListener("change", onFilterChange);
   filterSearchEl?.addEventListener("input", () => {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(onFilterChange, 150);
   });
 
-  // schimbare de tab în admin (chat / shop)
+  /* ---------- TAB CHANGE ADMIN ---------- */
+
   window.onAdminTabChange = () => {
     if (isAnyAdminTabActive()) {
       bumpAdminActive();
@@ -1782,16 +1668,12 @@ function initAdminApp() {
 
   async function initAdmin() {
     renderTokenInfo();
-    if (!ADMIN_TOKEN) {
-      setLiveIndicator(false);
-      return;
-    }
+    if (!ADMIN_TOKEN) return;
 
     await pollAdminCore();
     bumpAdminActive();
     adminPoller.start();
   }
 
-  setLiveIndicator(false);
   initAdmin();
 }
