@@ -20,7 +20,8 @@
           <span>Shop & Chat</span>
         </div>
         <div class="credits">
-          Credite: <span class="value" id="creditsValue">-</span>
+          <span>Credite disponibile</span>
+          <span class="value" id="creditsValue">-</span>
         </div>
       </div>
 
@@ -32,13 +33,17 @@
       <p class="user-line" id="userLine">Se încarcă utilizatorul...</p>
 
       <div class="tabs tabs--user">
-        <button class="tab-btn active" data-tab="shopTab">Shop</button>
-        <button class="tab-btn" data-tab="ticketsTab">Tichete</button>
+        <button class="tab-btn active" data-tab="shopTab">
+          <span>Shop</span>
+        </button>
+        <button class="tab-btn" data-tab="ticketsTab">
+          <span>Tichete</span>
+        </button>
       </div>
 
       <!-- SHOP TAB -->
       <div id="shopTab" class="tab-section active">
-        <div class="section-title">Shop · Categorii</div>
+        <div class="section-title">Produse</div>
         <div id="categoriesContainer" class="categories"></div>
 
         <div id="productPanel" class="product-panel" style="display:none;">
@@ -60,33 +65,34 @@
         </div>
       </div>
 
-      <!-- TICKETS TAB – stil Discord, cu burger + drawer lateral -->
+      <!-- TICKETS TAB -->
       <div id="ticketsTab" class="tab-section">
-        <!-- header special pentru tab-ul de tichete -->
+        <!-- titlu + buton 3 linii (burger) ca la Discord -->
         <div class="section-title section-title--tickets">
           <div class="tickets-title-left">
-            <button class="tickets-menu-toggle" id="ticketsMenuToggle" aria-label="Deschide lista de tichete">
+            <button
+              id="ticketsMenuToggle"
+              class="tickets-menu-toggle"
+              type="button"
+              aria-label="Deschide lista de tichete"
+            >
               <span></span>
               <span></span>
               <span></span>
             </button>
-            <span>Tichetele mele</span>
+            <span>Tichete & Chat</span>
           </div>
         </div>
 
-        <!-- layout: listă tichete + chat (Discord-like) -->
         <div class="chat-layout">
-          <!-- acest sidebar devine drawer animat pe mobil -->
           <div class="chat-sidebar" id="chatList"></div>
-
-          <!-- zona de chat tichet -->
           <div class="chat-main">
             <div class="chat-header" id="chatHeader">
               <span>Niciun tichet selectat</span>
             </div>
             <div class="chat-messages" id="chatMessages"></div>
             <div class="chat-input">
-              <!-- JS-ul va injecta bara de reply + .chat-input-row -->
+              <!-- JS va injecta bara de reply + va pune input + buton pe un rând -->
               <input
                 id="chatInput"
                 placeholder="Scrie un mesaj către admin..."
@@ -97,11 +103,8 @@
           </div>
         </div>
 
-        <!-- backdrop pentru când drawer-ul cu tichete e deschis (mobile) -->
+        <!-- backdrop pentru drawer-ul cu tichete pe mobil -->
         <div class="tickets-backdrop" id="ticketsBackdrop"></div>
-
-        <!-- info sub chat -->
-        <div class="tickets-info" id="ticketsInfo"></div>
       </div>
 
       <div class="footer">
