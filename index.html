@@ -31,8 +31,7 @@
 
       <p class="user-line" id="userLine">Se încarcă utilizatorul...</p>
 
-      <!-- Tabs user (Shop / Tichete) -->
-      <div class="tabs tabs--user" data-active="shopTab">
+      <div class="tabs tabs--user">
         <button class="tab-btn active" data-tab="shopTab">Shop</button>
         <button class="tab-btn" data-tab="ticketsTab">Tichete</button>
       </div>
@@ -63,32 +62,31 @@
 
       <!-- TICKETS TAB -->
       <div id="ticketsTab" class="tab-section">
-        <!-- titlu + hamburger pe mobil -->
-        <div class="section-title-row">
-          <div class="section-title">Tichetele mele</div>
+        <div class="section-title">Tichetele mele</div>
+
+        <!-- BARĂ MOBILĂ TIP DISCORD (burger stânga sus) -->
+        <div class="tickets-mobile-bar">
           <button
-            class="tickets-menu-btn"
-            id="ticketsMenuBtn"
+            class="tickets-menu-toggle"
+            id="ticketsMenuToggle"
             aria-label="Deschide lista de tichete"
           >
             <span></span>
             <span></span>
             <span></span>
           </button>
+          <span class="tickets-mobile-title">Tichete</span>
         </div>
 
         <div class="chat-layout">
-          <!-- sidebar clasic (desktop / tablet) -->
           <div class="chat-sidebar" id="chatList"></div>
-
-          <!-- zona principală chat -->
           <div class="chat-main">
             <div class="chat-header" id="chatHeader">
               <span>Niciun tichet selectat</span>
             </div>
             <div class="chat-messages" id="chatMessages"></div>
             <div class="chat-input">
-              <!-- bara de reply + input + buton sunt injectate de JS -->
+              <!-- aici JS-ul va injecta bara de reply + .chat-input-row ca la admin -->
               <input
                 id="chatInput"
                 placeholder="Scrie un mesaj către admin..."
@@ -98,6 +96,22 @@
             </div>
           </div>
         </div>
+
+        <!-- DRAWER MOBIL STIL DISCORD, APROAPE FULL SCREEN -->
+        <div class="tickets-drawer" id="ticketsDrawer">
+          <div class="tickets-drawer-header">
+            <span class="tickets-drawer-title">Tichetele mele</span>
+            <button
+              class="tickets-drawer-close"
+              id="ticketsDrawerClose"
+              aria-label="Închide lista de tichete"
+            >
+              ×
+            </button>
+          </div>
+          <div class="tickets-drawer-list" id="ticketsDrawerList"></div>
+        </div>
+
         <div class="tickets-info" id="ticketsInfo"></div>
       </div>
 
@@ -105,24 +119,6 @@
         <span>MiniApp · shop & chat</span>
         <span class="dot-red"></span>
       </div>
-    </div>
-  </div>
-
-  <!-- DRAWER MOBILE pentru tichete (stil Discord) -->
-  <div id="ticketsDrawer" class="tickets-drawer">
-    <div class="tickets-drawer-panel">
-      <div class="tickets-drawer-header">
-        <div class="tickets-drawer-title">Tichetele mele</div>
-        <button
-          id="ticketsDrawerClose"
-          class="tickets-drawer-close"
-          aria-label="Închide lista de tichete"
-        >
-          ×
-        </button>
-      </div>
-      <!-- listă tichete pentru mobil, populată identic cu chatList -->
-      <div class="tickets-drawer-body" id="chatListMobile"></div>
     </div>
   </div>
 
