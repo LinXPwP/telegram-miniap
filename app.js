@@ -1,4 +1,4 @@
-// app.js – versiune cu Discord-like chat, reply / edit / delete funcționale
+// app.js – versiune cu Discord-like chat, reply / edit / delete funcționale + unread badge + "Mesaj șters" în listă
 
 // URL-ul Netlify / API (proxy către bot.py)
 const API_URL = "https://api.redgen.vip/";
@@ -206,14 +206,12 @@ function renderDiscordMessages(messages, options) {
   const wasNearBottom = isNearBottom(container);
   container.innerHTML = "";
 
-  const list = messages || [];
-
   const msgById = {};
-  list.forEach((m) => {
+  (messages || []).forEach((m) => {
     if (m && m.id) msgById[m.id] = m;
   });
 
-  list.forEach((m) => {
+  (messages || []).forEach((m) => {
     if (!m) return;
 
     const row = document.createElement("div");
@@ -249,23 +247,21 @@ function renderDiscordMessages(messages, options) {
     const bubble = document.createElement("div");
     bubble.className = "msg-bubble";
 
-    // preview reply, dacă există – ca în Discord
+    // preview reply, dacă există
     if (m.reply_to && msgById[m.reply_to]) {
       const origin = msgById[m.reply_to];
       const preview = document.createElement("div");
       preview.className = "msg-reply-preview";
-
       const strong = document.createElement("strong");
       strong.textContent = origin.sender || "User";
       preview.appendChild(strong);
-
       const txt = document.createElement("span");
-      txt.textContent = (origin.text || "").slice(0, 80);
+      txt.textContent = (origin.text || "").slice(0, 60);
       preview.appendChild(txt);
 
       preview.addEventListener("click", (e) => {
         e.stopPropagation();
-        if (typeof onJumpTo === "function" && origin.id) {
+        if (typeof onJumpTo === "function") {
           onJumpTo(origin.id);
         }
       });
@@ -290,7 +286,7 @@ function renderDiscordMessages(messages, options) {
       bubble.appendChild(meta);
     }
 
-    // acțiuni (Reply/Edit/Del) doar dacă avem drepturi
+    // acțiuni (Reply/Edit/Del) doar dacă avem drepturi și nu e mesaj șters
     if (!m.deleted && (canReply || canEditDelete)) {
       const actions = document.createElement("div");
       actions.className = "msg-actions";
@@ -651,10 +647,13 @@ function initUserApp() {
     }
   }
 
+  // !!!!! MODIFICAT – ia în calcul mesajele șterse
   function getTicketLastMessage(t) {
     const msgs = t.messages || [];
     if (msgs.length === 0) return "";
-    return msgs[msgs.length - 1].text || "";
+    const last = msgs[msgs.length - 1];
+    if (last.deleted) return "Mesaj șters";
+    return last.text || "";
   }
 
   function renderTicketsList() {
@@ -1035,6 +1034,30 @@ function initAdminApp() {
   let CURRENT_SHOP = null;
   let SELECTED_TICKET_ID = null;
 
+  // ===== UNREAD STATE (admin) =====
+  let ticketSeenCounts = {};
+  const SEEN_STORAGE_KEY = "admin_seen_counts_v1";
+
+  function loadSeenCounts() {
+    try {
+      const raw = window.localStorage?.getItem(SEEN_STORAGE_KEY);
+      if (!raw) return {};
+      const obj = JSON.parse(raw);
+      return obj && typeof obj === "object" ? obj : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function saveSeenCounts() {
+    try {
+      window.localStorage?.setItem(
+        SEEN_STORAGE_KEY,
+        JSON.stringify(ticketSeenCounts)
+      );
+    } catch (e) {}
+  }
+
   let adminActiveUntil = 0;
   function bumpAdminActive(extraMs = 30000) {
     const now = Date.now();
@@ -1112,10 +1135,13 @@ function initAdminApp() {
 
   /* ---------- CHAT ADMIN ---------- */
 
+  // !!!!! MODIFICAT – ia în calcul mesajele șterse
   function getTicketLastMessage(t) {
     const msgs = t.messages || [];
     if (msgs.length === 0) return "";
-    return msgs[msgs.length - 1].text || "";
+    const last = msgs[msgs.length - 1];
+    if (last.deleted) return "Mesaj șters";
+    return last.text || "";
   }
 
   function renderTicketsList() {
@@ -1161,6 +1187,19 @@ function initAdminApp() {
       headerRow.appendChild(title);
       headerRow.appendChild(statusChip);
 
+      // ===== UNREAD BADGE (admin) =====
+      const totalMsgs = (t.messages || []).length;
+      const seen = ticketSeenCounts[t.id] || 0;
+      let unread = totalMsgs - seen;
+      if (unread < 0) unread = 0;
+
+      if (unread > 0 && t.status === "open") {
+        const unreadBadge = document.createElement("span");
+        unreadBadge.className = "unread-badge";
+        unreadBadge.textContent = unread > 9 ? "9+" : String(unread);
+        headerRow.appendChild(unreadBadge);
+      }
+
       const lastMsg = getTicketLastMessage(t);
       const line = document.createElement("div");
       line.className = "chat-item-line";
@@ -1183,13 +1222,13 @@ function initAdminApp() {
 
   function selectTicket(ticketId) {
     SELECTED_TICKET_ID = ticketId;
-    renderTicketsList();
 
     const t = ALL_TICKETS.find((x) => x.id === ticketId);
     if (!t) {
       ticketDetailsEl.style.display = "none";
       chatHeaderEl.innerHTML = "<span>Niciun tichet selectat</span>";
       chatMessagesEl.innerHTML = "";
+      renderTicketsList();
       return;
     }
 
@@ -1225,6 +1264,13 @@ function initAdminApp() {
 
     ticketStatusBarEl.textContent = "";
     ticketStatusBarEl.className = "status-bar";
+
+    // marcam toate mesajele ca citite pentru acest tichet
+    ticketSeenCounts[t.id] = (t.messages || []).length;
+    saveSeenCounts();
+
+    // re-randăm lista ca să dispară badge-ul unread
+    renderTicketsList();
   }
 
   function renderAdminMessages(ticket) {
@@ -1243,9 +1289,7 @@ function initAdminApp() {
 
   async function sendAdminMessage() {
     const text = chatInputEl.value.trim();
-    const activeTicketId = adminMode.ticketId || SELECTED_TICKET_ID;
-
-    if (!text || !activeTicketId) return;
+    if (!text || !SELECTED_TICKET_ID) return;
 
     const modeType = adminMode.type;
     const msgId = adminMode.messageId;
@@ -1254,9 +1298,9 @@ function initAdminApp() {
       let res;
 
       if (modeType === "edit" && msgId) {
-        // EDITARE – nu trimitem mesaj nou
+        // EDIT
         res = await apiCall("admin_edit_message", {
-          ticket_id: activeTicketId,
+          ticket_id: SELECTED_TICKET_ID,
           message_id: msgId,
           text,
         });
@@ -1265,7 +1309,7 @@ function initAdminApp() {
         const reply_to =
           modeType === "reply" && msgId ? msgId : null;
         res = await apiCall("admin_send_message", {
-          ticket_id: activeTicketId,
+          ticket_id: SELECTED_TICKET_ID,
           text,
           sender: "Admin",
           reply_to,
@@ -1286,12 +1330,13 @@ function initAdminApp() {
       }
 
       updateTicketStats();
-      renderTicketsList();
-      selectTicket(updated.id);
-
+      // selectTicket va marca și ca read
       chatInputEl.value = "";
       clearAdminMode();
       bumpAdminActive();
+
+      // re-selectăm tichetul ca să refacem UI + seenCounts
+      selectTicket(updated.id);
 
       const snap = await pollAdminCore();
       adminPoller.bumpFast();
@@ -1328,9 +1373,12 @@ function initAdminApp() {
       if (idx >= 0) ALL_TICKETS[idx] = updated;
 
       updateTicketStats();
-      renderTicketsList();
+
+      // dacă tocmai vizualizam acest tichet, îl re-selectăm (marchează și read)
       if (SELECTED_TICKET_ID === updated.id) {
         selectTicket(updated.id);
+      } else {
+        renderTicketsList();
       }
 
       bumpAdminActive();
@@ -1714,6 +1762,7 @@ function initAdminApp() {
       if (SELECTED_TICKET_ID) {
         const t = ALL_TICKETS.find((x) => x.id === SELECTED_TICKET_ID);
         if (t) {
+          // selectTicket va marca și ca read
           selectTicket(t.id);
         }
       }
@@ -1782,6 +1831,8 @@ function initAdminApp() {
   async function initAdmin() {
     renderTokenInfo();
     if (!ADMIN_TOKEN) return;
+
+    ticketSeenCounts = loadSeenCounts();
 
     await pollAdminCore();
     bumpAdminActive();
