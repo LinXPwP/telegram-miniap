@@ -1,11 +1,23 @@
-// app.js – Discord-like chat + reply / edit / delete
+// app.js – versiune cu Discord-like chat, reply / edit / delete funcționale
 
+// URL-ul Netlify / API (proxy către bot.py)
 const API_URL = "https://api.redgen.vip/";
 
 /* ============================
-   SMART POLL
+   HELPER – SMART POLLING
    ============================ */
-
+/**
+ * createSmartPoll:
+ *  - fetchFn: async () => snapshot (or undefined). Trebuie să facă și update de UI.
+ *  - isEnabledFn: () => boolean – dacă e false, nu se face request (tab închis, fereastră inactivă etc.)
+ *  - options:
+ *      minInterval   – ms, ex 3000
+ *      maxInterval   – ms, ex 8000
+ *      backoffStep   – ms, ex 2000
+ *      idleThreshold – de câte ori la rând fără schimbări până creștem intervalul
+ *
+ *  snapshot-ul e comparat (JSON.stringify) cu cel anterior ca să vedem dacă s-a schimbat ceva.
+ */
 function createSmartPoll(fetchFn, isEnabledFn, options = {}) {
   const minInterval = options.minInterval ?? 3000;
   const maxInterval = options.maxInterval ?? 8000;
@@ -80,15 +92,16 @@ function createSmartPoll(fetchFn, isEnabledFn, options = {}) {
 }
 
 /* ============================
-   BOOTSTRAP
+   BOOTSTRAP – Tabs + init
    ============================ */
 
 document.addEventListener("DOMContentLoaded", () => {
   const pageType = document.body.dataset.page;
 
-  // Tabs
+  // Tabs – segmented control, sincronizat cu CSS (data-active)
   document.querySelectorAll(".tabs").forEach((tabs) => {
     const buttons = tabs.querySelectorAll(".tab-btn");
+
     let activeBtn =
       tabs.querySelector(".tab-btn.active") || tabs.querySelector(".tab-btn");
     if (activeBtn) {
@@ -124,12 +137,15 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  if (pageType === "user") initUserApp();
-  if (pageType === "admin") initAdminApp();
+  if (pageType === "user") {
+    initUserApp();
+  } else if (pageType === "admin") {
+    initAdminApp();
+  }
 });
 
 /* ============================
-   UTIL
+   UTIL – API + timp + scroll
    ============================ */
 
 function formatTimestamp(ts) {
@@ -139,9 +155,9 @@ function formatTimestamp(ts) {
   const day = String(d.getDate()).padStart(2, "0");
   const month = String(d.getMonth() + 1).padStart(2, "0");
   const year = String(d.getFullYear()).slice(-2);
-  const h = String(d.getHours()).padStart(2, "0");
-  const m = String(d.getMinutes()).padStart(2, "0");
-  return `${day}/${month}/${year}, ${h}:${m}`;
+  const hours = String(d.getHours()).padStart(2, "0");
+  const mins = String(d.getMinutes()).padStart(2, "0");
+  return `${day}/${month}/${year}, ${hours}:${mins}`;
 }
 
 function isNearBottom(container, thresholdPx = 80) {
@@ -150,20 +166,34 @@ function isNearBottom(container, thresholdPx = 80) {
   return scrollHeight - (scrollTop + clientHeight) < thresholdPx;
 }
 
-function smartScrollToBottom(container, wasNearBottomOrForce) {
+function smartScrollToBottom(container, force = false) {
   if (!container) return;
-  if (wasNearBottomOrForce) {
+  if (force || isNearBottom(container)) {
     container.scrollTop = container.scrollHeight;
   }
 }
 
 /* ============================
-   DISCORD-LIKE RENDERER
+   SHARED – Discord-like renderer
    ============================ */
 
+/**
+ * Render mesaje în stil Discord.
+ * options:
+ *  - container: element .chat-messages
+ *  - ticket: tichetul curent
+ *  - messages: array de mesaje
+ *  - canReply: bool
+ *  - canEditDelete: bool (doar admin & doar pe mesaje admin)
+ *  - onReply(msg)
+ *  - onEdit(msg)
+ *  - onDelete(msg)
+ *  - onJumpTo(messageId)
+ */
 function renderDiscordMessages(messages, options) {
   const {
     container,
+    ticket,
     canReply,
     canEditDelete,
     onReply,
@@ -181,7 +211,7 @@ function renderDiscordMessages(messages, options) {
     if (m && m.id) msgById[m.id] = m;
   });
 
-  (messages || []).forEach((m) => {
+  messages.forEach((m) => {
     const row = document.createElement("div");
     row.className = "msg-row";
     row.dataset.messageId = m.id || "";
@@ -194,62 +224,44 @@ function renderDiscordMessages(messages, options) {
     const content = document.createElement("div");
     content.className = "msg-content";
 
-    // header: username + time
-    const header = document.createElement("div");
-    header.className = "msg-header";
+    const headerLine = document.createElement("div");
+    headerLine.className = "msg-header-line";
 
-    const usernameEl = document.createElement("span");
-    usernameEl.className = "msg-username";
-    if (m.from === "admin") usernameEl.classList.add("msg-username--admin");
-    usernameEl.textContent = senderName;
+    const userEl = document.createElement("span");
+    userEl.className = "msg-username";
+    if (m.from === "admin") userEl.classList.add("msg-username--admin");
+    userEl.textContent = senderName;
 
     const tsEl = document.createElement("span");
     tsEl.className = "msg-timestamp";
     tsEl.textContent = formatTimestamp(m.ts);
 
-    header.appendChild(usernameEl);
-    header.appendChild(tsEl);
+    headerLine.appendChild(userEl);
+    headerLine.appendChild(tsEl);
 
-    // bubble
     const bubble = document.createElement("div");
     bubble.className = "msg-bubble";
 
-    // REPLY preview (Discord style)
+    // preview reply, dacă există
     if (m.reply_to && msgById[m.reply_to]) {
       const origin = msgById[m.reply_to];
+      const preview = document.createElement("div");
+      preview.className = "msg-reply-preview";
+      const strong = document.createElement("strong");
+      strong.textContent = origin.sender || "User";
+      preview.appendChild(strong);
+      const txt = document.createElement("span");
+      txt.textContent = (origin.text || "").slice(0, 60);
+      preview.appendChild(txt);
 
-      const replyBar = document.createElement("div");
-      replyBar.className = "msg-reply-preview";
-
-      const leftBar = document.createElement("div");
-      leftBar.className = "msg-reply-bar";
-      replyBar.appendChild(leftBar);
-
-      const replyBody = document.createElement("div");
-      replyBody.className = "msg-reply-body";
-
-      const replyHeader = document.createElement("div");
-      replyHeader.className = "msg-reply-header";
-      const replyUser = document.createElement("span");
-      replyUser.className = "msg-reply-username";
-      replyUser.textContent = origin.sender || "User";
-      replyHeader.appendChild(replyUser);
-
-      const replyText = document.createElement("div");
-      replyText.className = "msg-reply-text";
-      replyText.textContent = (origin.text || "").slice(0, 120);
-
-      replyBody.appendChild(replyHeader);
-      replyBody.appendChild(replyText);
-
-      replyBar.appendChild(replyBody);
-
-      replyBar.addEventListener("click", (e) => {
+      preview.addEventListener("click", (e) => {
         e.stopPropagation();
-        if (typeof onJumpTo === "function") onJumpTo(origin.id);
+        if (typeof onJumpTo === "function") {
+          onJumpTo(origin.id);
+        }
       });
 
-      bubble.appendChild(replyBar);
+      bubble.appendChild(preview);
     }
 
     const textEl = document.createElement("div");
@@ -258,31 +270,31 @@ function renderDiscordMessages(messages, options) {
       textEl.classList.add("msg-text--deleted");
       textEl.textContent = "Mesaj șters";
     } else {
-      textEl.textContent = m.text || "";
+      textEl.textContent = m.text;
     }
     bubble.appendChild(textEl);
 
     if (m.edited && !m.deleted) {
-      const meta = document.createElement("span");
+      const meta = document.createElement("div");
       meta.className = "msg-meta";
-      meta.textContent = "(editat)";
+      meta.textContent = "editat";
       bubble.appendChild(meta);
     }
 
-    // actions (Reply / Edit / Del) – pe dreapta la hover
+    // acțiuni (Reply/Edit/Del) doar dacă avem drepturi
     if (!m.deleted && (canReply || canEditDelete)) {
       const actions = document.createElement("div");
       actions.className = "msg-actions";
 
       if (canReply) {
-        const btn = document.createElement("button");
-        btn.className = "msg-action-btn";
-        btn.textContent = "Reply";
-        btn.addEventListener("click", (e) => {
+        const replyBtn = document.createElement("button");
+        replyBtn.className = "msg-action-btn";
+        replyBtn.textContent = "Reply";
+        replyBtn.addEventListener("click", (e) => {
           e.stopPropagation();
           if (typeof onReply === "function") onReply(m);
         });
-        actions.appendChild(btn);
+        actions.appendChild(replyBtn);
       }
 
       if (canEditDelete && m.from === "admin") {
@@ -308,12 +320,10 @@ function renderDiscordMessages(messages, options) {
       bubble.appendChild(actions);
     }
 
-    content.appendChild(header);
+    content.appendChild(headerLine);
     content.appendChild(bubble);
-
     row.appendChild(avatar);
     row.appendChild(content);
-
     container.appendChild(row);
   });
 
@@ -328,11 +338,13 @@ function scrollToMessageElement(container, messageId) {
   if (!row) return;
   row.classList.add("msg-row--highlight");
   row.scrollIntoView({ behavior: "smooth", block: "center" });
-  setTimeout(() => row.classList.remove("msg-row--highlight"), 1200);
+  setTimeout(() => {
+    row.classList.remove("msg-row--highlight");
+  }, 1200);
 }
 
 /* ============================
-   USER MINIAPP
+   USER MINIAPP (index.html)
    ============================ */
 
 function initUserApp() {
@@ -371,55 +383,67 @@ function initUserApp() {
   const chatSendBtn = document.getElementById("chatSendBtn");
   const ticketsInfoEl = document.getElementById("ticketsInfo");
 
-  // bară mod (reply) – user
+  // bară „reply” user (fără edit/delete)
   const chatInputContainer = document.querySelector(
-    '#ticketsTab .chat-input'
+    '#ticketsTab .chat-input, .chat-input'
   );
   let userModeBar = null;
-  let userMode = null; // { type: "reply", messageId, sender, text }
+  let userMode = {
+    type: null, // "reply" sau null
+    messageId: null,
+    previewText: "",
+    sender: "",
+  };
 
-  if (chatInputContainer) {
+  if (chatInputContainer && !chatInputContainer.querySelector(".chat-mode-bar")) {
     userModeBar = document.createElement("div");
     userModeBar.className = "chat-mode-bar";
     userModeBar.style.display = "none";
-
-    const span = document.createElement("div");
+    const span = document.createElement("span");
     span.className = "chat-mode-text";
-
-    const cancelBtn = document.createElement("button");
-    cancelBtn.className = "btn-ghost chat-mode-cancel";
-    cancelBtn.textContent = "Cancel";
-    cancelBtn.onclick = () => clearUserMode();
-
+    const btn = document.createElement("button");
+    btn.className = "btn-ghost";
+    btn.style.fontSize = "10px";
+    btn.textContent = "Anulează";
+    btn.addEventListener("click", () => {
+      userMode.type = null;
+      userMode.messageId = null;
+      userMode.previewText = "";
+      userMode.sender = "";
+      userModeBar.style.display = "none";
+    });
     userModeBar.appendChild(span);
-    userModeBar.appendChild(cancelBtn);
+    userModeBar.appendChild(btn);
     chatInputContainer.prepend(userModeBar);
   }
 
   function setUserReplyMode(msg) {
     if (!userModeBar) return;
-    userMode = {
-      type: "reply",
-      messageId: msg.id,
-      sender: msg.sender || "User",
-      text: msg.text || "",
-    };
-    const span = userModeBar.querySelector(".chat-mode-text");
-    span.textContent = `Răspunzi lui ${userMode.sender}: "${userMode.text.slice(
-      0,
-      80
-    )}"`;
+    userMode.type = "reply";
+    userMode.messageId = msg.id;
+    userMode.previewText = (msg.text || "").slice(0, 80);
+    userMode.sender = msg.sender || "User";
+    const textEl = userModeBar.querySelector(".chat-mode-text");
+    textEl.textContent = `Răspunzi lui ${userMode.sender}: "${userMode.previewText}"`;
     userModeBar.style.display = "flex";
     chatInputEl.focus();
   }
 
   function clearUserMode() {
-    userMode = null;
-    if (userModeBar) userModeBar.style.display = "none";
+    if (!userModeBar) return;
+    userMode.type = null;
+    userMode.messageId = null;
+    userMode.previewText = "";
+    userMode.sender = "";
+    userModeBar.style.display = "none";
   }
 
   function apiCall(action, extraPayload = {}) {
-    const payload = { action, user: CURRENT_USER, ...extraPayload };
+    const payload = {
+      action,
+      user: CURRENT_USER,
+      ...extraPayload,
+    };
     return fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -442,7 +466,7 @@ function initUserApp() {
     userLineEl.innerHTML = `Utilizator: <b>${name}</b>`;
   }
 
-  /* SHOP USER */
+  /* ---------- SHOP (user) ---------- */
 
   function renderShop(shop) {
     categoriesContainer.innerHTML = "";
@@ -492,7 +516,7 @@ function initUserApp() {
         main.appendChild(pdesc);
 
         const right = document.createElement("div");
-        right.className = "product-right";
+        right.style.textAlign = "right";
 
         const price = document.createElement("div");
         price.className = "product-price";
@@ -557,7 +581,7 @@ function initUserApp() {
     try {
       const res = await apiCall("buy_product", {
         product_id: prod.id,
-        qty,
+        qty: qty,
       });
 
       if (!res.ok) {
@@ -605,7 +629,7 @@ function initUserApp() {
   panelCloseBtn?.addEventListener("click", closeProductPanel);
   panelBuyBtn?.addEventListener("click", buySelectedProduct);
 
-  /* CHAT USER */
+  /* ---------- CHAT (user) ---------- */
 
   function renderTicketsInfo() {
     if (!CURRENT_TICKETS || CURRENT_TICKETS.length === 0) {
@@ -686,8 +710,13 @@ function initUserApp() {
       <span>${t.product_name} · ${t.qty} buc · total ${t.total_price} credite · status: ${t.status}</span>
     `;
 
-    renderDiscordMessages(t.messages || [], {
+    renderUserMessages(t);
+  }
+
+  function renderUserMessages(ticket) {
+    renderDiscordMessages(ticket.messages || [], {
       container: chatMessagesEl,
+      ticket,
       canReply: true,
       canEditDelete: false,
       onReply: (msg) => setUserReplyMode(msg),
@@ -703,7 +732,9 @@ function initUserApp() {
     if (!text || !SELECTED_TICKET_ID) return;
 
     const reply_to =
-      userMode && userMode.type === "reply" ? userMode.messageId : null;
+      userMode.type === "reply" && userMode.messageId
+        ? userMode.messageId
+        : null;
 
     chatInputEl.value = "";
 
@@ -721,8 +752,11 @@ function initUserApp() {
 
       const updated = res.ticket;
       const idx = CURRENT_TICKETS.findIndex((t) => t.id === updated.id);
-      if (idx >= 0) CURRENT_TICKETS[idx] = updated;
-      else CURRENT_TICKETS.push(updated);
+      if (idx >= 0) {
+        CURRENT_TICKETS[idx] = updated;
+      } else {
+        CURRENT_TICKETS.push(updated);
+      }
 
       renderTicketsList();
       selectTicket(updated.id);
@@ -758,7 +792,9 @@ function initUserApp() {
 
       if (SELECTED_TICKET_ID) {
         const t = CURRENT_TICKETS.find((x) => x.id === SELECTED_TICKET_ID);
-        if (t) selectTicket(t.id);
+        if (t) {
+          selectTicket(t.id);
+        }
       }
       return CURRENT_TICKETS;
     } catch (err) {
@@ -866,7 +902,7 @@ function initUserApp() {
 }
 
 /* ============================
-   ADMIN MINIAPP
+   ADMIN MINIAPP (admin.html)
    ============================ */
 
 function initAdminApp() {
@@ -907,66 +943,83 @@ function initAdminApp() {
   const statOpenEl = document.getElementById("statOpen");
   const statClosedEl = document.getElementById("statClosed");
 
-  // bară mod (reply / edit) – admin
-  const chatInputContainer = document.querySelector("#chatTab .chat-input");
-  let adminModeBar = null;
-  let adminMode = null; // { type: "reply"|"edit", ticketId, messageId, sender, text }
+  const chatInputContainer = document.querySelector(
+    "#chatTab .chat-input"
+  );
 
-  if (chatInputContainer) {
+  // bară pentru reply / edit în admin
+  let adminModeBar = null;
+  const adminMode = {
+    type: null, // "reply" / "edit" / null
+    ticketId: null,
+    messageId: null,
+    previewText: "",
+    sender: "",
+  };
+
+  if (chatInputContainer && !chatInputContainer.querySelector(".chat-mode-bar")) {
     adminModeBar = document.createElement("div");
     adminModeBar.className = "chat-mode-bar";
     adminModeBar.style.display = "none";
 
-    const span = document.createElement("div");
+    const span = document.createElement("span");
     span.className = "chat-mode-text";
 
-    const cancelBtn = document.createElement("button");
-    cancelBtn.className = "btn-ghost chat-mode-cancel";
-    cancelBtn.textContent = "Cancel";
-    cancelBtn.onclick = () => clearAdminMode();
+    const btn = document.createElement("button");
+    btn.className = "btn-ghost";
+    btn.style.fontSize = "10px";
+    btn.textContent = "Anulează";
+    btn.addEventListener("click", () => {
+      clearAdminMode();
+    });
 
     adminModeBar.appendChild(span);
-    adminModeBar.appendChild(cancelBtn);
+    adminModeBar.appendChild(btn);
     chatInputContainer.prepend(adminModeBar);
+
+    // re-aranjăm input + buton într-un rând
+    const row = document.createElement("div");
+    row.className = "chat-input-row";
+    chatInputEl.parentNode.insertBefore(row, chatInputEl);
+    row.appendChild(chatInputEl);
+    row.appendChild(chatSendBtn);
   }
 
   function setAdminReplyMode(ticketId, msg) {
     if (!adminModeBar) return;
-    adminMode = {
-      type: "reply",
-      ticketId,
-      messageId: msg.id,
-      sender: msg.sender || "User",
-      text: msg.text || "",
-    };
-    const span = adminModeBar.querySelector(".chat-mode-text");
-    span.textContent = `Răspunzi lui ${adminMode.sender}: "${adminMode.text.slice(
-      0,
-      80
-    )}"`;
+    adminMode.type = "reply";
+    adminMode.ticketId = ticketId;
+    adminMode.messageId = msg.id;
+    adminMode.previewText = (msg.text || "").slice(0, 80);
+    adminMode.sender = msg.sender || "User";
+    const textEl = adminModeBar.querySelector(".chat-mode-text");
+    textEl.textContent = `Răspunzi lui ${adminMode.sender}: "${adminMode.previewText}"`;
     adminModeBar.style.display = "flex";
     chatInputEl.focus();
   }
 
   function setAdminEditMode(ticketId, msg) {
     if (!adminModeBar) return;
-    adminMode = {
-      type: "edit",
-      ticketId,
-      messageId: msg.id,
-      sender: msg.sender || "Admin",
-      text: msg.text || "",
-    };
-    const span = adminModeBar.querySelector(".chat-mode-text");
-    span.textContent = `Editezi mesajul: "${adminMode.text.slice(0, 80)}"`;
+    adminMode.type = "edit";
+    adminMode.ticketId = ticketId;
+    adminMode.messageId = msg.id;
+    adminMode.previewText = (msg.text || "").slice(0, 80);
+    adminMode.sender = msg.sender || "Admin";
+    const textEl = adminModeBar.querySelector(".chat-mode-text");
+    textEl.textContent = `Editezi mesajul: "${adminMode.previewText}"`;
     adminModeBar.style.display = "flex";
     chatInputEl.value = msg.text || "";
     chatInputEl.focus();
   }
 
   function clearAdminMode() {
-    adminMode = null;
-    if (adminModeBar) adminModeBar.style.display = "none";
+    if (!adminModeBar) return;
+    adminMode.type = null;
+    adminMode.ticketId = null;
+    adminMode.messageId = null;
+    adminMode.previewText = "";
+    adminMode.sender = "";
+    adminModeBar.style.display = "none";
   }
 
   let ALL_TICKETS = [];
@@ -980,7 +1033,11 @@ function initAdminApp() {
   }
 
   function apiCall(action, extraPayload = {}) {
-    const payload = { action, token: ADMIN_TOKEN, ...extraPayload };
+    const payload = {
+      action,
+      token: ADMIN_TOKEN,
+      ...extraPayload,
+    };
     return fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1007,7 +1064,7 @@ function initAdminApp() {
     );
   }
 
-  /* STATISTICI & FILTRE */
+  /* ---------- STATISTICI & FILTRE ---------- */
 
   function updateTicketStats() {
     const total = ALL_TICKETS.length;
@@ -1044,7 +1101,7 @@ function initAdminApp() {
     return list;
   }
 
-  /* CHAT ADMIN */
+  /* ---------- CHAT ADMIN ---------- */
 
   function getTicketLastMessage(t) {
     const msgs = t.messages || [];
@@ -1136,16 +1193,7 @@ function initAdminApp() {
     }</span>
     `;
 
-    renderDiscordMessages(t.messages || [], {
-      container: chatMessagesEl,
-      canReply: true,
-      canEditDelete: true,
-      onReply: (msg) => setAdminReplyMode(t.id, msg),
-      onEdit: (msg) => setAdminEditMode(t.id, msg),
-      onDelete: (msg) => deleteAdminMessage(t.id, msg.id),
-      onJumpTo: (messageId) =>
-        scrollToMessageElement(chatMessagesEl, messageId),
-    });
+    renderAdminMessages(t);
 
     ticketDetailsEl.style.display = "block";
     ticketSummaryEl.innerHTML = `
@@ -1170,33 +1218,41 @@ function initAdminApp() {
     ticketStatusBarEl.className = "status-bar";
   }
 
+  function renderAdminMessages(ticket) {
+    renderDiscordMessages(ticket.messages || [], {
+      container: chatMessagesEl,
+      ticket,
+      canReply: true,
+      canEditDelete: true,
+      onReply: (msg) => setAdminReplyMode(ticket.id, msg),
+      onEdit: (msg) => setAdminEditMode(ticket.id, msg),
+      onDelete: (msg) => deleteAdminMessage(ticket.id, msg.id),
+      onJumpTo: (messageId) =>
+        scrollToMessageElement(chatMessagesEl, messageId),
+    });
+  }
+
   async function sendAdminMessage() {
     const text = chatInputEl.value.trim();
     if (!text || !SELECTED_TICKET_ID) return;
 
+    const modeType = adminMode.type;
+    const msgId = adminMode.messageId;
+
     try {
       let res;
 
-      if (
-        adminMode &&
-        adminMode.type === "edit" &&
-        adminMode.ticketId === SELECTED_TICKET_ID
-      ) {
-        // EDIT EXISTENT
+      if (modeType === "edit" && msgId) {
+        // EDIT
         res = await apiCall("admin_edit_message", {
           ticket_id: SELECTED_TICKET_ID,
-          message_id: adminMode.messageId,
+          message_id: msgId,
           text,
         });
       } else {
         // NEW sau REPLY
         const reply_to =
-          adminMode &&
-          adminMode.type === "reply" &&
-          adminMode.ticketId === SELECTED_TICKET_ID
-            ? adminMode.messageId
-            : null;
-
+          modeType === "reply" && msgId ? msgId : null;
         res = await apiCall("admin_send_message", {
           ticket_id: SELECTED_TICKET_ID,
           text,
@@ -1206,14 +1262,17 @@ function initAdminApp() {
       }
 
       if (!res || !res.ok) {
-        console.error("admin_send / admin_edit error:", res);
+        console.error("admin send/edit error:", res);
         return;
       }
 
       const updated = res.ticket;
       const idx = ALL_TICKETS.findIndex((t) => t.id === updated.id);
-      if (idx >= 0) ALL_TICKETS[idx] = updated;
-      else ALL_TICKETS.push(updated);
+      if (idx >= 0) {
+        ALL_TICKETS[idx] = updated;
+      } else {
+        ALL_TICKETS.push(updated);
+      }
 
       updateTicketStats();
       renderTicketsList();
@@ -1227,7 +1286,7 @@ function initAdminApp() {
       adminPoller.bumpFast();
       return snap;
     } catch (err) {
-      console.error("admin_send / admin_edit error:", err);
+      console.error("admin_send/edit_message error:", err);
     }
   }
 
@@ -1273,7 +1332,7 @@ function initAdminApp() {
     }
   }
 
-  /* ÎNCHIDERE TICHET */
+  /* ---------- Închidere tichet ---------- */
 
   async function closeTicket(noteText) {
     if (!SELECTED_TICKET_ID) return;
@@ -1343,7 +1402,7 @@ function initAdminApp() {
     closeTicket(text);
   });
 
-  /* SHOP EDITOR (admin) – logic neschimbată, doar UI */
+  /* ---------- SHOP EDITOR ADMIN (nemodificat logic) ---------- */
 
   function updateShopMetrics() {
     if (!shopMetricsEl) return;
@@ -1619,7 +1678,7 @@ function initAdminApp() {
   addCategoryBtn?.addEventListener("click", addCategory);
   saveShopBtn?.addEventListener("click", saveShop);
 
-  /* POLL ADMIN */
+  /* ---------- CORE POLL ADMIN ---------- */
 
   async function pollAdminCore() {
     if (!ADMIN_TOKEN) return { tickets: ALL_TICKETS, shop: CURRENT_SHOP };
@@ -1643,7 +1702,9 @@ function initAdminApp() {
 
       if (SELECTED_TICKET_ID) {
         const t = ALL_TICKETS.find((x) => x.id === SELECTED_TICKET_ID);
-        if (t) selectTicket(t.id);
+        if (t) {
+          selectTicket(t.id);
+        }
       }
 
       return { tickets: ALL_TICKETS, shop: CURRENT_SHOP };
