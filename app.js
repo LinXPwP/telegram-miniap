@@ -1,7 +1,6 @@
 // app.js – versiune cu Discord-like chat, reply / edit / delete funcționale
 // + unread badge în admin + list preview corect pentru mesaje șterse
 // + user chat input aranjat ca la admin (reply bar + input+buton pe rând)
-// + drawer mobil pentru tichete (stil Discord) și sincronizare listă
 
 // URL-ul Netlify / API (proxy către bot.py)
 const API_URL = "https://api.redgen.vip/";
@@ -381,36 +380,27 @@ function initUserApp() {
   let SELECTED_PRODUCT = null;
 
   const chatListEl = document.getElementById("chatList");
-  const chatListMobileEl = document.getElementById("chatListMobile");
   const chatHeaderEl = document.getElementById("chatHeader");
   const chatMessagesEl = document.getElementById("chatMessages");
   const chatInputEl = document.getElementById("chatInput");
   const chatSendBtn = document.getElementById("chatSendBtn");
   const ticketsInfoEl = document.getElementById("ticketsInfo");
 
-  // drawer mobil tichete
-  const ticketsMenuBtn = document.getElementById("ticketsMenuBtn");
+  // Elemente pentru drawer-ul mobil de tichete (stil Discord)
   const ticketsDrawerEl = document.getElementById("ticketsDrawer");
-  const ticketsDrawerCloseBtn = document.getElementById("ticketsDrawerClose");
+  const ticketsDrawerListEl = document.getElementById("ticketsDrawerList");
+  const ticketsMenuToggle = document.getElementById("ticketsMenuToggle");
+  const ticketsDrawerClose = document.getElementById("ticketsDrawerClose");
 
-  function openTicketsDrawer() {
-    if (ticketsDrawerEl) {
-      ticketsDrawerEl.classList.add("open");
-    }
-  }
-
-  function closeTicketsDrawer() {
-    if (ticketsDrawerEl) {
-      ticketsDrawerEl.classList.remove("open");
-    }
-  }
-
-  ticketsMenuBtn?.addEventListener("click", () => {
-    openTicketsDrawer();
+  // toggle drawer pe mobil
+  ticketsMenuToggle?.addEventListener("click", () => {
+    if (!ticketsDrawerEl) return;
+    ticketsDrawerEl.classList.add("open");
   });
 
-  ticketsDrawerCloseBtn?.addEventListener("click", () => {
-    closeTicketsDrawer();
+  ticketsDrawerClose?.addEventListener("click", () => {
+    if (!ticketsDrawerEl) return;
+    ticketsDrawerEl.classList.remove("open");
   });
 
   // bară „reply” user + aranjare input ca la admin
@@ -691,52 +681,47 @@ function initUserApp() {
     return last.text || "";
   }
 
-  // randare listă tichete (sidebar + drawer mobil)
   function renderTicketsList() {
-    const lists = [];
-    if (chatListEl) lists.push(chatListEl);
-    if (chatListMobileEl) lists.push(chatListMobileEl);
+    if (!chatListEl) return;
 
-    lists.forEach((listEl) => {
-      listEl.innerHTML = "";
-    });
+    chatListEl.innerHTML = "";
+    if (ticketsDrawerListEl) {
+      ticketsDrawerListEl.innerHTML = "";
+    }
 
     if (!CURRENT_TICKETS || CURRENT_TICKETS.length === 0) {
-      lists.forEach((listEl) => {
-        listEl.innerHTML =
-          '<div style="padding:8px;font-size:12px;color:var(--muted);">Nu ai tichete încă.</div>';
-      });
+      const emptyHtml =
+        '<div style="padding:8px;font-size:12px;color:var(--muted);">Nu ai tichete încă.</div>';
+      chatListEl.innerHTML = emptyHtml;
+      if (ticketsDrawerListEl) {
+        ticketsDrawerListEl.innerHTML = emptyHtml;
+      }
       return;
     }
 
-    const sorted = CURRENT_TICKETS.slice().sort((a, b) => {
+    const list = CURRENT_TICKETS.slice().sort((a, b) => {
       if (a.status !== b.status) {
         return a.status === "open" ? -1 : 1;
       }
       return (b.id || 0) - (a.id || 0);
     });
 
-    sorted.forEach((t) => {
-      lists.forEach((listEl) => {
+    list.forEach((t) => {
+      const statusText = t.status === "open" ? "DESCHIS" : "ÎNCHIS";
+      const lastMsg = getTicketLastMessageUser(t) || "Fără mesaje încă.";
+
+      const createItem = (targetEl, isDrawer) => {
         const item = document.createElement("div");
         item.className = "chat-item";
-        item.classList.add(
-          t.status === "open" ? "chat-item--open" : "chat-item--closed"
-        );
         if (t.id === SELECTED_TICKET_ID) item.classList.add("active");
 
         const title = document.createElement("div");
         title.className = "chat-item-title";
         title.textContent = t.product_name || "Produs";
 
-        const statusText = t.status === "open" ? "DESCHIS" : "ÎNCHIS";
-        const lastMsg = getTicketLastMessageUser(t);
-
         const line = document.createElement("div");
         line.className = "chat-item-line";
-        line.textContent = `[${statusText}] ${
-          lastMsg || "Fără mesaje încă."
-        }`;
+        line.textContent = `[${statusText}] ${lastMsg}`;
 
         item.appendChild(title);
         item.appendChild(line);
@@ -744,18 +729,22 @@ function initUserApp() {
         item.addEventListener("click", async () => {
           selectTicket(t.id);
           bumpUserActive();
+          // pe mobil, după ce selectăm tichetul, închidem drawer-ul
+          if (isDrawer && ticketsDrawerEl) {
+            ticketsDrawerEl.classList.remove("open");
+          }
           const snap = await pollTicketsUserCore();
           userTicketsPoller.bumpFast();
-
-          // dacă a fost click din drawer mobil, îl închidem
-          if (listEl === chatListMobileEl) {
-            closeTicketsDrawer();
-          }
           return snap;
         });
 
-        listEl.appendChild(item);
-      });
+        targetEl.appendChild(item);
+      };
+
+      createItem(chatListEl, false);
+      if (ticketsDrawerListEl) {
+        createItem(ticketsDrawerListEl, true);
+      }
     });
   }
 
@@ -897,7 +886,6 @@ function initUserApp() {
       userTicketsPoller.start();
     } else {
       userTicketsPoller.stop();
-      closeTicketsDrawer();
     }
   };
 
