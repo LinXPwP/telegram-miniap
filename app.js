@@ -8,18 +8,6 @@ const API_URL = "https://api.redgen.vip/";
 /* ============================
    HELPER – SMART POLLING
    ============================ */
-/**
- * createSmartPoll:
- *  - fetchFn: async () => snapshot (or undefined). Trebuie să facă și update de UI.
- *  - isEnabledFn: () => boolean – dacă e false, nu se face request (tab închis, fereastră inactivă etc.)
- *  - options:
- *      minInterval   – ms, ex 3000
- *      maxInterval   – ms, ex 8000
- *      backoffStep   – ms, ex 2000
- *      idleThreshold – de câte ori la rând fără schimbări până creștem intervalul
- *
- *  snapshot-ul e comparat (JSON.stringify) cu cel anterior ca să vedem dacă s-a schimbat ceva.
- */
 function createSmartPoll(fetchFn, isEnabledFn, options = {}) {
   const minInterval = options.minInterval ?? 3000;
   const maxInterval = options.maxInterval ?? 8000;
@@ -179,19 +167,6 @@ function smartScrollToBottom(container, force = false) {
    SHARED – Discord-like renderer
    ============================ */
 
-/**
- * Render mesaje în stil Discord.
- * options:
- *  - container: element .chat-messages
- *  - ticket: tichetul curent
- *  - messages: array de mesaje
- *  - canReply: bool
- *  - canEditDelete: bool (doar admin & doar pe mesaje admin)
- *  - onReply(msg)
- *  - onEdit(msg)
- *  - onDelete(msg)
- *  - onJumpTo(messageId)
- */
 function renderDiscordMessages(messages, options) {
   const {
     container,
@@ -245,7 +220,7 @@ function renderDiscordMessages(messages, options) {
     const bubble = document.createElement("div");
     bubble.className = "msg-bubble";
 
-    // preview reply, dacă există
+    // preview reply
     if (m.reply_to && msgById[m.reply_to]) {
       const origin = msgById[m.reply_to];
       const preview = document.createElement("div");
@@ -284,7 +259,7 @@ function renderDiscordMessages(messages, options) {
       bubble.appendChild(meta);
     }
 
-    // acțiuni (Reply/Edit/Del) doar dacă avem drepturi
+    // acțiuni
     if (!m.deleted && (canReply || canEditDelete)) {
       const actions = document.createElement("div");
       actions.className = "msg-actions";
@@ -384,14 +359,13 @@ function initUserApp() {
   const chatMessagesEl = document.getElementById("chatMessages");
   const chatInputEl = document.getElementById("chatInput");
   const chatSendBtn = document.getElementById("chatSendBtn");
-  const ticketsInfoEl = document.getElementById("ticketsInfo");
 
-  // elemente noi pentru drawer & burger
+  // elemente pentru drawer-ul de tichete (mobil)
   const ticketsTabEl = document.getElementById("ticketsTab");
   const ticketsMenuToggle = document.getElementById("ticketsMenuToggle");
   const ticketsBackdrop = document.getElementById("ticketsBackdrop");
 
-  // bară „reply” user + aranjare input ca la admin
+  // bară „reply” user + aranjare input
   const chatInputContainer = document.querySelector(
     '#ticketsTab .chat-input, .chat-input'
   );
@@ -456,39 +430,19 @@ function initUserApp() {
     userModeBar.style.display = "none";
   }
 
-  /* ---------- Drawer tichete (stil Discord) ---------- */
-
-  function openTicketsDrawer() {
-    if (!ticketsTabEl) return;
-    ticketsTabEl.classList.add("tickets-drawer-open");
+  // meniul cu 3 linii (drawer cu tichete)
+  if (ticketsMenuToggle && ticketsTabEl) {
+    ticketsMenuToggle.addEventListener("click", () => {
+      const isOpen = ticketsTabEl.classList.toggle("tickets-drawer-open");
+      if (isOpen) bumpUserActive();
+    });
   }
 
-  function closeTicketsDrawer() {
-    if (!ticketsTabEl) return;
-    ticketsTabEl.classList.remove("tickets-drawer-open");
+  if (ticketsBackdrop && ticketsTabEl) {
+    ticketsBackdrop.addEventListener("click", () => {
+      ticketsTabEl.classList.remove("tickets-drawer-open");
+    });
   }
-
-  function closeTicketsDrawerIfMobile() {
-    if (window.matchMedia && window.matchMedia("(max-width: 900px)").matches) {
-      closeTicketsDrawer();
-    }
-  }
-
-  ticketsMenuToggle?.addEventListener("click", () => {
-    if (!ticketsTabEl) return;
-    const isOpen = ticketsTabEl.classList.contains("tickets-drawer-open");
-    if (isOpen) {
-      closeTicketsDrawer();
-    } else {
-      openTicketsDrawer();
-    }
-  });
-
-  ticketsBackdrop?.addEventListener("click", () => {
-    closeTicketsDrawer();
-  });
-
-  /* ---------- API helper ---------- */
 
   function apiCall(action, extraPayload = {}) {
     const payload = {
@@ -568,7 +522,7 @@ function initUserApp() {
         main.appendChild(pdesc);
 
         const right = document.createElement("div");
-        right.style.textAlign = "right";
+        right.className = "product-right";
 
         const price = document.createElement("div");
         price.className = "product-price";
@@ -656,7 +610,6 @@ function initUserApp() {
       CURRENT_TICKETS.push(newTicket);
       renderTicketsList();
       selectTicket(newTicket.id);
-      renderTicketsInfo();
 
       panelStatusEl.className = "status-bar status-ok";
       panelStatusEl.textContent = `Comandă trimisă, tichet #${newTicket.id} creat.`;
@@ -683,17 +636,6 @@ function initUserApp() {
 
   /* ---------- CHAT (user) ---------- */
 
-  function renderTicketsInfo() {
-    if (!CURRENT_TICKETS || CURRENT_TICKETS.length === 0) {
-      ticketsInfoEl.textContent =
-        "Nu ai tichete încă. Când cumperi un produs se creează automat un tichet.";
-    } else {
-      const openCount = CURRENT_TICKETS.filter((t) => t.status === "open")
-        .length;
-      ticketsInfoEl.innerHTML = `Ai <b>${CURRENT_TICKETS.length}</b> tichete, dintre care <b>${openCount}</b> deschise.`;
-    }
-  }
-
   function getTicketLastMessageUser(t) {
     const msgs = t.messages || [];
     if (msgs.length === 0) return "";
@@ -707,7 +649,7 @@ function initUserApp() {
     chatListEl.innerHTML = "";
     if (!CURRENT_TICKETS || CURRENT_TICKETS.length === 0) {
       chatListEl.innerHTML =
-        '<div style="padding:8px;font-size:12px;color:var(--muted);">Nu ai tichete încă.</div>';
+        '<div style="padding:8px;font-size:12px;color:var(--muted);">Nu ai tichete încă.<br/>Când cumperi un produs se creează automat un tichet.</div>';
       return;
     }
 
@@ -742,10 +684,6 @@ function initUserApp() {
       item.addEventListener("click", async () => {
         selectTicket(t.id);
         bumpUserActive();
-
-        // pe mobil: închidem drawer-ul la selectarea unui tichet
-        closeTicketsDrawerIfMobile();
-
         const snap = await pollTicketsUserCore();
         userTicketsPoller.bumpFast();
         return snap;
@@ -774,6 +712,11 @@ function initUserApp() {
     `;
 
     renderUserMessages(t);
+
+    // când selectezi un tichet pe mobil, închidem drawer-ul
+    if (ticketsTabEl) {
+      ticketsTabEl.classList.remove("tickets-drawer-open");
+    }
   }
 
   function renderUserMessages(ticket) {
@@ -823,7 +766,6 @@ function initUserApp() {
 
       renderTicketsList();
       selectTicket(updated.id);
-      renderTicketsInfo();
 
       clearUserMode();
       bumpUserActive();
@@ -851,7 +793,6 @@ function initUserApp() {
       if (!res.ok) return CURRENT_TICKETS;
       CURRENT_TICKETS = res.tickets || [];
       renderTicketsList();
-      renderTicketsInfo();
 
       if (SELECTED_TICKET_ID) {
         const t = CURRENT_TICKETS.find((x) => x.id === SELECTED_TICKET_ID);
@@ -893,8 +834,6 @@ function initUserApp() {
       userTicketsPoller.start();
     } else {
       userTicketsPoller.stop();
-      // când ieși din tab-ul de Tichete, închidem drawer-ul dacă e deschis
-      closeTicketsDrawer();
     }
   };
 
@@ -906,7 +845,6 @@ function initUserApp() {
       }
     } else {
       userTicketsPoller.stop();
-      closeTicketsDrawer();
     }
   });
 
@@ -952,7 +890,6 @@ function initUserApp() {
       renderUserHeader();
       renderShop(CURRENT_SHOP);
       renderTicketsList();
-      renderTicketsInfo();
 
       if (isTicketsTabActive()) {
         bumpUserActive();
@@ -970,6 +907,8 @@ function initUserApp() {
 /* ============================
    ADMIN MINIAPP (admin.html)
    ============================ */
+/* (restul initAdminApp rămâne la fel ca înainte – nu l-am modificat) */
+
 
 function initAdminApp() {
   const params = new URLSearchParams(window.location.search);
