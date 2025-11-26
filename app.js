@@ -1,7 +1,7 @@
 // app.js – versiune cu Discord-like chat, reply / edit / delete funcționale
 // + unread badge în admin + list preview corect pentru mesaje șterse
 // + user chat input aranjat ca la admin (reply bar + input+buton pe rând)
-// + mobile tickets overlay în stil Discord pentru user
+// + drawer mobil pentru tichete (stil Discord) și sincronizare listă
 
 // URL-ul Netlify / API (proxy către bot.py)
 const API_URL = "https://api.redgen.vip/";
@@ -381,16 +381,37 @@ function initUserApp() {
   let SELECTED_PRODUCT = null;
 
   const chatListEl = document.getElementById("chatList");
+  const chatListMobileEl = document.getElementById("chatListMobile");
   const chatHeaderEl = document.getElementById("chatHeader");
-  const chatHeaderTitleEl = document.getElementById("chatHeaderTitle");
-  const chatHeaderSubtitleEl = document.getElementById("chatHeaderSubtitle");
   const chatMessagesEl = document.getElementById("chatMessages");
   const chatInputEl = document.getElementById("chatInput");
   const chatSendBtn = document.getElementById("chatSendBtn");
   const ticketsInfoEl = document.getElementById("ticketsInfo");
 
-  const chatLayoutEl = document.querySelector("#ticketsTab .chat-layout");
-  const chatMobileMenuBtn = document.getElementById("chatMobileMenuBtn");
+  // drawer mobil tichete
+  const ticketsMenuBtn = document.getElementById("ticketsMenuBtn");
+  const ticketsDrawerEl = document.getElementById("ticketsDrawer");
+  const ticketsDrawerCloseBtn = document.getElementById("ticketsDrawerClose");
+
+  function openTicketsDrawer() {
+    if (ticketsDrawerEl) {
+      ticketsDrawerEl.classList.add("open");
+    }
+  }
+
+  function closeTicketsDrawer() {
+    if (ticketsDrawerEl) {
+      ticketsDrawerEl.classList.remove("open");
+    }
+  }
+
+  ticketsMenuBtn?.addEventListener("click", () => {
+    openTicketsDrawer();
+  });
+
+  ticketsDrawerCloseBtn?.addEventListener("click", () => {
+    closeTicketsDrawer();
+  });
 
   // bară „reply” user + aranjare input ca la admin
   const chatInputContainer = document.querySelector(
@@ -456,30 +477,6 @@ function initUserApp() {
     userMode.sender = "";
     userModeBar.style.display = "none";
   }
-
-  function isMobileView() {
-    return window.innerWidth <= 900;
-  }
-
-  function openUserTicketMenu() {
-    if (!chatLayoutEl) return;
-    chatLayoutEl.classList.add("chat-mobile-open");
-  }
-
-  function closeUserTicketMenu() {
-    if (!chatLayoutEl) return;
-    chatLayoutEl.classList.remove("chat-mobile-open");
-  }
-
-  chatMobileMenuBtn?.addEventListener("click", () => {
-    openUserTicketMenu();
-  });
-
-  window.addEventListener("resize", () => {
-    if (!isMobileView()) {
-      closeUserTicketMenu();
-    }
-  });
 
   function apiCall(action, extraPayload = {}) {
     const payload = {
@@ -681,7 +678,7 @@ function initUserApp() {
     } else {
       const openCount = CURRENT_TICKETS.filter((t) => t.status === "open")
         .length;
-      ticketsInfoEl.innerHTML = `Ai <b>${CURRENT_TICKETS.length</b> tichete, dintre care <b>${openCount}</b> deschise.`;
+      ticketsInfoEl.innerHTML = `Ai <b>${CURRENT_TICKETS.length}</b> tichete, dintre care <b>${openCount}</b> deschise.`;
     }
   }
 
@@ -694,68 +691,71 @@ function initUserApp() {
     return last.text || "";
   }
 
+  // randare listă tichete (sidebar + drawer mobil)
   function renderTicketsList() {
-    chatListEl.innerHTML = "";
+    const lists = [];
+    if (chatListEl) lists.push(chatListEl);
+    if (chatListMobileEl) lists.push(chatListMobileEl);
+
+    lists.forEach((listEl) => {
+      listEl.innerHTML = "";
+    });
+
     if (!CURRENT_TICKETS || CURRENT_TICKETS.length === 0) {
-      chatListEl.innerHTML =
-        '<div style="padding:8px;font-size:12px;color:var(--muted);">Nu ai tichete încă.</div>';
+      lists.forEach((listEl) => {
+        listEl.innerHTML =
+          '<div style="padding:8px;font-size:12px;color:var(--muted);">Nu ai tichete încă.</div>';
+      });
       return;
     }
 
-    CURRENT_TICKETS.sort((a, b) => {
+    const sorted = CURRENT_TICKETS.slice().sort((a, b) => {
       if (a.status !== b.status) {
         return a.status === "open" ? -1 : 1;
       }
       return (b.id || 0) - (a.id || 0);
     });
 
-    CURRENT_TICKETS.forEach((t) => {
-      const item = document.createElement("div");
-      item.className = "chat-item";
-      if (t.id === SELECTED_TICKET_ID) item.classList.add("active");
+    sorted.forEach((t) => {
+      lists.forEach((listEl) => {
+        const item = document.createElement("div");
+        item.className = "chat-item";
+        item.classList.add(
+          t.status === "open" ? "chat-item--open" : "chat-item--closed"
+        );
+        if (t.id === SELECTED_TICKET_ID) item.classList.add("active");
 
-      const headerRow = document.createElement("div");
-      headerRow.className = "chat-item-header-row";
+        const title = document.createElement("div");
+        title.className = "chat-item-title";
+        title.textContent = t.product_name || "Produs";
 
-      const title = document.createElement("div");
-      title.className = "chat-item-title";
-      title.textContent = t.product_name || "Produs";
+        const statusText = t.status === "open" ? "DESCHIS" : "ÎNCHIS";
+        const lastMsg = getTicketLastMessageUser(t);
 
-      const rightWrap = document.createElement("div");
-      rightWrap.style.display = "flex";
-      rightWrap.style.alignItems = "center";
-      rightWrap.style.gap = "4px";
+        const line = document.createElement("div");
+        line.className = "chat-item-line";
+        line.textContent = `[${statusText}] ${
+          lastMsg || "Fără mesaje încă."
+        }`;
 
-      const statusChip = document.createElement("span");
-      statusChip.className =
-        "ticket-status-pill " + (t.status === "open" ? "open" : "closed");
-      statusChip.textContent = t.status === "open" ? "DESCHIS" : "ÎNCHIS";
+        item.appendChild(title);
+        item.appendChild(line);
 
-      rightWrap.appendChild(statusChip);
+        item.addEventListener("click", async () => {
+          selectTicket(t.id);
+          bumpUserActive();
+          const snap = await pollTicketsUserCore();
+          userTicketsPoller.bumpFast();
 
-      headerRow.appendChild(title);
-      headerRow.appendChild(rightWrap);
+          // dacă a fost click din drawer mobil, îl închidem
+          if (listEl === chatListMobileEl) {
+            closeTicketsDrawer();
+          }
+          return snap;
+        });
 
-      const lastMsg = getTicketLastMessageUser(t);
-      const line = document.createElement("div");
-      line.className = "chat-item-line";
-      line.textContent = lastMsg || "Fără mesaje încă.";
-
-      item.appendChild(headerRow);
-      item.appendChild(line);
-
-      item.addEventListener("click", async () => {
-        selectTicket(t.id);
-        bumpUserActive();
-        const snap = await pollTicketsUserCore();
-        userTicketsPoller.bumpFast();
-        if (isMobileView()) {
-          closeUserTicketMenu();
-        }
-        return snap;
+        listEl.appendChild(item);
       });
-
-      chatListEl.appendChild(item);
     });
   }
 
@@ -765,22 +765,17 @@ function initUserApp() {
 
     const t = CURRENT_TICKETS.find((x) => x.id === ticketId);
     if (!t) {
-      if (chatHeaderTitleEl) chatHeaderTitleEl.textContent = "Niciun tichet selectat";
-      if (chatHeaderSubtitleEl) chatHeaderSubtitleEl.textContent = "";
+      chatHeaderEl.innerHTML = "<span>Niciun tichet selectat</span>";
       chatMessagesEl.innerHTML = "";
       return;
     }
 
-    if (chatHeaderTitleEl) {
-      chatHeaderTitleEl.textContent = `Tichet #${t.id}`;
-    }
-    if (chatHeaderSubtitleEl) {
-      chatHeaderSubtitleEl.textContent = `${t.product_name} · ${t.qty} buc · total ${
-        t.total_price
-      } credite · status: ${
-        t.status === "open" ? "DESCHIS" : "ÎNCHIS"
-      }`;
-    }
+    chatHeaderEl.innerHTML = `
+      <b>Tichet #${t.id}</b><br/>
+      <span>${t.product_name} · ${t.qty} buc · total ${
+      t.total_price
+    } credite · status: ${t.status}</span>
+    `;
 
     renderUserMessages(t);
   }
@@ -902,7 +897,7 @@ function initUserApp() {
       userTicketsPoller.start();
     } else {
       userTicketsPoller.stop();
-      closeUserTicketMenu();
+      closeTicketsDrawer();
     }
   };
 
