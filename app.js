@@ -386,22 +386,10 @@ function initUserApp() {
   const chatSendBtn = document.getElementById("chatSendBtn");
   const ticketsInfoEl = document.getElementById("ticketsInfo");
 
-  // Elemente pentru drawer-ul mobil de tichete (stil Discord)
-  const ticketsDrawerEl = document.getElementById("ticketsDrawer");
-  const ticketsDrawerListEl = document.getElementById("ticketsDrawerList");
+  // elemente noi pentru drawer & burger
+  const ticketsTabEl = document.getElementById("ticketsTab");
   const ticketsMenuToggle = document.getElementById("ticketsMenuToggle");
-  const ticketsDrawerClose = document.getElementById("ticketsDrawerClose");
-
-  // toggle drawer pe mobil
-  ticketsMenuToggle?.addEventListener("click", () => {
-    if (!ticketsDrawerEl) return;
-    ticketsDrawerEl.classList.add("open");
-  });
-
-  ticketsDrawerClose?.addEventListener("click", () => {
-    if (!ticketsDrawerEl) return;
-    ticketsDrawerEl.classList.remove("open");
-  });
+  const ticketsBackdrop = document.getElementById("ticketsBackdrop");
 
   // bară „reply” user + aranjare input ca la admin
   const chatInputContainer = document.querySelector(
@@ -467,6 +455,40 @@ function initUserApp() {
     userMode.sender = "";
     userModeBar.style.display = "none";
   }
+
+  /* ---------- Drawer tichete (stil Discord) ---------- */
+
+  function openTicketsDrawer() {
+    if (!ticketsTabEl) return;
+    ticketsTabEl.classList.add("tickets-drawer-open");
+  }
+
+  function closeTicketsDrawer() {
+    if (!ticketsTabEl) return;
+    ticketsTabEl.classList.remove("tickets-drawer-open");
+  }
+
+  function closeTicketsDrawerIfMobile() {
+    if (window.matchMedia && window.matchMedia("(max-width: 900px)").matches) {
+      closeTicketsDrawer();
+    }
+  }
+
+  ticketsMenuToggle?.addEventListener("click", () => {
+    if (!ticketsTabEl) return;
+    const isOpen = ticketsTabEl.classList.contains("tickets-drawer-open");
+    if (isOpen) {
+      closeTicketsDrawer();
+    } else {
+      openTicketsDrawer();
+    }
+  });
+
+  ticketsBackdrop?.addEventListener("click", () => {
+    closeTicketsDrawer();
+  });
+
+  /* ---------- API helper ---------- */
 
   function apiCall(action, extraPayload = {}) {
     const payload = {
@@ -682,69 +704,54 @@ function initUserApp() {
   }
 
   function renderTicketsList() {
-    if (!chatListEl) return;
-
     chatListEl.innerHTML = "";
-    if (ticketsDrawerListEl) {
-      ticketsDrawerListEl.innerHTML = "";
-    }
-
     if (!CURRENT_TICKETS || CURRENT_TICKETS.length === 0) {
-      const emptyHtml =
+      chatListEl.innerHTML =
         '<div style="padding:8px;font-size:12px;color:var(--muted);">Nu ai tichete încă.</div>';
-      chatListEl.innerHTML = emptyHtml;
-      if (ticketsDrawerListEl) {
-        ticketsDrawerListEl.innerHTML = emptyHtml;
-      }
       return;
     }
 
-    const list = CURRENT_TICKETS.slice().sort((a, b) => {
+    CURRENT_TICKETS.sort((a, b) => {
       if (a.status !== b.status) {
         return a.status === "open" ? -1 : 1;
       }
       return (b.id || 0) - (a.id || 0);
     });
 
-    list.forEach((t) => {
+    CURRENT_TICKETS.forEach((t) => {
+      const item = document.createElement("div");
+      item.className = "chat-item";
+      if (t.id === SELECTED_TICKET_ID) item.classList.add("active");
+
+      const title = document.createElement("div");
+      title.className = "chat-item-title";
+      title.textContent = t.product_name || "Produs";
+
       const statusText = t.status === "open" ? "DESCHIS" : "ÎNCHIS";
-      const lastMsg = getTicketLastMessageUser(t) || "Fără mesaje încă.";
+      const lastMsg = getTicketLastMessageUser(t);
 
-      const createItem = (targetEl, isDrawer) => {
-        const item = document.createElement("div");
-        item.className = "chat-item";
-        if (t.id === SELECTED_TICKET_ID) item.classList.add("active");
+      const line = document.createElement("div");
+      line.className = "chat-item-line";
+      line.textContent = `[${statusText}] ${
+        lastMsg || "Fără mesaje încă."
+      }`;
 
-        const title = document.createElement("div");
-        title.className = "chat-item-title";
-        title.textContent = t.product_name || "Produs";
+      item.appendChild(title);
+      item.appendChild(line);
 
-        const line = document.createElement("div");
-        line.className = "chat-item-line";
-        line.textContent = `[${statusText}] ${lastMsg}`;
+      item.addEventListener("click", async () => {
+        selectTicket(t.id);
+        bumpUserActive();
 
-        item.appendChild(title);
-        item.appendChild(line);
+        // pe mobil: închidem drawer-ul la selectarea unui tichet
+        closeTicketsDrawerIfMobile();
 
-        item.addEventListener("click", async () => {
-          selectTicket(t.id);
-          bumpUserActive();
-          // pe mobil, după ce selectăm tichetul, închidem drawer-ul
-          if (isDrawer && ticketsDrawerEl) {
-            ticketsDrawerEl.classList.remove("open");
-          }
-          const snap = await pollTicketsUserCore();
-          userTicketsPoller.bumpFast();
-          return snap;
-        });
+        const snap = await pollTicketsUserCore();
+        userTicketsPoller.bumpFast();
+        return snap;
+      });
 
-        targetEl.appendChild(item);
-      };
-
-      createItem(chatListEl, false);
-      if (ticketsDrawerListEl) {
-        createItem(ticketsDrawerListEl, true);
-      }
+      chatListEl.appendChild(item);
     });
   }
 
@@ -886,6 +893,8 @@ function initUserApp() {
       userTicketsPoller.start();
     } else {
       userTicketsPoller.stop();
+      // când ieși din tab-ul de Tichete, închidem drawer-ul dacă e deschis
+      closeTicketsDrawer();
     }
   };
 
@@ -897,6 +906,7 @@ function initUserApp() {
       }
     } else {
       userTicketsPoller.stop();
+      closeTicketsDrawer();
     }
   });
 
