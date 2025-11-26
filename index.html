@@ -31,7 +31,8 @@
 
       <p class="user-line" id="userLine">Se încarcă utilizatorul...</p>
 
-      <div class="tabs tabs--user">
+      <!-- Tabs user (Shop / Tichete) -->
+      <div class="tabs tabs--user" data-active="shopTab">
         <button class="tab-btn active" data-tab="shopTab">Shop</button>
         <button class="tab-btn" data-tab="ticketsTab">Tichete</button>
       </div>
@@ -62,34 +63,32 @@
 
       <!-- TICKETS TAB -->
       <div id="ticketsTab" class="tab-section">
-        <div class="section-title">Tichetele mele</div>
+        <!-- titlu + hamburger pe mobil -->
+        <div class="section-title-row">
+          <div class="section-title">Tichetele mele</div>
+          <button
+            class="tickets-menu-btn"
+            id="ticketsMenuBtn"
+            aria-label="Deschide lista de tichete"
+          >
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+        </div>
+
         <div class="chat-layout">
+          <!-- sidebar clasic (desktop / tablet) -->
           <div class="chat-sidebar" id="chatList"></div>
+
+          <!-- zona principală chat -->
           <div class="chat-main">
             <div class="chat-header" id="chatHeader">
-              <div class="chat-header-inner">
-                <button
-                  class="chat-mobile-menu-btn"
-                  id="chatMobileMenuBtn"
-                  aria-label="Deschide lista de tichete"
-                >
-                  ☰
-                </button>
-                <div class="chat-header-text">
-                  <span
-                    class="chat-header-title"
-                    id="chatHeaderTitle"
-                  >Niciun tichet selectat</span>
-                  <span
-                    class="chat-header-subtitle"
-                    id="chatHeaderSubtitle"
-                  ></span>
-                </div>
-              </div>
+              <span>Niciun tichet selectat</span>
             </div>
             <div class="chat-messages" id="chatMessages"></div>
             <div class="chat-input">
-              <!-- aici JS-ul va injecta bara de reply + .chat-input-row ca la admin -->
+              <!-- bara de reply + input + buton sunt injectate de JS -->
               <input
                 id="chatInput"
                 placeholder="Scrie un mesaj către admin..."
@@ -106,6 +105,24 @@
         <span>MiniApp · shop & chat</span>
         <span class="dot-red"></span>
       </div>
+    </div>
+  </div>
+
+  <!-- DRAWER MOBILE pentru tichete (stil Discord) -->
+  <div id="ticketsDrawer" class="tickets-drawer">
+    <div class="tickets-drawer-panel">
+      <div class="tickets-drawer-header">
+        <div class="tickets-drawer-title">Tichetele mele</div>
+        <button
+          id="ticketsDrawerClose"
+          class="tickets-drawer-close"
+          aria-label="Închide lista de tichete"
+        >
+          ×
+        </button>
+      </div>
+      <!-- listă tichete pentru mobil, populată identic cu chatList -->
+      <div class="tickets-drawer-body" id="chatListMobile"></div>
     </div>
   </div>
 
