@@ -100,20 +100,20 @@ body::after {
   align-items: stretch;
 }
 
-/* user miniapp */
+/* user miniapp – card centrat, dar mai "app-like" */
 
 body[data-page="user"] .container {
   max-width: 620px;
 }
 
-/* admin */
+/* admin – full height layout */
 
 body[data-page="admin"] .container {
   height: 100vh;
 }
 
 /* ============================
-   CARD PRINCIPAL
+   CARD PRINCIPAL – DESIGN NOU
    ============================ */
 
 .card {
@@ -131,7 +131,7 @@ body[data-page="admin"] .container {
   overflow: hidden;
 }
 
-/* user card – app full height în interior */
+/* user card – mai "compact app" */
 
 .card--user {
   width: 100%;
@@ -139,10 +139,10 @@ body[data-page="admin"] .container {
   margin: auto;
   display: flex;
   flex-direction: column;
-  min-height: min(92vh, 760px);
+  min-height: min(90vh, 720px);
 }
 
-/* admin card */
+/* admin card – dashboard full */
 
 .card--admin {
   flex: 1;
@@ -150,6 +150,8 @@ body[data-page="admin"] .container {
   flex-direction: column;
   max-height: 100%;
 }
+
+/* border glow nou */
 
 .card::before {
   content: "";
@@ -173,6 +175,8 @@ body[data-page="admin"] .container {
   pointer-events: none;
 }
 
+/* mic glow în colțul din dreapta jos */
+
 .card::after {
   content: "";
   position: absolute;
@@ -187,7 +191,7 @@ body[data-page="admin"] .container {
 }
 
 /* ============================
-   HEADER
+   HEADER NOU
    ============================ */
 
 .header-top {
@@ -236,7 +240,7 @@ body[data-page="admin"] .container {
   font-size: 13px;
 }
 
-/* titlu */
+/* titlu principal */
 
 h1 {
   margin: 6px 0 0;
@@ -277,7 +281,7 @@ h1::after {
 }
 
 /* ============================
-   TABS
+   TABS – STIL NOU
    ============================ */
 
 .tabs {
@@ -299,6 +303,10 @@ h1::after {
 
 .tabs--user {
   align-self: flex-start;
+}
+
+.tabs--admin {
+  margin-top: 4px;
 }
 
 .tab-btn {
@@ -337,7 +345,8 @@ h1::after {
   border-color: rgba(255, 183, 77, 0.8);
 }
 
-.tab-btn[data-tab="ticketsTab"]::before {
+.tab-btn[data-tab="ticketsTab"]::before,
+.tab-btn[data-tab="chatTab"]::before {
   border-color: rgba(92, 225, 145, 0.8);
 }
 
@@ -346,6 +355,7 @@ h1::after {
   transform: translateY(-0.5px);
 }
 
+/* highlight-ul roșu se mișcă corect */
 .tabs::after {
   content: "";
   position: absolute;
@@ -374,20 +384,28 @@ h1::after {
   transform: translateX(calc(100%));
 }
 
+/* admin tabs */
+
+.tabs--admin[data-active="chatTab"]::after {
+  transform: translateX(0);
+}
+
+.tabs--admin[data-active="shopTab"]::after {
+  transform: translateX(calc(100%));
+}
+
 /* secțiuni */
 
 .tab-section {
   display: none;
-  flex: 1;
 }
 
 .tab-section.active {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  flex: 1;
 }
-
-/* titluri */
 
 .section-title {
   font-size: 12px;
@@ -398,7 +416,7 @@ h1::after {
   opacity: 0.9;
 }
 
-/* header special pentru Tickets */
+/* Heading special pentru Tickets (titlu + burger) */
 
 .section-title--tickets {
   display: flex;
@@ -437,7 +455,7 @@ h1::after {
 }
 
 /* ============================
-   SHOP – GRID CATEGORII
+   SHOP – DESIGN NOU (CARD GRID)
    ============================ */
 
 .categories {
@@ -513,6 +531,8 @@ h1::after {
   z-index: 1;
 }
 
+/* products list în interiorul categoriei */
+
 .products {
   position: relative;
   display: flex;
@@ -522,12 +542,11 @@ h1::after {
 }
 
 .product {
-  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1.6fr) auto;
   align-items: center;
   gap: 6px;
-  padding: 6px 7px 6px 9px;
+  padding: 6px 7px;
   border-radius: 12px;
   background: rgba(6, 8, 28, 0.96);
   border: 1px solid rgba(255, 255, 255, 0.03);
@@ -593,7 +612,7 @@ h1::after {
 }
 
 /* ============================
-   PRODUCT PANEL
+   PRODUCT PANEL – CARD NOU
    ============================ */
 
 .product-panel {
@@ -697,20 +716,32 @@ h1::after {
 }
 
 /* ============================
-   CHAT LAYOUT – FULL CARD
+   CHAT LAYOUT – DISCORD STYLE
    ============================ */
 
 .chat-layout {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(190px, 0.8fr) minmax(0, 1.9fr);
+  grid-template-columns: minmax(190px, 0.85fr) minmax(0, 1.7fr);
   gap: 10px;
   flex: 1;
+  min-height: 260px;
+  max-height: 420px;
+  margin-top: 4px;
+}
+
+/* admin layout */
+
+.chat-admin-layout {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(260px, 0.9fr) minmax(0, 1.7fr);
+  gap: 10px;
   min-height: 0;
   margin-top: 4px;
 }
 
-/* sidebar */
+/* sidebar – listă tichete */
 
 .chat-sidebar {
   border-radius: 18px;
@@ -811,7 +842,7 @@ h1::after {
 }
 
 /* ============================
-   MESAJ – DISCORD
+   MESAJ – DISCORD STYLE
    ============================ */
 
 .msg-row {
@@ -918,7 +949,7 @@ h1::after {
   color: #fff;
 }
 
-/* acțiuni */
+/* acțiuni (Reply/Edit/Del) */
 
 .msg-actions {
   position: absolute;
@@ -986,7 +1017,7 @@ h1::after {
 }
 
 /* ============================
-   CHAT INPUT – BOTTOM BAR
+   CHAT INPUT – DISCORD BAR
    ============================ */
 
 .chat-input {
@@ -1029,8 +1060,16 @@ h1::after {
   white-space: nowrap;
 }
 
+/* info text */
+
+.tickets-info {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
 /* ============================
-   BURGER + DRAWER – TICKETS
+   BURGER + DRAWER – TICKETS MOBILE
    ============================ */
 
 .tickets-menu-toggle {
@@ -1084,6 +1123,147 @@ h1::after {
 }
 
 /* ============================
+   ADMIN – TICKET DETAILS & SHOP
+   ============================ */
+
+.ticket-details {
+  margin-top: 10px;
+  border-radius: 18px;
+  background: rgba(6, 8, 24, 0.96);
+  border: 1px solid var(--border-subtle);
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.ticket-summary {
+  margin-bottom: 4px;
+}
+
+.ticket-actions {
+  margin-top: 6px;
+  display: flex;
+  gap: 6px;
+}
+
+.shop-flex {
+  display: grid;
+  grid-template-columns: minmax(0, 2.1fr) minmax(260px, 0.9fr);
+  gap: 10px;
+  margin-top: 6px;
+  flex: 1;
+  min-height: 0;
+}
+
+.shop-container {
+  max-height: 460px;
+  overflow: auto;
+  border-radius: 18px;
+  background: var(--bg-soft);
+  border: 1px solid var(--border-subtle);
+  padding: 8px;
+}
+
+.shop-sidepanel {
+  border-radius: 18px;
+  background: rgba(7, 7, 22, 0.98);
+  border: 1px solid var(--border-subtle);
+  padding: 10px;
+  font-size: 12px;
+}
+
+.shop-sidepanel-title {
+  font-size: 14px;
+  margin: 0 0 4px;
+}
+
+.shop-sidepanel-text {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+
+/* editor categorie */
+
+.cat-card {
+  border-radius: 16px;
+  padding: 8px;
+  margin-bottom: 8px;
+  background: rgba(10, 11, 30, 0.98);
+  border: 1px solid var(--border-subtle);
+}
+
+.cat-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.cat-header input {
+  flex: 1;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(4, 4, 14, 0.98);
+  color: var(--text);
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.cat-desc textarea {
+  width: 100%;
+  margin-top: 4px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(3, 3, 15, 0.98);
+  color: var(--text);
+  padding: 6px 8px;
+  font-size: 12px;
+  resize: vertical;
+}
+
+/* produse editor */
+
+.products-list {
+  margin-top: 6px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 6px;
+  background: rgba(5, 6, 20, 0.98);
+}
+
+.product-row {
+  display: grid;
+  grid-template-columns: 1.6fr 0.7fr 0.7fr 0.7fr auto;
+  gap: 4px;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.product-row input {
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(4, 4, 14, 0.98);
+  color: var(--text);
+  padding: 4px 6px;
+  font-size: 11px;
+}
+
+.product-mini-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.small-input-label {
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.products-list input[type="text"] {
+  width: 100%;
+}
+
+/* ============================
    STATUS BARS
    ============================ */
 
@@ -1103,7 +1283,7 @@ h1::after {
 }
 
 /* ============================
-   BUTTONS
+   BUTOANE
    ============================ */
 
 .btn-primary,
@@ -1155,7 +1335,244 @@ h1::after {
 }
 
 /* ============================
-   SCROLLBARS
+   ADMIN TOOLBAR & STATS
+   ============================ */
+
+.admin-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  padding: 6px 8px;
+  border-radius: 14px;
+  background: rgba(5, 6, 20, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.toolbar-select {
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(4, 4, 14, 0.98);
+  color: var(--text);
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+.toolbar-search {
+  flex: 1;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(4, 4, 14, 0.98);
+  color: var(--text);
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.toolbar-stats {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.stat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 11px;
+}
+
+.stat-pill--open {
+  background: rgba(58, 214, 122, 0.08);
+  border-color: rgba(58, 214, 122, 0.4);
+}
+
+.stat-pill--closed {
+  background: rgba(255, 75, 92, 0.08);
+  border-color: rgba(255, 75, 92, 0.4);
+}
+
+.stat-pill--soft {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.stat-label {
+  color: var(--muted);
+}
+
+.stat-value {
+  font-weight: 600;
+}
+
+/* status pills în listă tichete */
+
+.chat-item-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+}
+
+.ticket-status-pill {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.ticket-status-pill.open {
+  background: rgba(58, 214, 122, 0.12);
+  border-color: rgba(58, 214, 122, 0.7);
+  color: #9bffb9;
+}
+
+.ticket-status-pill.closed {
+  background: rgba(255, 75, 92, 0.12);
+  border-color: rgba(255, 75, 92, 0.7);
+  color: #ff9ba4;
+}
+
+/* unread badge */
+
+.unread-badge {
+  min-width: 18px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #ff4b5c;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  text-align: center;
+  box-shadow: 0 0 12px rgba(255, 75, 92, 0.5);
+}
+
+/* shop metrics */
+
+.shop-metrics {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+/* categorie header admin */
+
+.cat-header-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.cat-header-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cat-toggle {
+  padding-inline: 6px;
+  min-width: 30px;
+}
+
+/* notă internă tichet */
+
+.ticket-note-inline {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.ticket-note-label {
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+.ticket-note-text {
+  opacity: 0.9;
+}
+
+.ticket-note-empty {
+  font-style: italic;
+  opacity: 0.7;
+}
+
+/* ============================
+   MODAL – MOTIV ÎNCHIDERE
+   ============================ */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 3, 10, 0.8);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 40;
+}
+
+.modal {
+  width: min(420px, 92vw);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 0 0, rgba(255, 24, 67, 0.3), transparent 65%),
+    rgba(6, 6, 20, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 22px 52px rgba(0, 0, 0, 0.9);
+  padding: 12px 14px 14px;
+  animation: panelIn 0.18s ease-out;
+}
+
+.modal h3 {
+  margin: 0 0 4px;
+  font-size: 15px;
+}
+
+.modal-text {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.modal textarea {
+  width: 100%;
+  min-height: 80px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(3, 3, 15, 0.98);
+  color: var(--text);
+  padding: 6px 8px;
+  font-size: 12px;
+  resize: vertical;
+  margin-bottom: 8px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+/* ============================
+   SCROLLBARS – CHAT / SIDEBAR
    ============================ */
 
 .chat-sidebar,
@@ -1193,15 +1610,18 @@ h1::after {
     min-height: 88vh;
   }
 
-  .chat-layout {
+  .chat-layout,
+  .chat-admin-layout,
+  .shop-flex {
     grid-template-columns: 1fr;
+    max-height: none;
   }
 
   .chat-messages {
     padding-right: 6px;
   }
 
-  /* lista de tichete devine drawer */
+  /* drawer pentru lista de tichete – stil Discord */
 
   #ticketsTab .chat-sidebar {
     position: fixed;
