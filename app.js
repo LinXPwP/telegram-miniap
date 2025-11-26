@@ -206,15 +206,22 @@ function renderDiscordMessages(messages, options) {
   const wasNearBottom = isNearBottom(container);
   container.innerHTML = "";
 
+  const list = messages || [];
+
   const msgById = {};
-  (messages || []).forEach((m) => {
+  list.forEach((m) => {
     if (m && m.id) msgById[m.id] = m;
   });
 
-  messages.forEach((m) => {
+  list.forEach((m) => {
+    if (!m) return;
+
     const row = document.createElement("div");
     row.className = "msg-row";
     row.dataset.messageId = m.id || "";
+    if (m.from === "system") {
+      row.classList.add("system");
+    }
 
     const avatar = document.createElement("div");
     avatar.className = "msg-avatar";
@@ -242,21 +249,23 @@ function renderDiscordMessages(messages, options) {
     const bubble = document.createElement("div");
     bubble.className = "msg-bubble";
 
-    // preview reply, dacă există
+    // preview reply, dacă există – ca în Discord
     if (m.reply_to && msgById[m.reply_to]) {
       const origin = msgById[m.reply_to];
       const preview = document.createElement("div");
       preview.className = "msg-reply-preview";
+
       const strong = document.createElement("strong");
       strong.textContent = origin.sender || "User";
       preview.appendChild(strong);
+
       const txt = document.createElement("span");
-      txt.textContent = (origin.text || "").slice(0, 60);
+      txt.textContent = (origin.text || "").slice(0, 80);
       preview.appendChild(txt);
 
       preview.addEventListener("click", (e) => {
         e.stopPropagation();
-        if (typeof onJumpTo === "function") {
+        if (typeof onJumpTo === "function" && origin.id) {
           onJumpTo(origin.id);
         }
       });
@@ -1234,7 +1243,9 @@ function initAdminApp() {
 
   async function sendAdminMessage() {
     const text = chatInputEl.value.trim();
-    if (!text || !SELECTED_TICKET_ID) return;
+    const activeTicketId = adminMode.ticketId || SELECTED_TICKET_ID;
+
+    if (!text || !activeTicketId) return;
 
     const modeType = adminMode.type;
     const msgId = adminMode.messageId;
@@ -1243,9 +1254,9 @@ function initAdminApp() {
       let res;
 
       if (modeType === "edit" && msgId) {
-        // EDIT
+        // EDITARE – nu trimitem mesaj nou
         res = await apiCall("admin_edit_message", {
-          ticket_id: SELECTED_TICKET_ID,
+          ticket_id: activeTicketId,
           message_id: msgId,
           text,
         });
@@ -1254,7 +1265,7 @@ function initAdminApp() {
         const reply_to =
           modeType === "reply" && msgId ? msgId : null;
         res = await apiCall("admin_send_message", {
-          ticket_id: SELECTED_TICKET_ID,
+          ticket_id: activeTicketId,
           text,
           sender: "Admin",
           reply_to,
