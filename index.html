@@ -31,7 +31,7 @@
 
       <p class="user-line" id="userLine">Se încarcă utilizatorul...</p>
 
-      <div class="tabs">
+      <div class="tabs tabs--user">
         <button class="tab-btn active" data-tab="shopTab">Shop</button>
         <button class="tab-btn" data-tab="ticketsTab">Tichete</button>
       </div>
@@ -71,6 +71,7 @@
             </div>
             <div class="chat-messages" id="chatMessages"></div>
             <div class="chat-input">
+              <!-- aici JS-ul va injecta bara de reply + .chat-input-row ca la admin -->
               <input
                 id="chatInput"
                 placeholder="Scrie un mesaj către admin..."
