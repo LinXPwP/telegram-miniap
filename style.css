@@ -823,7 +823,7 @@ h1 {
 
 @keyframes msgHighlight {
   0% {
-    background: rgba(255, 255, 255, 0.14);
+    background: rgba(255, 24, 67, 0.28);
   }
   100% {
     background: rgba(255, 255, 255, 0.04);
