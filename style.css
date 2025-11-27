@@ -54,7 +54,7 @@ body {
   color: var(--text);
 }
 
-/* glow blobs doar pe ecrane mai mari */
+/* glow doar pe ecrane mari */
 @media (min-width: 900px) {
   body::before,
   body::after {
@@ -94,30 +94,44 @@ body {
   padding: 12px 14px 20px;
 }
 
-/* în MiniApp user card mai mic, centrat, dar pe înălțime cât aproape tot ecranul */
+/* USER: full-screen, fără card / dreptunghi */
 
 body[data-page="user"] .container {
-  max-width: 560px;
+  max-width: 100%;
+  padding: 0;
+  margin: 0;
+  min-height: 100vh;
 }
 
 body[data-page="user"] .card--user {
-  max-width: 560px;
-  margin: 0 auto;
-  min-height: calc(100vh - 32px);
+  max-width: 100%;
+  margin: 0;
+  padding: 10px 10px 10px;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
-/* layout full-screen pentru admin */
+/* scoatem complet efectul de card la user */
+body[data-page="user"] .card--user {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-radius: 0;
+}
+
+body[data-page="user"] .card--user::before {
+  display: none;
+}
+
+/* ADMIN: rămâne card clasic în interiorul ecranului */
 
 body[data-page="admin"] .container {
   height: 100vh;
   display: flex;
 }
-
-/* ============================
-   CARD PRINCIPAL
-   ============================ */
 
 .card {
   position: relative;
@@ -232,7 +246,7 @@ h1 {
 }
 
 /* ============================
-   TABS – segmented control
+   TABS
    ============================ */
 
 .tabs {
@@ -284,20 +298,18 @@ h1 {
   transition: transform var(--transition-med);
 }
 
-/* user tabs: Shop (stânga) / Tichete (dreapta) */
+/* user tabs: Shop / Tichete */
 .tabs--user[data-active="shopTab"]::after {
   transform: translateX(0);
 }
-
 .tabs--user[data-active="ticketsTab"]::after {
   transform: translateX(calc(100%));
 }
 
-/* admin tabs: Chat (stânga) / Shop (dreapta) – păstrăm vechiul comportament */
+/* admin tabs: Chat / Shop */
 .tabs--admin[data-active="chatTab"]::after {
   transform: translateX(0);
 }
-
 .tabs--admin[data-active="shopTab"]::after {
   transform: translateX(calc(100%));
 }
@@ -324,21 +336,14 @@ h1 {
   opacity: 0.9;
 }
 
-/* titlu tickets – cu 3 linii stânga */
+/* pentru tickets – ca Discord, textul e puțin coborât că avem buton fix sus stânga */
 
 .section-title--tickets {
   display: flex;
   align-items: center;
   gap: 10px;
-}
-
-.tickets-title-left {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.16em;
+  margin-top: 26px; /* spațiu sub butonul fix de 3 linii */
+  padding-left: 34px; /* să nu intre sub buton */
 }
 
 /* ============================
@@ -486,9 +491,7 @@ h1 {
   color: var(--accent-soft);
 }
 
-/* ============================
-   PRODUCT PANEL (USER)
-   ============================ */
+/* panel product */
 
 .product-panel {
   margin-top: 10px;
@@ -581,13 +584,12 @@ h1 {
 .chat-layout {
   position: relative;
   flex: 1;
-  min-height: 260px;
-  margin-top: 4px;
+  min-height: calc(100vh - 190px); /* chat aproape pe tot ecranul */
   display: flex;
   flex-direction: column;
+  margin-top: 4px;
 }
 
-/* Chat principal pe aproape tot ecranul cardului */
 .chat-main {
   border-radius: var(--radius-md);
   background: var(--bg-soft);
@@ -614,9 +616,9 @@ h1 {
   overflow-y: auto;
 }
 
-/* ========== DRAWER TICKETS (user) ========== */
-
-/* Lista de tichete – drawer care glisează din stânga */
+/* ============================
+   DRAWER TICKETS – USER
+   ============================ */
 
 .chat-sidebar {
   position: absolute;
@@ -639,7 +641,7 @@ h1 {
   z-index: 20;
 }
 
-/* când drawer-ul e deschis pe tab-ul de tichete */
+/* când drawer-ul este deschis */
 
 #ticketsTab.tickets-drawer-open .chat-sidebar {
   transform: translateX(0);
@@ -648,11 +650,11 @@ h1 {
   box-shadow: 0 20px 45px rgba(0, 0, 0, 0.9);
 }
 
-/* backdrop întunecat în restul ecranului */
+/* backdrop */
 
 .tickets-backdrop {
   position: absolute;
-  inset: -12px -14px -16px;
+  inset: -10px -10px -10px;
   background: rgba(2, 3, 10, 0.78);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
@@ -667,13 +669,16 @@ h1 {
   pointer-events: auto;
 }
 
-/* buton 3 linii (hamburger) */
+/* BUTON 3 LINII – FIX STÂNGA SUS (ca Discord) */
 
 .tickets-menu-toggle {
-  width: 26px;
+  position: fixed;
+  top: 8px;
+  left: 10px;
+  width: 28px;
   height: 22px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   background: rgba(6, 6, 20, 0.96);
   display: inline-flex;
   align-items: center;
@@ -683,11 +688,12 @@ h1 {
   padding: 0 5px;
   transition: background var(--transition-fast), border-color var(--transition-fast),
     transform var(--transition-fast), box-shadow var(--transition-fast);
+  z-index: 50; /* peste tot, ca în screenshot */
 }
 
 .tickets-menu-toggle span {
-  width: 12px;
-  height: 1.6px;
+  width: 13px;
+  height: 1.8px;
   border-radius: 999px;
   background: #fff;
   display: block;
@@ -700,7 +706,7 @@ h1 {
   transform: translateY(-0.5px);
 }
 
-/* când drawer deschis – animăm puțin liniile */
+/* mic efect când drawer este deschis */
 
 #ticketsTab.tickets-drawer-open .tickets-menu-toggle span:nth-child(1) {
   transform-origin: left center;
@@ -712,7 +718,7 @@ h1 {
   transform: translateY(-1.5px) rotate(-12deg);
 }
 
-/* chat item din drawer – stil Discord-ish */
+/* chat item din listă */
 
 .chat-item {
   padding: 8px 10px;
@@ -750,7 +756,7 @@ h1 {
 }
 
 /* ============================
-   CHAT – mesaje stil Discord
+   MESAJ DISCORD-LIKE
    ============================ */
 
 .msg-row {
@@ -821,7 +827,7 @@ h1 {
   font-size: 13px;
   line-height: 1.4;
   color: #f3f4ff;
-  padding-right: 70px; /* spațiu pentru acțiuni */
+  padding-right: 70px;
 }
 
 .msg-text--deleted {
@@ -835,7 +841,7 @@ h1 {
   color: var(--muted);
 }
 
-/* preview la reply */
+/* reply preview */
 
 .msg-reply-preview {
   display: inline-flex;
@@ -859,7 +865,7 @@ h1 {
   color: #fff;
 }
 
-/* acțiuni – Reply / Edit / Del */
+/* acțiuni */
 
 .msg-actions {
   position: absolute;
@@ -901,8 +907,6 @@ h1 {
   color: #ff8a96;
 }
 
-/* highlight când sari la mesaj */
-
 .msg-row--highlight {
   animation: msgHighlight 1.2s ease-out;
 }
@@ -917,7 +921,7 @@ h1 {
 }
 
 /* ============================
-   CHAT INPUT – user & admin
+   CHAT INPUT
    ============================ */
 
 .chat-input {
@@ -961,7 +965,7 @@ h1 {
 }
 
 /* ============================
-   STATUS BARS
+   STATUS BAR + BUTTONS
    ============================ */
 
 .status-bar {
@@ -978,10 +982,6 @@ h1 {
 .status-error {
   color: var(--danger);
 }
-
-/* ============================
-   BUTTONS
-   ============================ */
 
 .btn-primary,
 .product-panel-buy,
@@ -1028,8 +1028,7 @@ h1 {
 }
 
 /* ============================
-   ADMIN – layout & elemente
-   (păstrat pentru admin.html)
+   ADMIN (păstrat)
    ============================ */
 
 .chat-admin-layout {
@@ -1080,7 +1079,7 @@ h1 {
   opacity: 0.7;
 }
 
-/* admin toolbar */
+/* admin toolbar & stats rămân la fel */
 
 .admin-toolbar {
   display: flex;
@@ -1129,8 +1128,6 @@ h1 {
   justify-content: flex-end;
 }
 
-/* stat pills */
-
 .stat-pill {
   display: inline-flex;
   align-items: center;
@@ -1163,8 +1160,6 @@ h1 {
 .stat-value {
   font-weight: 600;
 }
-
-/* status pill listă tichete admin */
 
 .chat-item-header-row {
   display: flex;
@@ -1251,8 +1246,6 @@ h1 {
   flex-wrap: wrap;
   margin-bottom: 8px;
 }
-
-/* cat editor */
 
 .cat-card {
   border-radius: var(--radius-md);
@@ -1352,7 +1345,7 @@ h1 {
 }
 
 /* ============================
-   MODAL – Închide tichet cu motiv
+   MODAL
    ============================ */
 
 .modal-backdrop {
@@ -1413,7 +1406,7 @@ h1 {
 }
 
 /* ============================
-   SCROLLBARS – chat & liste
+   SCROLLBARS
    ============================ */
 
 .chat-sidebar,
@@ -1448,7 +1441,7 @@ h1 {
 
 @media (max-width: 900px) {
   .container {
-    padding-inline: 10px;
+    padding-inline: 0;
   }
 
   .chat-admin-layout,
@@ -1461,7 +1454,6 @@ h1 {
     padding-right: 6px;
   }
 
-  /* la user oricum drawer-ul funcționează la fel, dar lățimea se adaptează */
   .chat-sidebar {
     width: min(300px, 80vw);
   }
