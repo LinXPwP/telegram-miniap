@@ -20,8 +20,7 @@
           <span>Shop & Chat</span>
         </div>
         <div class="credits">
-          <span>Credite disponibile</span>
-          <span class="value" id="creditsValue">-</span>
+          Credite: <span class="value" id="creditsValue">-</span>
         </div>
       </div>
 
@@ -33,17 +32,13 @@
       <p class="user-line" id="userLine">Se încarcă utilizatorul...</p>
 
       <div class="tabs tabs--user">
-        <button class="tab-btn active" data-tab="shopTab">
-          <span>Shop</span>
-        </button>
-        <button class="tab-btn" data-tab="ticketsTab">
-          <span>Tichete</span>
-        </button>
+        <button class="tab-btn active" data-tab="shopTab"><span>Shop</span></button>
+        <button class="tab-btn" data-tab="ticketsTab"><span>Tichete</span></button>
       </div>
 
       <!-- SHOP TAB -->
       <div id="shopTab" class="tab-section active">
-        <div class="section-title">Produse</div>
+        <div class="section-title">Categorii & produse</div>
         <div id="categoriesContainer" class="categories"></div>
 
         <div id="productPanel" class="product-panel" style="display:none;">
@@ -67,32 +62,30 @@
 
       <!-- TICKETS TAB -->
       <div id="ticketsTab" class="tab-section">
-        <!-- titlu + buton 3 linii (burger) ca la Discord -->
         <div class="section-title section-title--tickets">
           <div class="tickets-title-left">
-            <button
-              id="ticketsMenuToggle"
-              class="tickets-menu-toggle"
-              type="button"
-              aria-label="Deschide lista de tichete"
-            >
+            <!-- buton 3 linii (burger) -->
+            <button class="tickets-menu-toggle" id="ticketsMenuToggle" aria-label="Deschide lista de tichete">
               <span></span>
               <span></span>
               <span></span>
             </button>
-            <span>Tichete & Chat</span>
+            <span>Tichete & chat</span>
           </div>
         </div>
 
         <div class="chat-layout">
+          <!-- Sidebar-ul va fi un drawer care glisează din stânga -->
           <div class="chat-sidebar" id="chatList"></div>
+
+          <!-- Chat principal – aproape tot ecranul -->
           <div class="chat-main">
             <div class="chat-header" id="chatHeader">
               <span>Niciun tichet selectat</span>
             </div>
             <div class="chat-messages" id="chatMessages"></div>
             <div class="chat-input">
-              <!-- JS va injecta bara de reply + va pune input + buton pe un rând -->
+              <!-- bara REPLY + input+buton, JS le reorganizează -->
               <input
                 id="chatInput"
                 placeholder="Scrie un mesaj către admin..."
@@ -103,7 +96,7 @@
           </div>
         </div>
 
-        <!-- backdrop pentru drawer-ul cu tichete pe mobil -->
+        <!-- Backdrop pentru drawer-ul cu tichete -->
         <div class="tickets-backdrop" id="ticketsBackdrop"></div>
       </div>
 
