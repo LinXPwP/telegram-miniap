@@ -1,6 +1,7 @@
 // app.js – versiune cu Discord-like chat, reply / edit / delete funcționale
 // + unread badge în admin + list preview corect pentru mesaje șterse
 // + user chat input aranjat ca la admin (reply bar + input+buton pe rând)
+// + user tickets drawer (3 linii stânga sus, listă de tichete care glisează)
 
 // URL-ul Netlify / API (proxy către bot.py)
 const API_URL = "https://api.redgen.vip/";
@@ -8,6 +9,18 @@ const API_URL = "https://api.redgen.vip/";
 /* ============================
    HELPER – SMART POLLING
    ============================ */
+/**
+ * createSmartPoll:
+ *  - fetchFn: async () => snapshot (or undefined). Trebuie să facă și update de UI.
+ *  - isEnabledFn: () => boolean – dacă e false, nu se face request (tab închis, fereastră inactivă etc.)
+ *  - options:
+ *      minInterval   – ms, ex 3000
+ *      maxInterval   – ms, ex 8000
+ *      backoffStep   – ms, ex 2000
+ *      idleThreshold – de câte ori la rând fără schimbări până creștem intervalul
+ *
+ *  snapshot-ul e comparat (JSON.stringify) cu cel anterior ca să vedem dacă s-a schimbat ceva.
+ */
 function createSmartPoll(fetchFn, isEnabledFn, options = {}) {
   const minInterval = options.minInterval ?? 3000;
   const maxInterval = options.maxInterval ?? 8000;
@@ -167,6 +180,19 @@ function smartScrollToBottom(container, force = false) {
    SHARED – Discord-like renderer
    ============================ */
 
+/**
+ * Render mesaje în stil Discord.
+ * options:
+ *  - container: element .chat-messages
+ *  - ticket: tichetul curent
+ *  - messages: array de mesaje
+ *  - canReply: bool
+ *  - canEditDelete: bool (doar admin & doar pe mesaje admin)
+ *  - onReply(msg)
+ *  - onEdit(msg)
+ *  - onDelete(msg)
+ *  - onJumpTo(messageId)
+ */
 function renderDiscordMessages(messages, options) {
   const {
     container,
@@ -220,7 +246,7 @@ function renderDiscordMessages(messages, options) {
     const bubble = document.createElement("div");
     bubble.className = "msg-bubble";
 
-    // preview reply
+    // preview reply, dacă există
     if (m.reply_to && msgById[m.reply_to]) {
       const origin = msgById[m.reply_to];
       const preview = document.createElement("div");
@@ -259,7 +285,7 @@ function renderDiscordMessages(messages, options) {
       bubble.appendChild(meta);
     }
 
-    // acțiuni
+    // acțiuni (Reply/Edit/Del) doar dacă avem drepturi
     if (!m.deleted && (canReply || canEditDelete)) {
       const actions = document.createElement("div");
       actions.className = "msg-actions";
@@ -360,12 +386,12 @@ function initUserApp() {
   const chatInputEl = document.getElementById("chatInput");
   const chatSendBtn = document.getElementById("chatSendBtn");
 
-  // elemente pentru drawer-ul de tichete (mobil)
-  const ticketsTabEl = document.getElementById("ticketsTab");
+  // elemente pentru drawer-ul de tichete (3 linii + backdrop)
   const ticketsMenuToggle = document.getElementById("ticketsMenuToggle");
   const ticketsBackdrop = document.getElementById("ticketsBackdrop");
+  const ticketsTabEl = document.getElementById("ticketsTab");
 
-  // bară „reply” user + aranjare input
+  // bară „reply” user + aranjare input ca la admin
   const chatInputContainer = document.querySelector(
     '#ticketsTab .chat-input, .chat-input'
   );
@@ -430,18 +456,24 @@ function initUserApp() {
     userModeBar.style.display = "none";
   }
 
-  // meniul cu 3 linii (drawer cu tichete)
-  if (ticketsMenuToggle && ticketsTabEl) {
-    ticketsMenuToggle.addEventListener("click", () => {
-      const isOpen = ticketsTabEl.classList.toggle("tickets-drawer-open");
-      if (isOpen) bumpUserActive();
-    });
+  // drawer pentru lista de tichete (3 linii stânga sus)
+  function openTicketsDrawer() {
+    if (!ticketsTabEl) return;
+    ticketsTabEl.classList.add("tickets-drawer-open");
   }
 
-  if (ticketsBackdrop && ticketsTabEl) {
-    ticketsBackdrop.addEventListener("click", () => {
+  function closeTicketsDrawer() {
+    if (!ticketsTabEl) return;
+    ticketsTabEl.classList.remove("tickets-drawer-open");
+  }
+
+  function toggleTicketsDrawer() {
+    if (!ticketsTabEl) return;
+    if (ticketsTabEl.classList.contains("tickets-drawer-open")) {
       ticketsTabEl.classList.remove("tickets-drawer-open");
-    });
+    } else {
+      ticketsTabEl.classList.add("tickets-drawer-open");
+    }
   }
 
   function apiCall(action, extraPayload = {}) {
@@ -649,7 +681,7 @@ function initUserApp() {
     chatListEl.innerHTML = "";
     if (!CURRENT_TICKETS || CURRENT_TICKETS.length === 0) {
       chatListEl.innerHTML =
-        '<div style="padding:8px;font-size:12px;color:var(--muted);">Nu ai tichete încă.<br/>Când cumperi un produs se creează automat un tichet.</div>';
+        '<div style="padding:8px;font-size:12px;color:var(--muted);">Nu ai tichete încă. Când cumperi un produs se creează automat unul.</div>';
       return;
     }
 
@@ -684,6 +716,7 @@ function initUserApp() {
       item.addEventListener("click", async () => {
         selectTicket(t.id);
         bumpUserActive();
+        closeTicketsDrawer();
         const snap = await pollTicketsUserCore();
         userTicketsPoller.bumpFast();
         return snap;
@@ -712,11 +745,6 @@ function initUserApp() {
     `;
 
     renderUserMessages(t);
-
-    // când selectezi un tichet pe mobil, închidem drawer-ul
-    if (ticketsTabEl) {
-      ticketsTabEl.classList.remove("tickets-drawer-open");
-    }
   }
 
   function renderUserMessages(ticket) {
@@ -786,6 +814,22 @@ function initUserApp() {
     }
   });
 
+  // controle drawer – buton 3 linii + backdrop + ESC
+  ticketsMenuToggle?.addEventListener("click", () => {
+    toggleTicketsDrawer();
+    bumpUserActive();
+  });
+
+  ticketsBackdrop?.addEventListener("click", () => {
+    closeTicketsDrawer();
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      closeTicketsDrawer();
+    }
+  });
+
   async function pollTicketsUserCore() {
     if (!CURRENT_USER) return CURRENT_TICKETS;
     try {
@@ -834,6 +878,7 @@ function initUserApp() {
       userTicketsPoller.start();
     } else {
       userTicketsPoller.stop();
+      closeTicketsDrawer();
     }
   };
 
@@ -907,8 +952,6 @@ function initUserApp() {
 /* ============================
    ADMIN MINIAPP (admin.html)
    ============================ */
-/* (restul initAdminApp rămâne la fel ca înainte – nu l-am modificat) */
-
 
 function initAdminApp() {
   const params = new URLSearchParams(window.location.search);
