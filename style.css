@@ -564,14 +564,14 @@ h1 {
    ============================ */
 
 .chat-sidebar {
-  position: absolute;
+  position: fixed;              /* înainte era absolute */
   top: 0;
   bottom: 0;
   left: 0;
   width: min(320px, 80vw);
-  border-radius: var(--radius-md);
+  border-radius: 0 12px 12px 0;  /* colț stânga sus drept, ca un panel */
   background: #090b14;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -581,8 +581,9 @@ h1 {
   pointer-events: none;
   transition: transform var(--transition-med), opacity var(--transition-med),
     box-shadow var(--transition-med);
-  z-index: 20;
+  z-index: 40;                  /* mai sus decât restul */
 }
+
 
 /* backdrop */
 
