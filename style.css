@@ -1,5 +1,5 @@
 /* ============================
-   PALETĂ & GLOBAL
+   PALETĂ & GLOBAL (ROȘU)
    ============================ */
 
 :root {
@@ -8,9 +8,12 @@
   --bg-elevated: #202225;
   --bg-soft: #2b2d31;
   --bg-soft-alt: #313338;
-  --accent: #5865f2;          /* Discord blurple */
-  --accent-soft: #7289da;
+
+  /* accente roșu / roz */
+  --accent: #ff1843;
+  --accent-soft: #ff4b7a;
   --accent-danger: #f04747;
+
   --text: #fdfdfd;
   --muted: #a3a6b5;
   --border-subtle: rgba(255, 255, 255, 0.06);
@@ -53,8 +56,6 @@ body {
   padding: 12px 14px 20px;
 }
 
-/* user – fără card clasic, acoperă tot */
-
 body[data-page="user"] .container {
   max-width: 100%;
   padding: 0;
@@ -81,7 +82,7 @@ body[data-page="user"] .card--user::before {
   display: none;
 }
 
-/* admin card standard */
+/* admin card clasic */
 
 body[data-page="admin"] .container {
   height: 100vh;
@@ -107,7 +108,7 @@ body[data-page="admin"] .container {
   padding: 1px;
   background: linear-gradient(
     135deg,
-    rgba(88, 101, 242, 0.9),
+    rgba(255, 24, 67, 0.9),
     rgba(32, 34, 37, 0.7)
   );
   -webkit-mask: linear-gradient(#000 0 0) content-box,
@@ -269,7 +270,6 @@ h1 {
   margin: 0 0 6px;
 }
 
-/* la tichete coborâm puțin (menu button ocupă colțul) */
 .section-title--tickets {
   margin-top: 26px;
   padding-left: 36px;
@@ -542,8 +542,6 @@ h1 {
   z-index: 40;
 }
 
-/* backdrop întunecat */
-
 .tickets-backdrop {
   position: fixed;
   inset: 0;
@@ -565,7 +563,7 @@ h1 {
   pointer-events: auto;
 }
 
-/* buton 3 linii – fix stânga sus */
+/* buton 3 linii */
 
 .tickets-menu-toggle {
   position: fixed;
@@ -599,8 +597,6 @@ h1 {
   box-shadow: 0 0 8px rgba(0, 0, 0, 0.7);
   transform: translateY(-0.5px);
 }
-
-/* mic efect când panel-ul e deschis */
 
 #ticketsTab.tickets-drawer-open .tickets-menu-toggle span:nth-child(1) {
   transform-origin: left center;
@@ -668,7 +664,7 @@ h1 {
   flex: 0 0 32px;
   height: 32px;
   border-radius: 50%;
-  background: #5865f2;
+  background: var(--accent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -796,7 +792,7 @@ h1 {
 }
 @keyframes msgHighlight {
   0% {
-    background: rgba(88, 101, 242, 0.28);
+    background: rgba(255, 24, 67, 0.32);
   }
   100% {
     background: rgba(255, 255, 255, 0.04);
@@ -919,8 +915,6 @@ h1 {
   min-height: 0;
   margin-top: 4px;
 }
-
-/* listă tichete admin reutilizează .chat-sidebar, .chat-item etc. */
 
 .ticket-details {
   margin-top: 10px;
@@ -1063,7 +1057,7 @@ h1 {
   min-width: 18px;
   padding: 1px 6px;
   border-radius: 999px;
-  background: #f04747;
+  background: var(--accent-danger);
   color: #fff;
   font-size: 10px;
   font-weight: 600;
