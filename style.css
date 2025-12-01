@@ -289,16 +289,6 @@ h1 {
   opacity: 0.85;
 }
 
-.footer--admin {
-  margin-top: 8px;
-  font-size: 10px;
-  color: var(--muted);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  opacity: 0.85;
-}
-
 .dot-red {
   width: 7px;
   height: 7px;
@@ -404,13 +394,6 @@ h1 {
   overflow: hidden;
 }
 
-.product-right {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-}
-
 .product-price {
   font-size: 12px;
   font-weight: 600;
@@ -510,7 +493,7 @@ h1 {
 }
 
 .chat-main {
-  position: relative;
+  position: relative; /* IMPORTANT pentru scroll pill */
   border-radius: var(--radius-md);
   background: #2b2d31;
   border: 1px solid rgba(0, 0, 0, 0.7);
@@ -925,13 +908,6 @@ h1 {
    ADMIN – CHAT & SHOP
    ============================ */
 
-.admin-header-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  align-items: flex-end;
-}
-
 .chat-admin-layout {
   flex: 1;
   display: grid;
@@ -1278,51 +1254,6 @@ h1 {
 }
 
 /* ============================
-   SCROLL PILL – Mesaje noi ↓
-   ============================ */
-
-.scroll-to-bottom-pill {
-  position: absolute;
-  right: 10px;
-  bottom: 50px; /* deasupra input-ului */
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: #202225;
-  padding: 4px 10px;
-  font-size: 11px;
-  color: var(--muted);
-  cursor: pointer;
-  display: none;
-  align-items: center;
-  gap: 4px;
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.75);
-  z-index: 5;
-}
-
-.scroll-to-bottom-pill::after {
-  content: "↓";
-  font-size: 12px;
-}
-
-.scroll-to-bottom-pill:hover {
-  background: #313338;
-  color: var(--text);
-  border-color: var(--accent-soft);
-}
-
-/* ============================
-   ACȚIUNI TICHET USER
-   ============================ */
-
-.ticket-user-actions {
-  margin-top: 6px;
-  display: flex;
-  justify-content: flex-end;
-  gap: 6px;
-  font-size: 12px;
-}
-
-/* ============================
    SCROLLBARS
    ============================ */
 
@@ -1347,6 +1278,45 @@ h1 {
 .shop-container::-webkit-scrollbar-thumb {
   background: var(--accent);
   border-radius: 999px;
+}
+
+/* ============================
+   TICKET USER ACTIONS & SCROLL PILL (NEW)
+   ============================ */
+
+.ticket-user-actions {
+  margin-top: 6px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.scroll-to-bottom-pill {
+  position: absolute;
+  right: 10px;
+  bottom: 50px; /* deasupra input-ului */
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: #202225;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: var(--muted);
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.75);
+  z-index: 5;
+}
+.scroll-to-bottom-pill::after {
+  content: "↓";
+  font-size: 12px;
+}
+.scroll-to-bottom-pill:hover {
+  background: #313338;
+  color: var(--text);
+  border-color: var(--accent-soft);
 }
 
 /* ============================
