@@ -84,6 +84,7 @@
               <span>Niciun tichet selectat</span>
             </div>
             <div class="chat-messages" id="chatMessages"></div>
+
             <div class="chat-input">
               <!-- bara REPLY + input+buton, JS le reorganizează -->
               <input
@@ -94,6 +95,11 @@
               <button id="chatSendBtn">Trimite</button>
             </div>
           </div>
+        </div>
+
+        <!-- acțiuni user pentru tichetul selectat -->
+        <div class="ticket-user-actions" id="userTicketActions" style="display:none;">
+          <button class="btn-ghost" id="userTicketCloseBtn">Închide tichet</button>
         </div>
 
         <!-- Backdrop pentru drawer-ul cu tichete -->
