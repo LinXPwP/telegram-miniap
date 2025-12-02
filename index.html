@@ -8,115 +8,118 @@
   <!-- Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-  <!-- CSS -->
+  <!-- CSS comun -->
   <link rel="stylesheet" href="style.css" />
 </head>
-<body>
-  <div class="app">
-    <header class="app-header">
-      <div class="app-title">
-        <span class="logo-dot"></span>
-        <span class="app-title-text">MiniApp Shop & Chat</span>
-      </div>
-
-      <div class="app-header-right">
-        <div class="app-credits">
-          Credite: <span id="creditsValue">-</span>
+<body data-page="user">
+  <div class="container">
+    <div class="card card--user">
+      <!-- HEADER DOAR PENTRU SHOP (credite + buton Tichete) -->
+      <div id="shopHeader" class="header-top header-top--shop">
+        <button class="btn-ghost btn-go-tickets" id="goToTicketsBtn">Tichete</button>
+        <div class="credits">
+          Credite: <span class="value" id="creditsValue">-</span>
         </div>
-        <button class="btn-outline btn-small" id="openTicketsTabBtn">
-          Tichetele mele
-        </button>
       </div>
-    </header>
 
-    <main class="app-main">
-      <!-- Mesaj user / erori -->
-      <div id="userLine" class="user-info"></div>
+      <!-- linie user – o folosim doar pentru mesaje de eroare -->
+      <p class="user-line" id="userLine"></p>
 
-      <!-- Comutare între Shop / Tichete -->
-      <nav class="view-switcher">
-        <button class="view-btn active" id="tabShop" data-view="shop">Shop</button>
-        <button class="view-btn" id="tabTickets" data-view="tickets">Tichete</button>
-      </nav>
-
-      <!-- SHOP -->
-      <section id="shopView" class="view view--active">
-        <h2 class="section-title">Shop</h2>
+      <!-- SHOP (secțiune principală) -->
+      <div id="shopTab" class="tab-section active">
+        <div class="section-title">Shop</div>
         <div id="categoriesContainer" class="categories"></div>
-      </section>
 
-      <!-- TICKETS + CHAT -->
-      <section id="ticketsView" class="view">
-        <h2 class="section-title">Tichete și chat</h2>
+        <!-- POPUP PRODUS (overlay) -->
+        <div id="productPanel" class="product-panel" style="display:none;">
+          <div class="product-panel-card">
+            <div class="product-panel-header">
+              <div class="product-panel-name" id="panelName"></div>
+              <button class="product-panel-close" id="panelCloseBtn">×</button>
+            </div>
+            <div class="product-panel-desc" id="panelDesc"></div>
+            <div class="product-panel-price" id="panelPrice"></div>
+            <div class="qty-row">
+              <span class="qty-label">Cantitate:</span>
+              <input type="number" id="panelQty" min="1" value="1" />
+              <span id="panelQtyRange" class="qty-range"></span>
+            </div>
+            <button class="product-panel-buy" id="panelBuyBtn">
+              Cumpără și deschide tichet
+            </button>
+            <div class="status-bar" id="panelStatus"></div>
+          </div>
+        </div>
+      </div>
 
-        <div class="tickets-layout">
-          <!-- Lista de tichete -->
-          <aside class="tickets-list" id="chatList"></aside>
+      <!-- TICKETS (full page chat) -->
+      <div id="ticketsTab" class="tab-section">
+        <div class="chat-layout">
+          <!-- Sidebar listă tichete (drawer) -->
+          <div class="chat-sidebar" id="chatList"></div>
 
           <!-- Chat principal -->
-          <section class="chat">
-            <div class="chat-header">
-              <div class="chat-title" id="ticketTitle">
-                Niciun tichet selectat
+          <div class="chat-main">
+            <div class="chat-header" id="chatHeader">
+              <div class="chat-header-left">
+                <!-- 3 linii stânga sus -->
+                <button
+                  class="tickets-menu-toggle"
+                  id="ticketsMenuToggle"
+                  aria-label="Deschide lista de tichete"
+                >
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </button>
+
+                <!-- username - product -->
+                <div class="chat-title-main" id="ticketTitle">
+                  Niciun tichet selectat
+                </div>
               </div>
-              <button class="btn-outline btn-small" id="userTicketCloseBtn">
-                Închide tichet
-              </button>
+
+              <div class="chat-header-right">
+                <!-- buton Închide tichet (dreapta sus) -->
+                <button class="btn-ghost btn-close-ticket" id="userTicketCloseBtn">
+                  Închide tichet
+                </button>
+              </div>
             </div>
 
             <div class="chat-messages" id="chatMessages"></div>
 
-            <div class="chat-input-row">
+            <div class="chat-input">
+              <!-- bara REPLY + input+buton, JS le reorganizează -->
               <input
                 id="chatInput"
-                type="text"
                 placeholder="Scrie un mesaj către admin..."
                 autocomplete="off"
               />
-              <button class="btn-primary btn-small" id="chatSendBtn">
-                Trimite
+              <button id="chatSendBtn">Trimite</button>
+            </div>
+
+            <!-- stânga jos – back la shop -->
+            <div class="chat-bottom-bar">
+              <button class="btn-ghost btn-back-shop" id="backToShopBtn">
+                ← Înapoi la shop
               </button>
             </div>
-          </section>
+          </div>
         </div>
-      </section>
-    </main>
 
-    <footer class="app-footer">
-      <span>MiniApp · shop & chat</span>
-    </footer>
-  </div>
-
-  <!-- MODAL PRODUS -->
-  <div id="productPanel" class="modal">
-    <div class="modal-card">
-      <div class="modal-header">
-        <div class="modal-title" id="panelName"></div>
-        <button class="modal-close" id="panelCloseBtn" aria-label="Închide">×</button>
+        <!-- Backdrop pentru drawer lista tichete -->
+        <div class="tickets-backdrop" id="ticketsBackdrop"></div>
       </div>
 
-      <div class="modal-body">
-        <p class="modal-desc" id="panelDesc"></p>
-        <p class="modal-price" id="panelPrice"></p>
-
-        <div class="modal-qty-row">
-          <label for="panelQty">Cantitate</label>
-          <input type="number" id="panelQty" min="1" value="1" />
-          <span id="panelQtyRange" class="modal-qty-range"></span>
-        </div>
-
-        <div class="modal-actions">
-          <button class="btn-primary" id="panelBuyBtn">
-            Cumpără și deschide tichet
-          </button>
-        </div>
-
-        <div class="status-text" id="panelStatus"></div>
+      <div class="footer">
+        <span>MiniApp · shop & chat</span>
+        <span class="dot-red"></span>
       </div>
     </div>
   </div>
 
-  <!-- JS -->
+  <!-- JS comun -->
   <script src="app.js"></script>
 </body>
 </html>
