@@ -57,35 +57,31 @@ body {
 }
 
 body[data-page="user"] .container {
-  max-width: 1100px;
-  padding: 0 16px 28px;
-  margin: 0 auto;
-}
-
-body[data-page="user"] .page-shell {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 18px 14px 26px;
+  max-width: 100%;
+  padding: 0;
+  margin: 0;
+  min-height: 100vh;
 }
 
 body[data-page="user"] .card--user {
   position: relative;
+  max-width: 100%;
   margin: 0;
-  padding: 14px 14px 18px;
-  min-height: 70vh;
+  padding: 10px 10px 10px;
+  min-height: 100vh;
+  height: 100vh;        /* user card ocupă toată înălțimea */
   display: flex;
   flex-direction: column;
-  background: linear-gradient(180deg, #16171c 0%, #0f1012 100%);
-  border-radius: var(--radius-lg);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow: 0 22px 48px rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  overflow: hidden;
+  background: #111214;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  overflow: hidden;     /* scroll intern, nu extinde pagina */
 }
 
 body[data-page="user"] .card--user::before {
-  display: block;
+  display: none;
 }
 
 /* admin card clasic */
@@ -133,301 +129,15 @@ body[data-page="admin"] .container {
 }
 
 /* ============================
-   USER HERO & GRID
-   ============================ */
-
-body[data-page="user"] {
-  background: radial-gradient(circle at 20% 20%, rgba(255, 24, 67, 0.08), transparent 26%),
-    radial-gradient(circle at 80% 0%, rgba(255, 24, 67, 0.12), transparent 30%),
-    #0c0d10;
-}
-
-body[data-page="user"] .hero {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
-  gap: 16px;
-  padding: 8px 2px 18px;
-  align-items: stretch;
-}
-
-body[data-page="user"] .hero__text {
-  background: linear-gradient(145deg, rgba(255, 24, 67, 0.16), rgba(24, 26, 32, 0.96));
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.6);
-  border-radius: 18px;
-  padding: 20px 20px 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-body[data-page="user"] .hero__text--revamp {
-  position: relative;
-  overflow: hidden;
-  gap: 14px;
-}
-
-body[data-page="user"] .hero__text--revamp::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    circle at 18% 10%,
-    rgba(255, 75, 122, 0.16),
-    transparent 30%
-  );
-  pointer-events: none;
-}
-
-.pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: rgba(255, 24, 67, 0.12);
-  border: 1px solid rgba(255, 24, 67, 0.24);
-  color: var(--text);
-  font-size: 11px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.pill--glow {
-  box-shadow: 0 0 0 1px rgba(255, 24, 67, 0.2), 0 12px 24px rgba(255, 24, 67, 0.16);
-  background: linear-gradient(120deg, rgba(255, 24, 67, 0.22), rgba(32, 34, 37, 0.8));
-}
-
-body[data-page="user"] .hero h1 {
-  font-size: 26px;
-  margin: 0;
-  line-height: 1.2;
-}
-
-body[data-page="user"] .hero p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.hero__actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  width: 100%;
-}
-
-.hero__meta {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.hero__divider {
-  width: 16px;
-  height: 1px;
-  background: rgba(255, 255, 255, 0.14);
-  display: inline-block;
-}
-
-.btn-primary--wide {
-  min-width: 170px;
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-}
-
-.hero__ghost {
-  border-color: rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-}
-
-.hero__actions .btn-primary,
-.hero__actions .btn-ghost {
-  flex: 1 1 240px;
-  justify-content: center;
-}
-
-.btn-primary {
-  padding: 12px 16px;
-  background: linear-gradient(140deg, #ff1843, #ff4b7a);
-  border: none;
-  border-radius: 12px;
-  color: #0c0d10;
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 0 14px 36px rgba(255, 24, 67, 0.35);
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
-}
-
-.btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 18px 46px rgba(255, 24, 67, 0.45);
-}
-
-.balance-card {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: rgba(23, 24, 30, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
-}
-
-.balance-card .label {
-  font-size: 11px;
-  color: var(--muted);
-}
-
-.balance-card .value {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--accent-soft);
-}
-
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--muted);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.chip--soft {
-  background: rgba(255, 24, 67, 0.12);
-  color: #ffc4d4;
-  border-color: rgba(255, 24, 67, 0.3);
-}
-
-body[data-page="user"] .hero__stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 10px;
-}
-
-body[data-page="user"] .hero__panel--revamp {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.balance-card--hero {
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  padding: 14px 16px;
-  background: linear-gradient(135deg, rgba(32, 34, 37, 0.92), rgba(255, 24, 67, 0.12));
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.panel-card {
-  background: #16171b;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 16px;
-  padding: 14px 14px 16px;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55);
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.panel-card__title {
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: var(--muted);
-}
-
-.panel-card__list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.panel-feature {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 10px;
-  align-items: start;
-}
-
-.panel-feature__title {
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.panel-feature p {
-  margin: 2px 0 0;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.panel-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  background: linear-gradient(135deg, #ff1843, #ff4b7a);
-  box-shadow: 0 0 0 4px rgba(255, 24, 67, 0.12);
-  margin-top: 4px;
-}
-
-.stat-card {
-  background: #17181d;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 16px;
-  padding: 12px 12px 14px;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.stat-label {
-  color: var(--muted);
-  font-size: 11px;
-}
-
-.stat-value {
-  font-size: 18px;
-  font-weight: 700;
-}
-
-.stat-card p {
-  margin: 0;
-  color: #b7b8c6;
-  font-size: 12px;
-  line-height: 1.4;
-}
-
-/* ============================
    HEADER
    ============================ */
 
 .header-top {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: 10px;
   margin-bottom: 6px;
-}
-
-/* doar în shop user avem header-top cu credite */
-.header-top--shop {
-  margin-top: 4px;
 }
 
 .badge {
@@ -459,6 +169,13 @@ body[data-page="user"] .hero__panel--revamp {
   color: var(--accent-soft);
 }
 
+/* TITLU + SUBTITLU + USER-LINE SUNT ASCUNSE PE PAGINA DE USER */
+body[data-page="user"] h1,
+body[data-page="user"] .subtitle,
+body[data-page="user"] .user-line {
+  display: none;
+}
+
 h1 {
   margin: 2px 0 0;
   font-size: 18px;
@@ -470,10 +187,7 @@ h1 {
   color: var(--muted);
 }
 
-/* linia cu user – o folosim doar pentru erori / mesaje, ascunsă implicit */
-
 .user-line {
-  display: none;
   margin: 0 0 8px;
   font-size: 11px;
   color: var(--muted);
@@ -483,7 +197,7 @@ h1 {
 }
 
 /* ============================
-   TABS (folosite în admin; în user nu mai avem)
+   TABS
    ============================ */
 
 .tabs {
@@ -496,6 +210,11 @@ h1 {
   border: 1px solid rgba(255, 255, 255, 0.05);
   margin-bottom: 10px;
   overflow: hidden;
+}
+
+/* TABS USER – ASCUNSE DIN UI (logică păstrată în JS) */
+body[data-page="user"] .tabs--user {
+  display: none;
 }
 
 .tab-btn {
@@ -529,6 +248,15 @@ h1 {
   transition: transform var(--transition-med);
 }
 
+/* user tabs */
+
+.tabs--user[data-active="shopTab"]::after {
+  transform: translateX(0);
+}
+.tabs--user[data-active="ticketsTab"]::after {
+  transform: translateX(calc(100%));
+}
+
 /* admin tabs */
 
 .tabs--admin[data-active="chatTab"]::after {
@@ -548,89 +276,17 @@ h1 {
   flex: 1;
 }
 
-.tab-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.section-eyebrow {
+.section-title {
   font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.16em;
   color: var(--muted);
-  margin-bottom: 2px;
+  margin: 0 0 6px;
 }
 
-.section-title {
-  font-size: 22px;
-  margin: 0;
-  line-height: 1.2;
-}
-
-.section-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.shop-credit-sticky {
-  position: sticky;
-  top: 8px;
-  z-index: 6;
-  margin: 2px 0 10px;
-}
-
-.shop-credit-banner {
-  padding: 14px 15px;
-  border-radius: var(--radius-md);
-  border: 1px solid rgba(255, 24, 67, 0.22);
-  background:
-    linear-gradient(120deg, rgba(255, 24, 67, 0.24), rgba(255, 24, 67, 0.1)),
-    radial-gradient(circle at 18% 40%, rgba(255, 24, 67, 0.14), transparent 38%),
-    #1c1e23;
-  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
-
-.shop-credit-left {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.shop-credit-label {
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  font-size: 12px;
-  color: #ffd6e0;
-}
-
-.shop-credit-note {
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.shop-credit-value {
-  font-size: 26px;
-  font-weight: 800;
-  color: var(--text);
-  padding: 10px 14px;
-  background: linear-gradient(135deg, rgba(255, 24, 67, 0.3), rgba(255, 24, 67, 0.14));
-  border-radius: var(--radius-md);
-  border: 1px solid rgba(255, 24, 67, 0.4);
-  min-width: 86px;
-  text-align: center;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-  letter-spacing: 0.01em;
+.section-title--tickets {
+  margin-top: 26px;
+  padding-left: 36px;
 }
 
 /* ============================
@@ -860,40 +516,40 @@ h1 {
   flex: 1;
 }
 
-/* header chat: burger + titlu + buton închidere la user */
+/* HEADER NOU SUS ÎN CHAT – 3 LINES + TITLU + CLOSE */
+
+.chat-main-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.7);
+  background: #26282c;
+}
+
+.chat-main-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chat-ticket-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.chat-main-header-right {
+  display: flex;
+  align-items: center;
+}
 
 .chat-header {
   padding: 7px 10px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.6);
   font-size: 12px;
 }
-
-body[data-page="user"] .chat-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.chat-header-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.chat-header-right .btn-close-ticket {
-  padding-inline: 10px;
-  font-size: 11px;
-}
-
 .chat-header span {
   color: var(--muted);
-}
-
-.chat-title-main {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text);
 }
 
 .chat-messages {
@@ -950,9 +606,12 @@ body[data-page="user"] #ticketsTab.tickets-drawer-open .tickets-backdrop {
   pointer-events: auto;
 }
 
-/* buton 3 linii – acum stă în header, nu mai e fixed */
+/* buton 3 linii – ACUM RELATIV ÎN HEADER, NU FIXED SUS */
 
 body[data-page="user"] .tickets-menu-toggle {
+  position: relative;
+  top: 0;
+  left: 0;
   width: 32px;
   height: 24px;
   border-radius: 999px;
@@ -997,32 +656,8 @@ body[data-page="user"]
   transform: translateY(-2px) rotate(-10deg);
 }
 
-@media (max-width: 860px) {
-  body[data-page="user"] .hero {
-    grid-template-columns: 1fr;
-  }
-
-  body[data-page="user"] .card--user {
-    padding: 12px 12px 16px;
-  }
-
-  .tab-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .hero__actions .btn-primary,
-  .hero__actions .btn-ghost {
-    flex-basis: 100%;
-  }
-
-  .shop-credit-sticky {
-    top: 4px;
-  }
-}
-
 /* ============================
-   SIDEBAR – ADMIN (fix)
+   SIDEBAR – ADMIN (fix!!!)
    ============================ */
 
 body[data-page="admin"] .chat-sidebar {
@@ -1282,19 +917,6 @@ body[data-page="admin"] .chat-sidebar {
   white-space: nowrap;
 }
 
-/* bară jos-stânga cu „Înapoi la shop” */
-
-.chat-bottom-bar {
-  padding: 4px 8px 6px;
-  border-top: 1px solid rgba(0, 0, 0, 0.6);
-  display: flex;
-  justify-content: flex-start;
-}
-
-.btn-back-shop {
-  font-size: 11px;
-}
-
 /* ============================
    STATUS & BUTOANE
    ============================ */
@@ -1354,16 +976,15 @@ body[data-page="admin"] .chat-sidebar {
   transform: translateY(-0.5px);
 }
 
-/* disabled buttons */
+/* BUTON JOS STÂNGA – ÎNAPOI LA SHOP */
 
-button:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-button:disabled:hover {
-  transform: none;
-  box-shadow: none;
+.back-to-shop-btn {
+  margin-top: 8px;
+  align-self: flex-start;
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 /* ============================
@@ -1539,19 +1160,17 @@ button:disabled:hover {
 }
 
 .shop-container {
-  height: calc(100vh - 240px);
-  min-height: 520px;
-  max-height: none;
+  max-height: 460px;
   overflow: auto;
   border-radius: var(--radius-md);
-  background: linear-gradient(180deg, #1f2125 0%, #16171a 100%);
+  background: #202225;
   border: 1px solid var(--border-subtle);
-  padding: 10px;
+  padding: 8px;
 }
 
 .shop-sidepanel {
   border-radius: var(--radius-md);
-  background: linear-gradient(180deg, #202225 0%, #18191c 100%);
+  background: #202225;
   border: 1px solid var(--border-subtle);
   padding: 10px;
   font-size: 12px;
@@ -1574,24 +1193,12 @@ button:disabled:hover {
   margin-bottom: 8px;
 }
 
-.shop-metrics .stat-pill {
-  font-size: 11px;
-}
-
 .cat-card {
   border-radius: var(--radius-md);
-  padding: 10px;
+  padding: 8px;
   margin-bottom: 8px;
-  background: linear-gradient(160deg, rgba(43, 45, 49, 0.95), #1b1c20);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
-  position: relative;
-  transition: transform var(--transition-fast), border-color var(--transition-fast);
-}
-
-.cat-card:hover {
-  transform: translateY(-1px);
-  border-color: rgba(255, 255, 255, 0.12);
+  background: #2b2d31;
+  border: 1px solid var(--border-subtle);
 }
 
 .cat-header {
@@ -1605,33 +1212,6 @@ button:disabled:hover {
   align-items: center;
   gap: 6px;
   flex: 1;
-}
-
-.drag-handle {
-  width: 26px;
-  height: 26px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px dashed rgba(255, 255, 255, 0.08);
-  color: var(--muted);
-  font-size: 14px;
-  cursor: grab;
-  transition: all var(--transition-fast);
-}
-
-.drag-handle:hover {
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.drag-handle--small {
-  width: 22px;
-  height: 22px;
-  font-size: 12px;
 }
 .cat-header-right {
   display: flex;
@@ -1670,20 +1250,16 @@ button:disabled:hover {
   margin-top: 6px;
   border-radius: var(--radius-sm);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 8px;
-  background: linear-gradient(180deg, #1b1c20 0%, #141518 100%);
+  padding: 6px;
+  background: #202225;
 }
 
 .product-row {
   display: grid;
-  grid-template-columns: auto 1.6fr 0.7fr 0.7fr 0.7fr auto;
+  grid-template-columns: 1.6fr 0.7fr 0.7fr 0.7fr auto;
   gap: 4px;
   align-items: center;
   margin-bottom: 4px;
-  padding: 2px 4px;
-  border-radius: 10px;
-  position: relative;
-  transition: background var(--transition-fast), border-color var(--transition-fast);
 }
 
 .product-row input {
@@ -1708,35 +1284,6 @@ button:disabled:hover {
 
 .products-list input[type="text"] {
   width: 100%;
-}
-
-.cat-card.is-dragging,
-.product-row.is-dragging {
-  opacity: 0.8;
-  border-color: rgba(255, 255, 255, 0.16);
-}
-
-.drop-before::before,
-.drop-after::after {
-  content: "";
-  position: absolute;
-  left: 8px;
-  right: 8px;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, var(--accent), transparent);
-}
-
-.drop-before::before {
-  top: 0;
-}
-
-.drop-after::after {
-  bottom: 0;
-}
-
-.products-list.drop-target {
-  outline: 1px dashed rgba(255, 255, 255, 0.2);
-  outline-offset: 2px;
 }
 
 /* ============================
@@ -1838,59 +1385,4 @@ button:disabled:hover {
   body[data-page="user"] .chat-sidebar {
     width: min(300px, 80vw);
   }
-}
-/* ============================
-   PANEL PRODUS – POPUP OVERLAY
-   ============================ */
-
-.product-panel {
-  position: fixed;
-  inset: 0;
-  display: none;              /* controlat din JS */
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.75);
-  z-index: 60;
-}
-
-.product-panel-card {
-  width: min(420px, 92vw);
-  border-radius: var(--radius-md);
-  padding: 10px 12px;
-  background: #202225;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.9);
-  animation: panelIn 0.18s ease-out;
-}
-
-.product-panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 4px;
-}
-
-.product-panel-name {
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.product-panel-close {
-  border: none;
-  background: transparent;
-  color: var(--muted);
-  font-size: 18px;
-  cursor: pointer;
-  padding: 0 4px;
-}
-
-.product-panel-desc {
-  font-size: 12px;
-  color: var(--muted);
-  margin-bottom: 4px;
-}
-
-.product-panel-price {
-  font-size: 12px;
-  margin-bottom: 6px;
 }
