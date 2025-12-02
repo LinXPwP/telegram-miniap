@@ -1,8 +1,5 @@
 // app.js – versiune simplificată, doar pentru USER
-// - Shop cu categorii + produse
-// - Popup produs (cantitate, cumpărare, deschidere tichet)
-// - Listă tichete + chat tip suport
-// - Polling inteligent pentru actualizare tichete
+console.log("User dashboard v2.0");
 
 const API_URL = "https://api.redgen.vip/";
 
