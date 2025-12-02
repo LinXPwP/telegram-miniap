@@ -4,6 +4,8 @@
 // + user tickets drawer (3 linii stânga sus, listă de tichete care glisează)
 // + blocare mesaje pe tichete închise (user + admin)
 // + user poate închide propriul tichet din UI
+// + layout user tickets: chat aproape full, header sus cu (3 linii + nume tichet + close),
+//   buton jos stânga "Înapoi la Shop", fără titlu/subtitlu/user-line și fără tabs vizibile
 
 // URL-ul Netlify / API (proxy către bot.py)
 const API_URL = "https://api.redgen.vip/";
@@ -427,7 +429,7 @@ function initUserApp() {
   }
 
   const creditsValueEl = document.getElementById("creditsValue");
-  const userLineEl = document.getElementById("userLine");
+  const userLineEl = document.getElementById("userLine"); // poate fi null acum
 
   const categoriesContainer = document.getElementById("categoriesContainer");
   const productPanelEl = document.getElementById("productPanel");
@@ -452,9 +454,12 @@ function initUserApp() {
   const ticketsBackdrop = document.getElementById("ticketsBackdrop");
   const ticketsTabEl = document.getElementById("ticketsTab");
 
-  // acțiuni user pentru tichet (buton închidere)
-  const userTicketActionsEl = document.getElementById("userTicketActions");
+  // header nou – titlu tichet sus + buton close
+  const chatTicketTitleEl = document.getElementById("chatTicketTitle");
   const userTicketCloseBtn = document.getElementById("userTicketCloseBtn");
+
+  // buton jos stânga – back la Shop
+  const backToShopBtn = document.getElementById("backToShopBtn");
 
   // bară „reply” user + aranjare input ca la admin
   const chatInputContainer = document.querySelector(
@@ -518,8 +523,13 @@ function initUserApp() {
       chatSendBtn.disabled = true;
       chatInputEl.placeholder =
         "Selectează un tichet pentru a începe chat-ul...";
-      if (userTicketActionsEl) userTicketActionsEl.style.display = "none";
       clearUserMode();
+      if (chatTicketTitleEl) {
+        chatTicketTitleEl.textContent = "Niciun tichet selectat";
+      }
+      if (userTicketCloseBtn) {
+        userTicketCloseBtn.style.display = "none";
+      }
       return;
     }
 
@@ -530,9 +540,9 @@ function initUserApp() {
       ? "Acest tichet este închis. Nu mai poți trimite mesaje."
       : "Scrie un mesaj către admin...";
 
-    if (userTicketActionsEl) {
+    if (userTicketCloseBtn) {
       // user poate închide doar tichete deschise
-      userTicketActionsEl.style.display = isClosed ? "none" : "flex";
+      userTicketCloseBtn.style.display = isClosed ? "none" : "inline-flex";
     }
 
     if (isClosed) {
@@ -595,12 +605,17 @@ function initUserApp() {
 
   function renderUserHeader() {
     if (!CURRENT_USER) return;
-    creditsValueEl.textContent = CURRENT_USER.credits;
-    const name =
-      CURRENT_USER.username && CURRENT_USER.username !== "fara_username"
-        ? "@" + CURRENT_USER.username
-        : `ID ${CURRENT_USER.id}`;
-    userLineEl.innerHTML = `Utilizator: <b>${name}</b>`;
+    if (creditsValueEl) {
+      creditsValueEl.textContent = CURRENT_USER.credits;
+    }
+    // userLineEl nu mai este în UI, dar dacă există, îl completăm
+    if (userLineEl) {
+      const name =
+        CURRENT_USER.username && CURRENT_USER.username !== "fara_username"
+          ? "@" + CURRENT_USER.username
+          : `ID ${CURRENT_USER.id}`;
+      userLineEl.innerHTML = `Utilizator: <b>${name}</b>`;
+    }
   }
 
   /* ---------- SHOP (user) ---------- */
@@ -735,7 +750,9 @@ function initUserApp() {
       }
 
       CURRENT_USER.credits = res.new_balance;
-      creditsValueEl.textContent = CURRENT_USER.credits;
+      if (creditsValueEl) {
+        creditsValueEl.textContent = CURRENT_USER.credits;
+      }
 
       const newTicket = res.ticket;
       CURRENT_TICKETS.push(newTicket);
@@ -859,10 +876,28 @@ function initUserApp() {
     renderTicketsList();
 
     if (!t) {
+      if (chatTicketTitleEl) {
+        chatTicketTitleEl.textContent = "Niciun tichet selectat";
+      }
       chatHeaderEl.innerHTML = "<span>Niciun tichet selectat</span>";
       chatMessagesEl.innerHTML = "";
       updateUserChatState(null);
       return;
+    }
+
+    // titlul sus: (username - product_name)
+    if (chatTicketTitleEl) {
+      let displayUser =
+        CURRENT_USER &&
+        CURRENT_USER.username &&
+        CURRENT_USER.username !== "fara_username"
+          ? "@" + CURRENT_USER.username
+          : CURRENT_USER && CURRENT_USER.id
+          ? "ID " + CURRENT_USER.id
+          : "User";
+      chatTicketTitleEl.textContent = `${displayUser} - ${
+        t.product_name || "Produs"
+      }`;
     }
 
     chatHeaderEl.innerHTML = `
@@ -1007,11 +1042,24 @@ function initUserApp() {
     }
   });
 
-  // buton user "Închide tichet"
+  // buton user "Închide tichet" (acum în header sus dreapta)
   userTicketCloseBtn?.addEventListener("click", () => {
     if (!SELECTED_TICKET_ID) return;
     if (!confirm("Sigur vrei să închizi acest tichet?")) return;
     userCloseCurrentTicket();
+  });
+
+  // buton jos stânga – Înapoi la Shop
+  backToShopBtn?.addEventListener("click", () => {
+    const shopTabEl = document.getElementById("shopTab");
+    const ticketsTabEl = document.getElementById("ticketsTab");
+    if (shopTabEl && ticketsTabEl) {
+      shopTabEl.classList.add("active");
+      ticketsTabEl.classList.remove("active");
+    }
+    if (typeof window.onUserTabChange === "function") {
+      window.onUserTabChange("shopTab");
+    }
   });
 
   async function pollTicketsUserCore() {
@@ -1044,6 +1092,9 @@ function initUserApp() {
         } else {
           // tichetul poate a expirat și a fost șters (după 1 săptămână)
           SELECTED_TICKET_ID = null;
+          if (chatTicketTitleEl) {
+            chatTicketTitleEl.textContent = "Niciun tichet selectat";
+          }
           chatHeaderEl.innerHTML = "<span>Niciun tichet selectat</span>";
           chatMessagesEl.innerHTML = "";
           updateUserChatState(null);
@@ -1100,8 +1151,10 @@ function initUserApp() {
 
   async function initApp() {
     if (!tg) {
-      userLineEl.textContent =
-        "Nu ești în Telegram MiniApp. Deschide link-ul prin bot.";
+      if (userLineEl) {
+        userLineEl.textContent =
+          "Nu ești în Telegram MiniApp. Deschide link-ul prin bot.";
+      }
       return;
     }
 
@@ -1110,8 +1163,10 @@ function initUserApp() {
 
     const user = tg.initDataUnsafe?.user;
     if (!user) {
-      userLineEl.textContent =
-        "Telegram nu a trimis datele userului. Deschide MiniApp-ul din butonul inline al botului.";
+      if (userLineEl) {
+        userLineEl.textContent =
+          "Telegram nu a trimis datele userului. Deschide MiniApp-ul din butonul inline al botului.";
+      }
       return;
     }
 
@@ -1126,8 +1181,10 @@ function initUserApp() {
     try {
       const res = await apiCall("init", {});
       if (!res.ok) {
-        userLineEl.textContent =
-          "Eroare la inițializare (server nu a răspuns ok).";
+        if (userLineEl) {
+          userLineEl.textContent =
+            "Eroare la inițializare (server nu a răspuns ok).";
+        }
         return;
       }
 
@@ -1160,7 +1217,9 @@ function initUserApp() {
       }
     } catch (err) {
       console.error("init error:", err);
-      userLineEl.textContent = "Eroare la inițializare (network).";
+      if (userLineEl) {
+        userLineEl.textContent = "Eroare la inițializare (network).";
+      }
     }
   }
 
@@ -1172,6 +1231,8 @@ function initUserApp() {
    ============================ */
 
 function initAdminApp() {
+  // ... partea de admin rămâne EXACT cum o aveai (nu am modificat nimic) ...
+  // (am păstrat tot codul tău de admin mai jos identic)
   const params = new URLSearchParams(window.location.search);
   const ADMIN_TOKEN = params.get("token") || "";
 
