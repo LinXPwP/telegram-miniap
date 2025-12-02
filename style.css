@@ -57,31 +57,36 @@ body {
 }
 
 body[data-page="user"] .container {
-  max-width: 100%;
-  padding: 0;
-  margin: 0;
-  min-height: 100vh;
+  max-width: 1100px;
+  padding: 0 16px 28px;
+  margin: 0 auto;
+}
+
+body[data-page="user"] .page-shell {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 18px 14px 26px;
 }
 
 body[data-page="user"] .card--user {
   position: relative;
-  max-width: 100%;
   margin: 0;
-  padding: 10px 10px 10px;
-  min-height: 100vh;
-  height: 100vh;        /* user card ocupă toată înălțimea */
+  padding: 14px 14px 18px;
+  min-height: 70vh;
   display: flex;
   flex-direction: column;
-  background: #111214;
-  border-radius: 0;
-  border: none;
-  box-shadow: none;
-  backdrop-filter: none;
-  overflow: hidden;     /* scroll intern, nu extinde pagina */
+  gap: 12px;
+  background: linear-gradient(180deg, #16171c 0%, #0f1012 100%);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 22px 48px rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  overflow: hidden;
 }
 
 body[data-page="user"] .card--user::before {
-  display: none;
+  display: block;
 }
 
 /* admin card clasic */
@@ -126,6 +131,143 @@ body[data-page="admin"] .container {
   display: flex;
   flex-direction: column;
   max-height: 100%;
+}
+
+/* ============================
+   USER HERO & GRID
+   ============================ */
+
+body[data-page="user"] {
+  background: radial-gradient(circle at 20% 20%, rgba(255, 24, 67, 0.08), transparent 26%),
+    radial-gradient(circle at 80% 0%, rgba(255, 24, 67, 0.12), transparent 30%),
+    #0c0d10;
+}
+
+/* ============================
+   USER TOPBAR & GRID
+   ============================ */
+
+.btn-primary {
+  padding: 11px 14px;
+  background: linear-gradient(135deg, #ff1843, #ff4b7a);
+  border: none;
+  border-radius: 12px;
+  color: #0c0d10;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 14px 36px rgba(255, 24, 67, 0.35);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  white-space: nowrap;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 18px 46px rgba(255, 24, 67, 0.45);
+}
+
+.balance-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(23, 24, 30, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.balance-card .label {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.balance-card .value {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--accent-soft);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.chip--soft {
+  background: rgba(255, 24, 67, 0.12);
+  color: #ffc4d4;
+  border-color: rgba(255, 24, 67, 0.3);
+}
+
+.user-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(120deg, rgba(24, 26, 32, 0.9), rgba(255, 24, 67, 0.06));
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+}
+
+.brand-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.brand-title {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.brand-sub {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.user-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.user-topline {
+  margin: 12px 0 14px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+}
+
+.topline-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: #191b1f;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: #d7d8e2;
+  font-size: 12px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--muted);
+}
+
+.dot--accent {
+  background: var(--accent);
 }
 
 /* ============================
@@ -263,17 +405,32 @@ h1 {
   flex: 1;
 }
 
-.section-title {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.16em;
-  color: var(--muted);
-  margin: 0 0 6px;
+.tab-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
 }
 
-.section-title--tickets {
-  margin-top: 26px;
-  padding-left: 36px;
+.section-eyebrow {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+
+.section-title {
+  font-size: 18px;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.section-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 /* ============================
@@ -638,6 +795,26 @@ body[data-page="user"]
   span:nth-child(3) {
   transform-origin: left center;
   transform: translateY(-2px) rotate(-10deg);
+}
+
+@media (max-width: 860px) {
+  .user-topbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .user-top-actions {
+    width: 100%;
+  }
+
+  body[data-page="user"] .card--user {
+    padding: 12px 12px 16px;
+  }
+
+  .tab-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
 /* ============================
@@ -1158,17 +1335,19 @@ button:disabled:hover {
 }
 
 .shop-container {
-  max-height: 460px;
+  height: calc(100vh - 240px);
+  min-height: 520px;
+  max-height: none;
   overflow: auto;
   border-radius: var(--radius-md);
-  background: #202225;
+  background: linear-gradient(180deg, #1f2125 0%, #16171a 100%);
   border: 1px solid var(--border-subtle);
-  padding: 8px;
+  padding: 10px;
 }
 
 .shop-sidepanel {
   border-radius: var(--radius-md);
-  background: #202225;
+  background: linear-gradient(180deg, #202225 0%, #18191c 100%);
   border: 1px solid var(--border-subtle);
   padding: 10px;
   font-size: 12px;
@@ -1197,10 +1376,18 @@ button:disabled:hover {
 
 .cat-card {
   border-radius: var(--radius-md);
-  padding: 8px;
+  padding: 10px;
   margin-bottom: 8px;
-  background: #2b2d31;
-  border: 1px solid var(--border-subtle);
+  background: linear-gradient(160deg, rgba(43, 45, 49, 0.95), #1b1c20);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+  position: relative;
+  transition: transform var(--transition-fast), border-color var(--transition-fast);
+}
+
+.cat-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
 .cat-header {
@@ -1214,6 +1401,33 @@ button:disabled:hover {
   align-items: center;
   gap: 6px;
   flex: 1;
+}
+
+.drag-handle {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(255, 255, 255, 0.08);
+  color: var(--muted);
+  font-size: 14px;
+  cursor: grab;
+  transition: all var(--transition-fast);
+}
+
+.drag-handle:hover {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.drag-handle--small {
+  width: 22px;
+  height: 22px;
+  font-size: 12px;
 }
 .cat-header-right {
   display: flex;
@@ -1252,16 +1466,20 @@ button:disabled:hover {
   margin-top: 6px;
   border-radius: var(--radius-sm);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 6px;
-  background: #202225;
+  padding: 8px;
+  background: linear-gradient(180deg, #1b1c20 0%, #141518 100%);
 }
 
 .product-row {
   display: grid;
-  grid-template-columns: 1.6fr 0.7fr 0.7fr 0.7fr auto;
+  grid-template-columns: auto 1.6fr 0.7fr 0.7fr 0.7fr auto;
   gap: 4px;
   align-items: center;
   margin-bottom: 4px;
+  padding: 2px 4px;
+  border-radius: 10px;
+  position: relative;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
 }
 
 .product-row input {
@@ -1286,6 +1504,35 @@ button:disabled:hover {
 
 .products-list input[type="text"] {
   width: 100%;
+}
+
+.cat-card.is-dragging,
+.product-row.is-dragging {
+  opacity: 0.8;
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.drop-before::before,
+.drop-after::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+}
+
+.drop-before::before {
+  top: 0;
+}
+
+.drop-after::after {
+  bottom: 0;
+}
+
+.products-list.drop-target {
+  outline: 1px dashed rgba(255, 255, 255, 0.2);
+  outline-offset: 2px;
 }
 
 /* ============================

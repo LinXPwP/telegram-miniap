@@ -1170,6 +1170,9 @@ function initAdminApp() {
   const addCategoryBtn = document.getElementById("addCategoryBtn");
   const saveShopBtn = document.getElementById("saveShopBtn");
   const shopMetricsEl = document.getElementById("shopMetrics");
+  let draggingCatIndex = null;
+  let draggingProduct = null;
+  let lastShopSyncTs = 0;
 
   const reasonModalEl = document.getElementById("reasonModal");
   const reasonInputEl = document.getElementById("reasonInput");
@@ -1778,6 +1781,50 @@ function initAdminApp() {
     `;
   }
 
+  function markShopStatus(text, type = "neutral") {
+    if (!shopStatusBarEl) return;
+    shopStatusBarEl.textContent = text;
+    shopStatusBarEl.className = "status-bar";
+    if (type === "ok") shopStatusBarEl.classList.add("status-ok");
+    if (type === "error") shopStatusBarEl.classList.add("status-error");
+  }
+
+  function reorderCategories(targetIndex, placeAfter) {
+    if (draggingCatIndex === null) return;
+    const list = CURRENT_SHOP?.categories || [];
+    if (targetIndex < 0 || targetIndex >= list.length) return;
+    if (draggingCatIndex === targetIndex) return;
+
+    const [moved] = list.splice(draggingCatIndex, 1);
+    let insertIndex = placeAfter ? targetIndex + 1 : targetIndex;
+    if (draggingCatIndex < insertIndex) insertIndex -= 1;
+    insertIndex = Math.max(0, Math.min(insertIndex, list.length));
+    list.splice(insertIndex, 0, moved);
+
+    draggingCatIndex = null;
+    renderShopEditor();
+  }
+
+  function reorderProducts(catIndex, targetIndex, placeAfter) {
+    if (!CURRENT_SHOP || !CURRENT_SHOP.categories) return;
+    if (!draggingProduct) return;
+    const { catIndex: fromCat, prodIndex: fromIndex } = draggingProduct;
+    if (fromCat !== catIndex) return;
+
+    const products = CURRENT_SHOP.categories[catIndex].products || [];
+    if (targetIndex < 0 || targetIndex >= products.length) return;
+    if (fromIndex === targetIndex) return;
+
+    const [moved] = products.splice(fromIndex, 1);
+    let insertIndex = placeAfter ? targetIndex + 1 : targetIndex;
+    if (fromIndex < insertIndex) insertIndex -= 1;
+    insertIndex = Math.max(0, Math.min(insertIndex, products.length));
+    products.splice(insertIndex, 0, moved);
+
+    draggingProduct = null;
+    renderShopEditor();
+  }
+
   function renderShopEditor() {
     shopContainerEl.innerHTML = "";
     if (!CURRENT_SHOP || !CURRENT_SHOP.categories) {
@@ -1790,12 +1837,52 @@ function initAdminApp() {
     CURRENT_SHOP.categories.forEach((cat, catIndex) => {
       const catDiv = document.createElement("div");
       catDiv.className = "cat-card";
+      catDiv.dataset.catIndex = String(catIndex);
+
+      const dragHandleCat = document.createElement("div");
+      dragHandleCat.className = "drag-handle";
+      dragHandleCat.title = "Trage pentru a reordona categoria";
+      dragHandleCat.textContent = "↕";
+      dragHandleCat.draggable = true;
+      dragHandleCat.addEventListener("dragstart", (e) => {
+        draggingCatIndex = catIndex;
+        catDiv.classList.add("is-dragging");
+        e.dataTransfer.effectAllowed = "move";
+      });
+      dragHandleCat.addEventListener("dragend", () => {
+        draggingCatIndex = null;
+        catDiv.classList.remove("is-dragging");
+      });
+
+      catDiv.addEventListener("dragover", (e) => {
+        if (draggingCatIndex === null) return;
+        e.preventDefault();
+        const rect = catDiv.getBoundingClientRect();
+        const placeAfter = e.clientY - rect.top > rect.height / 2;
+        catDiv.classList.toggle("drop-after", placeAfter);
+        catDiv.classList.toggle("drop-before", !placeAfter);
+      });
+
+      catDiv.addEventListener("dragleave", () => {
+        catDiv.classList.remove("drop-after", "drop-before");
+      });
+
+      catDiv.addEventListener("drop", (e) => {
+        if (draggingCatIndex === null) return;
+        e.preventDefault();
+        const rect = catDiv.getBoundingClientRect();
+        const placeAfter = e.clientY - rect.top > rect.height / 2;
+        catDiv.classList.remove("drop-after", "drop-before");
+        reorderCategories(catIndex, placeAfter);
+      });
 
       const header = document.createElement("div");
       header.className = "cat-header";
 
       const left = document.createElement("div");
       left.className = "cat-header-left";
+
+      left.appendChild(dragHandleCat);
 
       const toggleBtn = document.createElement("button");
       toggleBtn.className = "btn-ghost cat-toggle";
@@ -1855,9 +1942,69 @@ function initAdminApp() {
         const productsWrap = document.createElement("div");
         productsWrap.className = "products-list";
 
+        productsWrap.addEventListener("dragover", (e) => {
+          if (!draggingProduct || draggingProduct.catIndex !== catIndex) return;
+          e.preventDefault();
+          productsWrap.classList.add("drop-target");
+        });
+
+        productsWrap.addEventListener("dragleave", () => {
+          productsWrap.classList.remove("drop-target");
+        });
+
+        productsWrap.addEventListener("drop", (e) => {
+          if (!draggingProduct || draggingProduct.catIndex !== catIndex) return;
+          e.preventDefault();
+          productsWrap.classList.remove("drop-target");
+          const lastIndex = (cat.products || []).length - 1;
+          if (lastIndex >= 0) {
+            reorderProducts(catIndex, lastIndex, true);
+          }
+        });
+
         (cat.products = cat.products || []).forEach((prod, prodIndex) => {
           const row = document.createElement("div");
           row.className = "product-row";
+          row.dataset.catIndex = String(catIndex);
+          row.dataset.prodIndex = String(prodIndex);
+
+          const prodHandle = document.createElement("div");
+          prodHandle.className = "drag-handle drag-handle--small";
+          prodHandle.title = "Trage pentru a reordona produsul";
+          prodHandle.textContent = "↕";
+          prodHandle.draggable = true;
+          prodHandle.addEventListener("dragstart", (e) => {
+            draggingProduct = { catIndex, prodIndex };
+            row.classList.add("is-dragging");
+            e.dataTransfer.effectAllowed = "move";
+          });
+          prodHandle.addEventListener("dragend", () => {
+            row.classList.remove("is-dragging");
+            draggingProduct = null;
+            productsWrap.classList.remove("drop-target");
+          });
+
+          row.addEventListener("dragover", (e) => {
+            if (!draggingProduct || draggingProduct.catIndex !== catIndex) return;
+            e.preventDefault();
+            const rect = row.getBoundingClientRect();
+            const placeAfter = e.clientY - rect.top > rect.height / 2;
+            row.classList.toggle("drop-after", placeAfter);
+            row.classList.toggle("drop-before", !placeAfter);
+          });
+
+          row.addEventListener("dragleave", () => {
+            row.classList.remove("drop-after", "drop-before");
+          });
+
+          row.addEventListener("drop", (e) => {
+            if (!draggingProduct || draggingProduct.catIndex !== catIndex) return;
+            e.preventDefault();
+            const rect = row.getBoundingClientRect();
+            const placeAfter = e.clientY - rect.top > rect.height / 2;
+            row.classList.remove("drop-after", "drop-before");
+            reorderProducts(catIndex, prodIndex, placeAfter);
+          });
 
           const colName = document.createElement("div");
           const nameInputProd = document.createElement("input");
@@ -1928,6 +2075,7 @@ function initAdminApp() {
           };
           colActions.appendChild(delProdBtn);
 
+          row.appendChild(prodHandle);
           row.appendChild(colName);
           row.appendChild(colPrice);
           row.appendChild(colMin);
@@ -1983,31 +2131,43 @@ function initAdminApp() {
     updateShopMetrics();
   }
 
+  async function syncShopFromServer({ silent = false } = {}) {
+    if (!ADMIN_TOKEN) return;
+    if (!silent) markShopStatus("Se sincronizează shop-ul...");
+
+    try {
+      const snap = await pollAdminCore({ includeShop: true });
+      lastShopSyncTs = Date.now();
+      if (!silent) markShopStatus("Shop actualizat.", "ok");
+      return snap;
+    } catch (err) {
+      console.error("syncShopFromServer error:", err);
+      if (!silent) markShopStatus("Eroare la sincronizarea shop-ului.", "error");
+    }
+  }
+
   async function saveShop() {
     if (!CURRENT_SHOP) return;
-    shopStatusBarEl.textContent = "Se salvează shop-ul...";
-    shopStatusBarEl.className = "status-bar";
+    markShopStatus("Se salvează shop-ul...");
 
     try {
       const res = await apiCall("admin_save_shop", { shop: CURRENT_SHOP });
       if (!res.ok) {
-        shopStatusBarEl.textContent =
-          "Eroare la salvare: " + (res.error || "necunoscută");
-        shopStatusBarEl.className = "status-bar status-error";
+        markShopStatus(
+          "Eroare la salvare: " + (res.error || "necunoscută"),
+          "error"
+        );
         return;
       }
-      shopStatusBarEl.textContent = "Shop salvat.";
-      shopStatusBarEl.className = "status-bar status-ok";
-
       bumpAdminActive();
+      await syncShopFromServer({ silent: true });
+      markShopStatus("Shop salvat și sincronizat.", "ok");
 
-      const snap = await pollAdminCore();
       adminPoller.bumpFast();
-      return snap;
+      return { ok: true };
     } catch (err) {
       console.error("admin_save_shop error:", err);
-      shopStatusBarEl.textContent = "Eroare la comunicarea cu serverul.";
-      shopStatusBarEl.className = "status-bar status-error";
+      markShopStatus("Eroare la comunicarea cu serverul.", "error");
     }
   }
 
@@ -2025,7 +2185,10 @@ function initAdminApp() {
   addCategoryBtn?.addEventListener("click", addCategory);
   saveShopBtn?.addEventListener("click", saveShop);
 
-  async function pollAdminCore() {
+  renderShopEditor();
+
+  async function pollAdminCore(options = {}) {
+    const includeShop = options.includeShop === true;
     if (!ADMIN_TOKEN) return { tickets: ALL_TICKETS, shop: CURRENT_SHOP };
 
     try {
@@ -2039,7 +2202,9 @@ function initAdminApp() {
       }
 
       ALL_TICKETS = res.tickets || [];
-      CURRENT_SHOP = res.shop || { categories: [] };
+      if (includeShop) {
+        CURRENT_SHOP = res.shop || { categories: [] };
+      }
 
       ALL_TICKETS.forEach((t) => {
         const key = String(t.id);
@@ -2054,7 +2219,9 @@ function initAdminApp() {
 
       updateTicketStats();
       renderTicketsList();
-      renderShopEditor();
+      if (includeShop) {
+        renderShopEditor();
+      }
 
       if (SELECTED_TICKET_ID) {
         const t = ALL_TICKETS.find((x) => x.id === SELECTED_TICKET_ID);
@@ -2109,10 +2276,14 @@ function initAdminApp() {
     searchTimeout = setTimeout(onFilterChange, 150);
   });
 
-  window.onAdminTabChange = () => {
+  window.onAdminTabChange = (target) => {
     if (isAnyAdminTabActive()) {
       bumpAdminActive();
       adminPoller.start();
+      if (target === "shopTab") {
+        const isRecentSync = Date.now() - lastShopSyncTs < 4000;
+        syncShopFromServer({ silent: isRecentSync });
+      }
     } else {
       adminPoller.stop();
     }
@@ -2134,6 +2305,11 @@ function initAdminApp() {
     if (!ADMIN_TOKEN) return;
 
     await pollAdminCore();
+
+    if (shopTabEl && shopTabEl.classList.contains("active")) {
+      await syncShopFromServer({ silent: true });
+    }
+
     bumpAdminActive();
     adminPoller.start();
   }
