@@ -1,4 +1,4 @@
-// Aplicație doar pentru USER (fără admin), design simplu & compact
+console.log("Admin dashboard v2.2");
 const API_URL = "https://api.redgen.vip/";
 
 /* ============================
