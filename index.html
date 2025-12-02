@@ -14,27 +14,23 @@
 <body data-page="user">
   <div class="container">
     <div class="card card--user">
+      <!-- HEADER COMPACT – doar credite (ascunse pe Tickets) -->
       <div class="header-top">
-        <div class="badge">
-          <span class="badge-dot"></span>
-          <span>Shop & Chat</span>
-        </div>
-        <div class="credits">
+        <div class="header-spacer"></div>
+        <div class="credits" id="creditsBlock">
           Credite: <span class="value" id="creditsValue">-</span>
         </div>
       </div>
 
-      <!-- TITLU, SUBTITLU ȘI LINIA CU UTILIZATORUL AU FOST SCOASE DIN UI -->
-
-      <!-- Tabs rămân în DOM dar sunt ascunse din CSS, ca să nu ocupe loc -->
-      <div class="tabs tabs--user">
+      <!-- Tabs tehnice – ascunse vizual, folosite doar de JS -->
+      <div class="tabs tabs--user" style="display:none;">
         <button class="tab-btn active" data-tab="shopTab"><span>Shop</span></button>
         <button class="tab-btn" data-tab="ticketsTab"><span>Tichete</span></button>
       </div>
 
       <!-- SHOP TAB -->
       <div id="shopTab" class="tab-section active">
-        <div class="section-title">Categorii & produse</div>
+        <div class="section-title">Shop</div>
         <div id="categoriesContainer" class="categories"></div>
 
         <div id="productPanel" class="product-panel" style="display:none;">
@@ -56,53 +52,34 @@
         </div>
       </div>
 
-      <!-- TICKETS TAB – CHAT FULL PAGE STYLE -->
+      <!-- TICKETS TAB – fullscreen chat, header sus cu burger, titlu, close -->
       <div id="ticketsTab" class="tab-section">
+        <!-- TOP BAR: ☰ + "username - product" + Închide -->
+        <div class="ticket-topbar">
+          <button class="tickets-menu-toggle" id="ticketsMenuToggle" aria-label="Deschide lista de tichete">
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+
+          <div class="ticket-top-title" id="chatHeader">
+            <span>Niciun tichet selectat</span>
+          </div>
+
+          <button class="btn-ghost ticket-top-close-btn" id="userTicketCloseBtn" disabled>
+            Închide tichet
+          </button>
+        </div>
+
         <div class="chat-layout">
           <!-- Sidebar-ul (drawer) cu lista de tichete -->
           <div class="chat-sidebar" id="chatList"></div>
 
-          <!-- Chat principal – aproape toată pagina -->
+          <!-- Chat principal – aproape tot ecranul -->
           <div class="chat-main">
-            <!-- HEADER SUS: 3 LINES + NUME TICHIET + CLOSE -->
-            <div class="chat-main-header">
-              <div class="chat-main-header-left">
-                <!-- buton 3 linii (burger) -->
-                <button
-                  class="tickets-menu-toggle"
-                  id="ticketsMenuToggle"
-                  aria-label="Deschide lista de tichete"
-                >
-                  <span></span>
-                  <span></span>
-                  <span></span>
-                </button>
-                <div class="chat-ticket-title" id="chatTicketTitle">
-                  Niciun tichet selectat
-                </div>
-              </div>
-              <div class="chat-main-header-right">
-                <!-- buton close tichet (doar dacă e deschis) -->
-                <button
-                  class="btn-ghost btn-close-ticket"
-                  id="userTicketCloseBtn"
-                  style="display:none;"
-                >
-                  Închide tichet
-                </button>
-              </div>
-            </div>
-
-            <!-- Sub-header cu detalii (id, qty, preț, status) -->
-            <div class="chat-header" id="chatHeader">
-              <span>Selectează un tichet din lista din stânga pentru a începe chat-ul.</span>
-            </div>
-
-            <!-- Mesaje -->
             <div class="chat-messages" id="chatMessages"></div>
-
-            <!-- Input chat (reply bar + input+buton sunt aranjate din JS) -->
             <div class="chat-input">
+              <!-- bara REPLY + input+buton, JS le reorganizează -->
               <input
                 id="chatInput"
                 placeholder="Scrie un mesaj către admin..."
@@ -110,12 +87,11 @@
               />
               <button id="chatSendBtn">Trimite</button>
             </div>
-            <!-- buton “Mesaje noi ↓” este creat dinamic de app.js -->
           </div>
         </div>
 
-        <!-- Buton jos stânga – Înapoi la Shop -->
-        <button class="btn-ghost back-to-shop-btn" id="backToShopBtn">
+        <!-- buton jos stânga – înapoi la Shop -->
+        <button class="back-to-shop-btn" id="backToShopBtn">
           ← Înapoi la Shop
         </button>
 
