@@ -359,6 +359,65 @@ function initUserApp() {
   let CURRENT_TICKETS = [];
   let SELECTED_TICKET_ID = null;
 
+  // UNREAD SYSTEM – USER (localStorage)
+  let USER_LAST_SEEN = {};
+
+  function loadUserSeen() {
+    try {
+      const raw = localStorage.getItem("user_ticket_seen");
+      if (raw) {
+        USER_LAST_SEEN = JSON.parse(raw);
+      } else {
+        USER_LAST_SEEN = {};
+      }
+    } catch (e) {
+      USER_LAST_SEEN = {};
+    }
+  }
+
+  function saveUserSeen() {
+    try {
+      localStorage.setItem("user_ticket_seen", JSON.stringify(USER_LAST_SEEN));
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  function markTicketReadUser(ticket) {
+    if (!ticket) return;
+    const msgs = ticket.messages || [];
+    if (!msgs.length) return;
+    const last = msgs[msgs.length - 1];
+    if (!last || !last.id) return;
+    const key = String(ticket.id);
+    USER_LAST_SEEN[key] = last.id;
+    saveUserSeen();
+  }
+
+  function getUnreadCountUser(ticket) {
+    const msgs = ticket.messages || [];
+    if (!msgs.length) return 0;
+    const key = String(ticket.id);
+    const lastSeenId = USER_LAST_SEEN[key];
+
+    let startIndex = -1;
+    if (lastSeenId) {
+      startIndex = msgs.findIndex((m) => m && m.id === lastSeenId);
+    }
+
+    let count = 0;
+    for (let i = startIndex + 1; i < msgs.length; i++) {
+      const m = msgs[i];
+      if (!m) continue;
+      if (m.deleted) continue;
+      // user vede ca "necitite" doar mesajele de la ADMIN
+      if (m.from === "admin") count++;
+    }
+    return count;
+  }
+
+  loadUserSeen();
+
   let userActiveUntil = 0;
   function bumpUserActive(extraMs = 25000) {
     const now = Date.now();
@@ -697,20 +756,42 @@ function initUserApp() {
       item.className = "chat-item";
       if (t.id === SELECTED_TICKET_ID) item.classList.add("active");
 
+      const headerRow = document.createElement("div");
+      headerRow.className = "chat-item-header-row";
+
       const title = document.createElement("div");
       title.className = "chat-item-title";
       title.textContent = t.product_name || "Produs";
 
-      const statusText = t.status === "open" ? "DESCHIS" : "ÎNCHIS";
-      const lastMsg = getTicketLastMessageUser(t);
+      const rightWrap = document.createElement("div");
+      rightWrap.style.display = "flex";
+      rightWrap.style.alignItems = "center";
+      rightWrap.style.gap = "4px";
 
+      const statusText = t.status === "open" ? "DESCHIS" : "ÎNCHIS";
+      const statusChip = document.createElement("span");
+      statusChip.className =
+        "ticket-status-pill " + (t.status === "open" ? "open" : "closed");
+      statusChip.textContent = statusText;
+      rightWrap.appendChild(statusChip);
+
+      const unreadCount = getUnreadCountUser(t);
+      if (unreadCount > 0 && t.status === "open") {
+        const badge = document.createElement("span");
+        badge.className = "unread-badge";
+        badge.textContent = unreadCount > 99 ? "99+" : String(unreadCount);
+        rightWrap.appendChild(badge);
+      }
+
+      headerRow.appendChild(title);
+      headerRow.appendChild(rightWrap);
+
+      const lastMsg = getTicketLastMessageUser(t);
       const line = document.createElement("div");
       line.className = "chat-item-line";
-      line.textContent = `[${statusText}] ${
-        lastMsg || "Fără mesaje încă."
-      }`;
+      line.textContent = lastMsg || "Fără mesaje încă.";
 
-      item.appendChild(title);
+      item.appendChild(headerRow);
       item.appendChild(line);
 
       item.addEventListener("click", async () => {
@@ -728,9 +809,15 @@ function initUserApp() {
 
   function selectTicket(ticketId) {
     SELECTED_TICKET_ID = ticketId;
-    renderTicketsList();
 
     const t = CURRENT_TICKETS.find((x) => x.id === ticketId);
+    if (t) {
+      // când user-ul intră pe tichet, îl marcăm ca "citit"
+      markTicketReadUser(t);
+    }
+
+    renderTicketsList();
+
     if (!t) {
       chatHeaderEl.innerHTML = "<span>Niciun tichet selectat</span>";
       chatMessagesEl.innerHTML = "";
@@ -835,7 +922,22 @@ function initUserApp() {
     try {
       const res = await apiCall("user_get_tickets", {});
       if (!res.ok) return CURRENT_TICKETS;
+
       CURRENT_TICKETS = res.tickets || [];
+
+      // la prima încărcare, dacă nu avem seen pentru un tichet,
+      // considerăm ultimul mesaj ca fiind "citit"
+      CURRENT_TICKETS.forEach((t) => {
+        const key = String(t.id);
+        if (!USER_LAST_SEEN[key]) {
+          const msgs = t.messages || [];
+          if (msgs.length) {
+            USER_LAST_SEEN[key] = msgs[msgs.length - 1].id;
+          }
+        }
+      });
+      saveUserSeen();
+
       renderTicketsList();
 
       if (SELECTED_TICKET_ID) {
@@ -931,6 +1033,18 @@ function initUserApp() {
 
       CURRENT_SHOP = res.shop;
       CURRENT_TICKETS = res.tickets || [];
+
+      // inițializare seen și pentru tichetele venite din init
+      CURRENT_TICKETS.forEach((t) => {
+        const key = String(t.id);
+        if (!USER_LAST_SEEN[key]) {
+          const msgs = t.messages || [];
+          if (msgs.length) {
+            USER_LAST_SEEN[key] = msgs[msgs.length - 1].id;
+          }
+        }
+      });
+      saveUserSeen();
 
       renderUserHeader();
       renderShop(CURRENT_SHOP);
