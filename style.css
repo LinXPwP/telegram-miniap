@@ -1,23 +1,25 @@
 /* ============================
-   PALETĂ & GLOBAL
+   GLOBAL
    ============================ */
 
 :root {
-  --bg: #0f1012;
-  --bg-elevated: #1a1c20;
-  --bg-soft: #202228;
-  --bg-soft-alt: #262831;
+  --bg: #05070a;
+  --bg-soft: #0c1016;
+  --bg-soft-alt: #121821;
+  --bg-elevated: #161d28;
 
-  --accent: #e43f5a;
-  --accent-soft: #f16a7e;
+  --accent: #ff2f56;
+  --accent-soft: #ff6b8a;
+  --accent-danger: #ff4b4b;
 
-  --text-main: #f5f5f7;
-  --text-muted: #9ca0b1;
-  --border-subtle: rgba(255, 255, 255, 0.06);
+  --text: #f5f7fb;
+  --muted: #8c93a3;
+  --border: rgba(255, 255, 255, 0.08);
 
-  --radius-lg: 14px;
-  --radius-md: 10px;
-  --radius-sm: 6px;
+  --radius-lg: 18px;
+  --radius-md: 12px;
+  --radius-sm: 8px;
+  --shadow-soft: 0 12px 30px rgba(0, 0, 0, 0.65);
 
   --transition-fast: 0.12s ease-out;
   --transition-med: 0.18s ease-out;
@@ -33,106 +35,120 @@
 
 html,
 body {
+  margin: 0;
+  padding: 0;
   height: 100%;
 }
 
 body {
-  margin: 0;
-  background: radial-gradient(circle at top, #171821 0, #0f1012 50%, #050608 100%);
-  color: var(--text-main);
+  background: radial-gradient(circle at top, #141b27 0, #04060a 52%);
+  color: var(--text);
 }
 
 /* ============================
-   LAYOUT APP
+   LAYOUT – USER FULLSCREEN
    ============================ */
 
-.app {
-  max-width: 900px;
+.container {
+  max-width: 960px;
   margin: 0 auto;
-  min-height: 100vh;
-  padding: 12px 12px 10px;
+  height: 100vh;
+  padding: 10px 10px 14px;
   display: flex;
-  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
 }
 
-/* HEADER */
+body[data-page="user"] .container {
+  max-width: 100%;
+  padding-inline: 8px;
+}
 
-.app-header {
+.card {
+  position: relative;
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  border-radius: var(--radius-lg);
+  background: rgba(8, 11, 17, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: var(--shadow-soft);
+  padding: 10px 10px 8px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.card--user {
+  height: 100%;
+}
+
+/* tiny glow border */
+.card::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  border: 1px solid rgba(255, 47, 86, 0.22);
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+/* ============================
+   HEADER + FOOTER
+   ============================ */
+
+.header-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 10px;
-  border-radius: var(--radius-lg);
-  background: rgba(10, 11, 14, 0.9);
-  border: 1px solid var(--border-subtle);
-  backdrop-filter: blur(12px);
-  margin-bottom: 8px;
-}
-
-.app-header-left {
-  display: flex;
-  align-items: center;
   gap: 8px;
+  margin-bottom: 6px;
 }
 
-.app-logo-dot {
-  width: 18px;
-  height: 18px;
-  border-radius: 999px;
-  background: var(--accent);
+.header-top--shop {
+  padding-inline: 2px;
 }
 
-.app-title {
-  display: flex;
-  flex-direction: column;
-}
-
-.app-title-main {
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.app-title-sub {
+.badge {
   font-size: 11px;
-  color: var(--text-muted);
-}
-
-.app-header-right {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  color: var(--muted);
 }
 
 .credits {
   font-size: 12px;
-  color: var(--text-muted);
-}
-.credits span {
-  color: var(--accent-soft);
-  font-weight: 600;
-}
-
-/* MAIN + FOOTER */
-
-.app-main {
-  flex: 1;
-  margin-top: 8px;
+  color: var(--muted);
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  align-items: center;
+  gap: 4px;
+}
+.credits .value {
+  font-weight: 600;
+  color: var(--accent-soft);
 }
 
-.app-footer {
-  margin-top: 6px;
+.user-line {
+  margin: 0 2px 6px;
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--muted);
+  display: none; /* folosit doar pentru erori / info speciale */
+}
+.user-line b {
+  color: var(--text);
+}
+
+.footer {
+  margin-top: 6px;
+  padding-top: 4px;
+  font-size: 10px;
+  color: var(--muted);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  opacity: 0.9;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
 }
 
-.status-dot {
+.dot-red {
   width: 7px;
   height: 7px;
   border-radius: 999px;
@@ -140,202 +156,177 @@ body {
 }
 
 /* ============================
-   TEXT MIC / USER LINE
+   TAB SECTIONS (Shop / Tickets)
    ============================ */
 
-.user-line {
-  margin: 0;
-  font-size: 11px;
-  color: var(--text-muted);
+.tab-section {
   display: none;
 }
 
-/* ============================
-   SCREEN SWITCH
-   ============================ */
-
-.screen {
-  display: none;
-}
-
-.screen--active {
+.tab-section.active {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  min-height: 0;
+  flex: 1;
+}
+
+.section-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--muted);
+  margin: 0 2px 6px;
 }
 
 /* ============================
-   HEADERE SCREEN
+   GENERAL BUTTONS
    ============================ */
 
-.screen-header h1 {
-  margin: 0 0 2px;
-  font-size: 18px;
+button {
+  font-family: inherit;
 }
-
-.screen-subtitle {
-  margin: 0;
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-/* ============================
-   BUTOANE
-   ============================ */
 
 .btn-primary,
-.btn-secondary {
-  border-radius: 999px;
+.product-panel-buy,
+.chat-input button,
+.product-btn {
   border: none;
-  font-size: 12px;
-  padding: 7px 14px;
-  cursor: pointer;
-  transition: background var(--transition-fast), color var(--transition-fast),
-    border-color var(--transition-fast), transform var(--transition-fast),
-    box-shadow var(--transition-fast);
-}
-
-.btn-primary {
+  border-radius: 999px;
   background: var(--accent);
   color: #fff;
+  font-size: 12px;
+  padding: 6px 11px;
+  cursor: pointer;
+  transition: background var(--transition-fast),
+    transform var(--transition-fast), box-shadow var(--transition-fast);
 }
 
-.btn-primary:hover {
+.btn-primary:hover,
+.product-panel-buy:hover,
+.chat-input button:hover,
+.product-btn:hover {
   background: var(--accent-soft);
   transform: translateY(-0.5px);
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.6);
 }
 
-.btn-secondary {
-  background: transparent;
-  color: var(--text-main);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-}
-
-.btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.28);
-}
-
-.btn-secondary--small {
-  padding-inline: 10px;
-  font-size: 11px;
-}
-
-.btn-full {
-  width: 100%;
-}
-
-/* Icon buttons */
-
-.btn-icon {
+.btn-ghost {
   border-radius: 999px;
-  border: none;
-  background: transparent;
-  color: var(--text-main);
-  font-size: 14px;
-  width: 28px;
-  height: 28px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(15, 19, 27, 0.9);
+  font-size: 11px;
+  color: var(--muted);
   cursor: pointer;
-  padding: 0;
-  transition: background var(--transition-fast), color var(--transition-fast),
-    transform var(--transition-fast);
+  transition: background var(--transition-fast),
+    border-color var(--transition-fast), color var(--transition-fast),
+    transform var(--transition-fast), box-shadow var(--transition-fast);
 }
 
-.btn-icon--border {
-  border: 1px solid rgba(255, 255, 255, 0.18);
-}
-
-.btn-icon:hover {
-  background: rgba(255, 255, 255, 0.06);
+.btn-ghost:hover {
+  background: #171e28;
+  border-color: rgba(255, 255, 255, 0.3);
+  color: var(--text);
   transform: translateY(-0.5px);
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.6);
 }
-
-/* Disabled */
 
 button:disabled {
-  opacity: 0.55;
+  opacity: 0.45;
   cursor: default;
-  transform: none !important;
-  box-shadow: none !important;
+  box-shadow: none;
+  transform: none;
 }
 
 /* ============================
-   SHOP – CATEGORII & PRODUSE
+   SHOP LIST
    ============================ */
 
 .categories {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
+  padding: 2px;
+  margin-bottom: 4px;
 }
 
 .category {
-  border-radius: var(--radius-lg);
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-subtle);
-  padding: 10px 11px;
+  border-radius: var(--radius-md);
+  padding: 7px 8px;
+  background: var(--bg-soft);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: background var(--transition-fast),
+    border-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.category:hover {
+  background: var(--bg-soft-alt);
+  border-color: rgba(255, 255, 255, 0.16);
+  transform: translateY(-0.5px);
 }
 
 .category-header {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: baseline;
-  margin-bottom: 4px;
+  gap: 6px;
 }
 
 .category-name {
-  font-size: 14px;
-  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.category-pill {
+  font-size: 9px;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--muted);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .category-desc {
-  margin: 0 0 6px;
-  font-size: 12px;
-  color: var(--text-muted);
+  font-size: 11px;
+  color: var(--muted);
 }
 
 .products {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .product {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 6px 7px;
-  border-radius: var(--radius-md);
-  background: var(--bg-soft);
-  border: 1px solid rgba(0, 0, 0, 0.7);
-  transition: background var(--transition-fast), border-color var(--transition-fast),
-    transform var(--transition-fast);
-}
-
-.product:hover {
-  background: var(--bg-soft-alt);
-  border-color: rgba(255, 255, 255, 0.18);
-  transform: translateY(-1px);
+  gap: 6px;
+  padding: 5px 6px;
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .product-main {
-  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   min-width: 0;
 }
 
 .product-name {
-  font-size: 13px;
-  font-weight: 500;
-  margin-bottom: 2px;
+  font-size: 12px;
+  font-weight: 600;
 }
 
-.product-text {
-  font-size: 12px;
-  color: var(--text-muted);
+.product-desc {
+  font-size: 11px;
+  color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -344,8 +335,9 @@ button:disabled {
 .product-right {
   display: flex;
   flex-direction: column;
+  gap: 3px;
   align-items: flex-end;
-  gap: 4px;
+  min-width: 0;
 }
 
 .product-price {
@@ -354,321 +346,13 @@ button:disabled {
   color: var(--accent-soft);
 }
 
-/* ============================
-   TICHETE – LAYOUT
-   ============================ */
-
-.tickets-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  border-radius: var(--radius-lg);
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-subtle);
-}
-
-.tickets-title {
-  flex: 1;
-  font-size: 13px;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--text-main);
-}
-
-.tickets-layout {
-  margin-top: 6px;
-  border-radius: var(--radius-lg);
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-subtle);
-  display: grid;
-  grid-template-columns: minmax(220px, 0.9fr) minmax(0, 1.7fr);
-  min-height: 280px;
-  max-height: calc(100vh - 210px);
-  overflow: hidden;
-}
-
-/* LISTĂ TICHETE (SIDEBAR) */
-
-.tickets-list {
-  background: var(--bg-soft);
-  border-right: 1px solid rgba(0, 0, 0, 0.7);
-  overflow-y: auto;
-  padding: 4px 0;
-  font-size: 12px;
-}
-
-/* CHAT */
-
-.tickets-chat {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  background: var(--bg-elevated);
-}
-
-.chat-messages {
-  flex: 1;
-  padding: 6px 8px 4px;
-  overflow-y: auto;
+.product-btn {
+  font-size: 11px;
+  padding-inline: 10px;
 }
 
 /* ============================
-   CHAT – MESAJE
-   ============================ */
-
-.msg-row {
-  display: flex;
-  gap: 8px;
-  padding: 4px 6px;
-  border-radius: var(--radius-md);
-  margin-bottom: 3px;
-  transition: background 0.12s ease-out;
-}
-
-.msg-row:hover {
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.msg-side {
-  flex: 0 0 26px;
-  height: 26px;
-  border-radius: 999px;
-  background: #262833;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-muted);
-}
-
-.msg-main {
-  flex: 1;
-  min-width: 0;
-}
-
-.msg-header {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  margin-bottom: 1px;
-}
-
-.msg-name {
-  font-size: 12px;
-  font-weight: 600;
-}
-.msg-name--admin {
-  color: #70ffba;
-}
-.msg-time {
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.msg-body {
-  font-size: 13px;
-}
-
-.msg-text {
-  margin: 0;
-  line-height: 1.4;
-}
-
-.msg-text--deleted {
-  color: var(--text-muted);
-  font-style: italic;
-}
-
-.msg-reply-preview {
-  display: inline-block;
-  max-width: 100%;
-  font-size: 11px;
-  color: var(--text-muted);
-  border-left: 2px solid var(--accent-soft);
-  padding: 2px 6px;
-  margin-bottom: 2px;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 3px;
-  cursor: pointer;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.msg-actions {
-  margin-top: 2px;
-}
-
-.msg-action {
-  border: none;
-  background: transparent;
-  color: var(--text-muted);
-  font-size: 11px;
-  padding: 0;
-  cursor: pointer;
-  transition: color 0.12s ease-out;
-}
-
-.msg-action:hover {
-  color: #ffffff;
-}
-
-.msg-row--highlight {
-  background: rgba(228, 63, 90, 0.22);
-}
-
-/* ============================
-   CHAT – INPUT
-   ============================ */
-
-.chat-input-area {
-  border-top: 1px solid rgba(0, 0, 0, 0.65);
-  padding: 6px 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  background: var(--bg-soft);
-}
-
-.chat-input-row {
-  display: flex;
-  gap: 6px;
-}
-
-.chat-input-row input {
-  flex: 1;
-  border-radius: 999px;
-  border: 1px solid rgba(0, 0, 0, 0.7);
-  background: #14151a;
-  color: var(--text-main);
-  padding: 6px 10px;
-  font-size: 12px;
-}
-
-.chat-input-row input::placeholder {
-  color: var(--text-muted);
-}
-
-/* REPLY BAR */
-
-.reply-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  padding: 3px 8px;
-  border-radius: var(--radius-md);
-  background: rgba(0, 0, 0, 0.5);
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.reply-bar-text {
-  flex: 1;
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.reply-bar-close {
-  border-radius: 999px;
-  border: none;
-  font-size: 10px;
-  padding: 3px 8px;
-  background: transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: background 0.12s ease-out, color 0.12s ease-out;
-}
-
-.reply-bar-close:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
-}
-
-/* ============================
-   TICHETE – ITEM LISTĂ
-   ============================ */
-
-.ticket-item {
-  padding: 6px 8px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.7);
-  cursor: pointer;
-  transition: background var(--transition-fast), transform var(--transition-fast);
-}
-
-.ticket-item:hover {
-  background: rgba(255, 255, 255, 0.03);
-  transform: translateY(-0.5px);
-}
-
-.ticket-item--active {
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.ticket-item-top {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 2px;
-}
-
-.ticket-item-title {
-  flex: 1;
-  font-size: 12px;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.ticket-item-bottom {
-  font-size: 11px;
-  color: var(--text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.ticket-status {
-  font-size: 10px;
-  padding: 1px 7px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.ticket-status--open {
-  border-color: rgba(123, 237, 159, 0.85);
-  color: #a5ffcc;
-  background: rgba(123, 237, 159, 0.12);
-}
-
-.ticket-status--closed {
-  border-color: rgba(244, 114, 94, 0.85);
-  color: #ffc0ba;
-  background: rgba(244, 114, 94, 0.15);
-}
-
-.ticket-unread {
-  min-width: 18px;
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: var(--accent);
-  color: #fff;
-  font-size: 10px;
-  font-weight: 600;
-  text-align: center;
-}
-
-/* ============================
-   POPUP PRODUS
+   PRODUCT PANEL – POPUP OVERLAY
    ============================ */
 
 .product-panel {
@@ -677,21 +361,17 @@ button:disabled {
   display: none;
   align-items: center;
   justify-content: center;
-  background: rgba(5, 6, 8, 0.78);
-  z-index: 40;
-}
-
-.product-panel--visible {
-  display: flex;
+  background: rgba(0, 0, 0, 0.75);
+  z-index: 50;
 }
 
 .product-panel-card {
   width: min(420px, 92vw);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
   background: var(--bg-elevated);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  padding: 12px 14px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.9);
   animation: panelIn var(--transition-med);
 }
 
@@ -703,182 +383,537 @@ button:disabled {
 }
 
 .product-panel-name {
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .product-panel-close {
   border: none;
   background: transparent;
-  color: var(--text-muted);
+  color: var(--muted);
   font-size: 18px;
   cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
 }
 
 .product-panel-desc {
   font-size: 12px;
-  color: var(--text-muted);
+  color: var(--muted);
   margin-bottom: 4px;
 }
 
 .product-panel-price {
   font-size: 12px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
-
-/* qty */
 
 .qty-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
-
 .qty-label {
   font-size: 12px;
 }
-
 .qty-row input {
-  width: 80px;
+  width: 70px;
+  padding: 4px 6px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: #131418;
-  color: var(--text-main);
-  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: #05070b;
+  color: var(--text);
   font-size: 12px;
   text-align: center;
 }
-
 .qty-range {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--muted);
 }
-
-/* STATUS */
 
 .status-bar {
-  margin-top: 6px;
+  margin-top: 5px;
   font-size: 11px;
-  color: var(--text-muted);
   min-height: 14px;
+  color: var(--muted);
 }
-
-.status-bar--ok {
-  color: #70ffba;
+.status-ok {
+  color: #57f287;
 }
-
-.status-bar--error {
-  color: #ff858a;
+.status-error {
+  color: var(--accent-danger);
 }
 
 /* ============================
-   EMPTY STATE
+   CHAT LAYOUT – TICKETS
    ============================ */
 
-.empty-state {
-  border-radius: var(--radius-lg);
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px dashed rgba(255, 255, 255, 0.16);
-  padding: 10px;
-  font-size: 12px;
-  color: var(--text-muted);
+.chat-layout {
+  display: grid;
+  grid-template-columns: minmax(210px, 0.8fr) minmax(0, 1.7fr);
+  gap: 8px;
+  min-height: 0;
+  margin-top: 4px;
 }
 
-.empty-state--sidebar {
-  margin: 6px;
+/* SIDEBAR – ticket list */
+
+.chat-sidebar {
+  border-radius: var(--radius-md);
+  background: var(--bg-soft);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  overflow-y: auto;
+  font-size: 12px;
+}
+
+/* chat main */
+
+.chat-main {
+  border-radius: var(--radius-md);
+  background: var(--bg-soft);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.chat-header {
+  padding: 7px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.chat-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chat-title-main {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.chat-header-right .btn-close-ticket {
+  font-size: 11px;
+  padding-inline: 9px;
+}
+
+.chat-messages {
+  flex: 1;
+  padding: 6px 6px 4px 8px;
+  overflow-y: auto;
+  background: radial-gradient(circle at top, #181f2b 0, #080b12 45%);
+}
+
+/* bottom bar */
+
+.chat-bottom-bar {
+  padding: 4px 8px 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  display: flex;
+  justify-content: flex-start;
+}
+
+.btn-back-shop {
+  font-size: 11px;
+}
+
+/* ============================
+   TICKETS SIDEBAR ITEMS
+   ============================ */
+
+.chat-item {
+  padding: 7px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  transition: background var(--transition-fast),
+    transform var(--transition-fast), border-color var(--transition-fast);
+}
+
+.chat-item:hover {
+  background: rgba(255, 255, 255, 0.03);
+  transform: translateY(-0.5px);
+}
+
+.chat-item.active {
+  background: rgba(255, 47, 86, 0.08);
+  border-left: 2px solid var(--accent);
+}
+
+.chat-item-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.chat-item-title {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.chat-item-line {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+}
+
+.ticket-status-pill {
+  font-size: 9px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.ticket-status-pill.open {
+  background: rgba(87, 242, 135, 0.12);
+  border-color: rgba(87, 242, 135, 0.6);
+  color: #c2ffd9;
+}
+.ticket-status-pill.closed {
+  background: rgba(240, 71, 71, 0.12);
+  border-color: rgba(240, 71, 71, 0.6);
+  color: #ffc0c5;
+}
+
+.unread-badge {
+  min-width: 18px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--accent-danger);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* ============================
+   CHAT MESSAGES – DISCORD-LIKE
+   ============================ */
+
+.msg-row {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  margin-bottom: 2px;
+  transition: background var(--transition-fast);
+}
+.msg-row:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.msg-avatar {
+  flex: 0 0 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-soft));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  user-select: none;
+}
+
+.msg-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.msg-header-line {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-bottom: 1px;
+}
+
+.msg-username {
+  font-size: 12px;
+  font-weight: 600;
+}
+.msg-username--admin {
+  color: #6df59d;
+}
+
+.msg-timestamp {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.msg-bubble {
+  position: relative;
+}
+
+.msg-text {
+  font-size: 13px;
+  line-height: 1.4;
+  color: #f2f3ff;
+  padding-right: 70px;
+}
+
+.msg-text--deleted {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.msg-meta {
+  margin-top: 1px;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+/* reply preview */
+
+.msg-reply-preview {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  margin-bottom: 2px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border-left: 2px solid var(--accent-soft);
+  background: rgba(0, 0, 0, 0.24);
+  font-size: 11px;
+  color: var(--muted);
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.msg-reply-preview strong {
+  margin-right: 4px;
+  color: #fff;
+}
+
+/* actions */
+
+.msg-actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  transform: translateY(-50%);
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+}
+.msg-row:hover .msg-actions {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(-50%) translateX(0);
+}
+
+.msg-action-btn {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 10px;
+  padding: 0 4px;
+  cursor: pointer;
+}
+.msg-action-btn:hover {
+  color: #ffffff;
+}
+.msg-action-btn--danger {
+  color: var(--accent-danger);
+}
+.msg-action-btn--danger:hover {
+  color: #ff9398;
+}
+
+.msg-row--highlight {
+  animation: msgHighlight 1s ease-out;
+}
+
+@keyframes msgHighlight {
+  0% {
+    background: rgba(255, 47, 86, 0.32);
+  }
+  100% {
+    background: rgba(255, 255, 255, 0.03);
+  }
+}
+
+/* ============================
+   CHAT INPUT + MODE BAR
+   ============================ */
+
+.chat-input {
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: rgba(9, 12, 18, 0.98);
+}
+
+.chat-mode-bar {
+  font-size: 11px;
+  color: var(--muted);
+  padding: 3px 7px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.03);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+}
+
+.chat-input-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.chat-input input {
+  flex: 1;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: #05070c;
+  color: var(--text);
+  padding: 7px 10px;
+  font-size: 12px;
+}
+
+.chat-input input::placeholder {
+  color: #616b7a;
+}
+
+.chat-input button {
+  white-space: nowrap;
+}
+
+/* ============================
+   TICKETS DRAWER – MOBILE
+   ============================ */
+
+.tickets-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition-med);
+  z-index: 30;
+}
+
+.tickets-menu-toggle {
+  width: 30px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(12, 16, 24, 0.95);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  gap: 3px;
+  padding: 0 5px;
+  transition: background var(--transition-fast),
+    border-color var(--transition-fast), box-shadow var(--transition-fast),
+    transform var(--transition-fast);
+}
+.tickets-menu-toggle span {
+  width: 13px;
+  height: 2px;
+  border-radius: 999px;
+  background: #f5f5ff;
+  display: block;
+}
+.tickets-menu-toggle:hover {
+  background: #171d27;
+  border-color: var(--accent-soft);
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.8);
+  transform: translateY(-0.5px);
+}
+
+/* mobile drawer state – applied by JS on #ticketsTab */
+
+@media (max-width: 880px) {
+  .chat-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* sidebar devine drawer */
+  .chat-sidebar {
+    position: fixed;
+    top: 6px;
+    bottom: 6px;
+    left: 6px;
+    width: min(320px, 80vw);
+    border-radius: var(--radius-md);
+    background: var(--bg-soft);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transform: translateX(-105%);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform var(--transition-med), opacity var(--transition-med),
+      box-shadow var(--transition-med);
+    z-index: 40;
+  }
+
+  #ticketsTab.tickets-drawer-open .chat-sidebar {
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.9);
+  }
+
+  #ticketsTab.tickets-drawer-open ~ .tickets-backdrop {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 
 /* ============================
    SCROLLBARS
    ============================ */
 
-.tickets-list,
+.chat-sidebar,
 .chat-messages {
   scrollbar-width: thin;
-  scrollbar-color: var(--accent) transparent;
+  scrollbar-color: var(--accent-soft) transparent;
 }
 
-.tickets-list::-webkit-scrollbar,
+.chat-sidebar::-webkit-scrollbar,
 .chat-messages::-webkit-scrollbar {
   width: 6px;
 }
-
-.tickets-list::-webkit-scrollbar-track,
+.chat-sidebar::-webkit-scrollbar-track,
 .chat-messages::-webkit-scrollbar-track {
   background: transparent;
 }
-
-.tickets-list::-webkit-scrollbar-thumb,
+.chat-sidebar::-webkit-scrollbar-thumb,
 .chat-messages::-webkit-scrollbar-thumb {
-  background: var(--accent);
+  background: var(--accent-soft);
   border-radius: 999px;
 }
 
 /* ============================
-   RESPONSIVE
-   ============================ */
-
-@media (max-width: 768px) {
-  .app {
-    padding-inline: 8px;
-  }
-
-  .app-header {
-    padding-inline: 8px;
-  }
-
-  .tickets-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  /* listă tichete ca drawer */
-  .tickets-list {
-    position: fixed;
-    top: 12px;
-    bottom: 12px;
-    left: 8px;
-    width: min(280px, 80vw);
-    border-radius: var(--radius-lg);
-    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.9);
-    transform: translateX(-105%);
-    opacity: 0;
-    pointer-events: none;
-    transition: transform var(--transition-med), opacity var(--transition-med);
-    z-index: 35;
-  }
-
-  .tickets-backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.65);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity var(--transition-med);
-    z-index: 30;
-  }
-
-  #ticketsTab.tickets-drawer-open .tickets-list {
-    transform: translateX(0);
-    opacity: 1;
-    pointer-events: auto;
-  }
-
-  #ticketsTab.tickets-drawer-open ~ .tickets-backdrop,
-  #ticketsTab.tickets-drawer-open .tickets-backdrop {
-    opacity: 1;
-    pointer-events: auto;
-  }
-}
-
-/* ============================
-   ANIMAȚII
+   ANIMATIONS
    ============================ */
 
 @keyframes panelIn {
   from {
     opacity: 0;
-    transform: translateY(4px) scale(0.98);
+    transform: translateY(6px) scale(0.98);
   }
   to {
     opacity: 1;
