@@ -425,6 +425,7 @@ function initUserApp() {
   const ticketsTabEl = document.getElementById("ticketsTab");
   const shopHeaderEl = document.getElementById("shopHeader");
   const goToTicketsBtn = document.getElementById("goToTicketsBtn");
+  const heroShopBtn = document.getElementById("heroShopBtn");
   const backToShopBtn = document.getElementById("backToShopBtn");
 
   const chatInputContainer = document.querySelector(
@@ -457,6 +458,15 @@ function initUserApp() {
   if (goToTicketsBtn) {
     goToTicketsBtn.addEventListener("click", () => {
       showTicketsTab();
+    });
+  }
+
+  if (heroShopBtn) {
+    heroShopBtn.addEventListener("click", () => {
+      showShopTab();
+      if (categoriesContainer) {
+        categoriesContainer.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
     });
   }
 
