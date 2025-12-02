@@ -2,6 +2,8 @@
 // + unread badge în admin + list preview corect pentru mesaje șterse
 // + user chat input aranjat ca la admin (reply bar + input+buton pe rând)
 // + user tickets drawer (3 linii stânga sus, listă de tichete care glisează)
+// + blocare mesaje pe tichete închise (user + admin)
+// + user poate închide propriul tichet din UI
 
 // URL-ul Netlify / API (proxy către bot.py)
 const API_URL = "https://api.redgen.vip/";
@@ -450,6 +452,10 @@ function initUserApp() {
   const ticketsBackdrop = document.getElementById("ticketsBackdrop");
   const ticketsTabEl = document.getElementById("ticketsTab");
 
+  // acțiuni user pentru tichet (buton închidere)
+  const userTicketActionsEl = document.getElementById("userTicketActions");
+  const userTicketCloseBtn = document.getElementById("userTicketCloseBtn");
+
   // bară „reply” user + aranjare input ca la admin
   const chatInputContainer = document.querySelector(
     '#ticketsTab .chat-input, .chat-input'
@@ -494,6 +500,49 @@ function initUserApp() {
     }
   }
 
+  // gestionează starea input-ului de chat (open/closed/no ticket)
+  function clearUserMode() {
+    if (!userModeBar) return;
+    userMode.type = null;
+    userMode.messageId = null;
+    userMode.previewText = "";
+    userMode.sender = "";
+    userModeBar.style.display = "none";
+  }
+
+  function updateUserChatState(ticket) {
+    if (!chatInputEl || !chatSendBtn) return;
+
+    if (!ticket) {
+      chatInputEl.disabled = true;
+      chatSendBtn.disabled = true;
+      chatInputEl.placeholder =
+        "Selectează un tichet pentru a începe chat-ul...";
+      if (userTicketActionsEl) userTicketActionsEl.style.display = "none";
+      clearUserMode();
+      return;
+    }
+
+    const isClosed = ticket.status === "closed";
+    chatInputEl.disabled = isClosed;
+    chatSendBtn.disabled = isClosed;
+    chatInputEl.placeholder = isClosed
+      ? "Acest tichet este închis. Nu mai poți trimite mesaje."
+      : "Scrie un mesaj către admin...";
+
+    if (userTicketActionsEl) {
+      // user poate închide doar tichete deschise
+      userTicketActionsEl.style.display = isClosed ? "none" : "flex";
+    }
+
+    if (isClosed) {
+      clearUserMode();
+    }
+  }
+
+  // stare inițială – fără tichet selectat
+  updateUserChatState(null);
+
   function setUserReplyMode(msg) {
     if (!userModeBar) return;
     userMode.type = "reply";
@@ -504,15 +553,6 @@ function initUserApp() {
     textEl.textContent = `Răspunzi lui ${userMode.sender}: "${userMode.previewText}"`;
     userModeBar.style.display = "flex";
     chatInputEl.focus();
-  }
-
-  function clearUserMode() {
-    if (!userModeBar) return;
-    userMode.type = null;
-    userMode.messageId = null;
-    userMode.previewText = "";
-    userMode.sender = "";
-    userModeBar.style.display = "none";
   }
 
   // drawer pentru lista de tichete (3 linii stânga sus)
@@ -821,6 +861,7 @@ function initUserApp() {
     if (!t) {
       chatHeaderEl.innerHTML = "<span>Niciun tichet selectat</span>";
       chatMessagesEl.innerHTML = "";
+      updateUserChatState(null);
       return;
     }
 
@@ -832,15 +873,18 @@ function initUserApp() {
     `;
 
     renderUserMessages(t);
+    updateUserChatState(t);
   }
 
   function renderUserMessages(ticket) {
     renderDiscordMessages(ticket.messages || [], {
       container: chatMessagesEl,
       ticket,
-      canReply: true,
+      canReply: ticket.status === "open",
       canEditDelete: false,
-      onReply: (msg) => setUserReplyMode(msg),
+      onReply: (msg) => {
+        if (ticket.status === "open") setUserReplyMode(msg);
+      },
       onEdit: null,
       onDelete: null,
       onJumpTo: (messageId) =>
@@ -851,6 +895,13 @@ function initUserApp() {
   async function sendChatMessage() {
     const text = chatInputEl.value.trim();
     if (!text || !SELECTED_TICKET_ID) return;
+
+    const t = CURRENT_TICKETS.find((x) => x.id === SELECTED_TICKET_ID);
+    if (!t || t.status === "closed") {
+      // de siguranță – UI oricum blochează
+      updateUserChatState(t || null);
+      return;
+    }
 
     const reply_to =
       userMode.type === "reply" && userMode.messageId
@@ -868,6 +919,13 @@ function initUserApp() {
 
       if (!res.ok) {
         console.error("user_send_message error:", res);
+        if (res.error === "ticket_closed") {
+          // serverul spune clar că tichetul e închis
+          const updatedTicket = CURRENT_TICKETS.find(
+            (x) => x.id === SELECTED_TICKET_ID
+          );
+          updateUserChatState(updatedTicket || null);
+        }
         return;
       }
 
@@ -882,7 +940,6 @@ function initUserApp() {
       renderTicketsList();
       selectTicket(updated.id);
 
-      clearUserMode();
       bumpUserActive();
 
       const snap = await pollTicketsUserCore();
@@ -890,6 +947,39 @@ function initUserApp() {
       return snap;
     } catch (err) {
       console.error("user_send_message error:", err);
+    }
+  }
+
+  // user închide propriul tichet
+  async function userCloseCurrentTicket() {
+    if (!SELECTED_TICKET_ID) return;
+    try {
+      const res = await apiCall("user_close_ticket", {
+        ticket_id: SELECTED_TICKET_ID,
+      });
+
+      if (!res.ok) {
+        console.error("user_close_ticket error:", res);
+        return;
+      }
+
+      const updated = res.ticket;
+      const idx = CURRENT_TICKETS.findIndex((t) => t.id === updated.id);
+      if (idx >= 0) {
+        CURRENT_TICKETS[idx] = updated;
+      } else {
+        CURRENT_TICKETS.push(updated);
+      }
+
+      renderTicketsList();
+      selectTicket(updated.id);
+      bumpUserActive();
+
+      const snap = await pollTicketsUserCore();
+      userTicketsPoller.bumpFast();
+      return snap;
+    } catch (err) {
+      console.error("user_close_ticket error:", err);
     }
   }
 
@@ -915,6 +1005,13 @@ function initUserApp() {
     if (e.key === "Escape") {
       closeTicketsDrawer();
     }
+  });
+
+  // buton user "Închide tichet"
+  userTicketCloseBtn?.addEventListener("click", () => {
+    if (!SELECTED_TICKET_ID) return;
+    if (!confirm("Sigur vrei să închizi acest tichet?")) return;
+    userCloseCurrentTicket();
   });
 
   async function pollTicketsUserCore() {
@@ -944,6 +1041,12 @@ function initUserApp() {
         const t = CURRENT_TICKETS.find((x) => x.id === SELECTED_TICKET_ID);
         if (t) {
           selectTicket(t.id);
+        } else {
+          // tichetul poate a expirat și a fost șters (după 1 săptămână)
+          SELECTED_TICKET_ID = null;
+          chatHeaderEl.innerHTML = "<span>Niciun tichet selectat</span>";
+          chatMessagesEl.innerHTML = "";
+          updateUserChatState(null);
         }
       }
       return CURRENT_TICKETS;
@@ -1050,6 +1153,7 @@ function initUserApp() {
       renderShop(CURRENT_SHOP);
       renderTicketsList();
 
+      // dacă e selectat tab-ul de tichete, pornește poller-ul
       if (isTicketsTabActive()) {
         bumpUserActive();
         userTicketsPoller.start();
@@ -1119,6 +1223,41 @@ function initAdminApp() {
     sender: "",
   };
 
+  function clearAdminMode() {
+    if (!adminModeBar) return;
+    adminMode.type = null;
+    adminMode.ticketId = null;
+    adminMode.messageId = null;
+    adminMode.previewText = "";
+    adminMode.sender = "";
+    adminModeBar.style.display = "none";
+  }
+
+  // starea input-ului admin în funcție de statusul tichetului
+  function updateAdminChatState(ticket) {
+    if (!chatInputEl || !chatSendBtn) return;
+
+    if (!ticket) {
+      chatInputEl.disabled = true;
+      chatSendBtn.disabled = true;
+      chatInputEl.placeholder =
+        "Selectează un tichet pentru a trimite mesaje...";
+      clearAdminMode();
+      return;
+    }
+
+    const isClosed = ticket.status === "closed";
+    chatInputEl.disabled = isClosed;
+    chatSendBtn.disabled = isClosed;
+    chatInputEl.placeholder = isClosed
+      ? "Acest tichet este închis. Nu mai poți trimite mesaje."
+      : "Scrie un mesaj către utilizator...";
+
+    if (isClosed) {
+      clearAdminMode();
+    }
+  }
+
   if (chatInputContainer && !chatInputContainer.querySelector(".chat-mode-bar")) {
     adminModeBar = document.createElement("div");
     adminModeBar.className = "chat-mode-bar";
@@ -1147,6 +1286,9 @@ function initAdminApp() {
     row.appendChild(chatSendBtn);
   }
 
+  // inițial – fără tichet selectat
+  updateAdminChatState(null);
+
   function setAdminReplyMode(ticketId, msg) {
     if (!adminModeBar) return;
     adminMode.type = "reply";
@@ -1172,16 +1314,6 @@ function initAdminApp() {
     adminModeBar.style.display = "flex";
     chatInputEl.value = msg.text || "";
     chatInputEl.focus();
-  }
-
-  function clearAdminMode() {
-    if (!adminModeBar) return;
-    adminMode.type = null;
-    adminMode.ticketId = null;
-    adminMode.messageId = null;
-    adminMode.previewText = "";
-    adminMode.sender = "";
-    adminModeBar.style.display = "none";
   }
 
   let ALL_TICKETS = [];
@@ -1341,6 +1473,7 @@ function initAdminApp() {
         ticketDetailsEl.style.display = "none";
         chatHeaderEl.innerHTML = "<span>Niciun tichet selectat</span>";
         chatMessagesEl.innerHTML = "";
+        updateAdminChatState(null);
       }
       return;
     }
@@ -1417,6 +1550,7 @@ function initAdminApp() {
       ticketDetailsEl.style.display = "none";
       chatHeaderEl.innerHTML = "<span>Niciun tichet selectat</span>";
       chatMessagesEl.innerHTML = "";
+      updateAdminChatState(null);
       return;
     }
 
@@ -1455,17 +1589,24 @@ function initAdminApp() {
     // marcam ca citit când deschidem tichetul
     markTicketRead(t);
     renderTicketsList();
+    updateAdminChatState(t);
   }
 
   function renderAdminMessages(ticket) {
     renderDiscordMessages(ticket.messages || [], {
       container: chatMessagesEl,
       ticket,
-      canReply: true,
+      canReply: ticket.status === "open",
       canEditDelete: true,
-      onReply: (msg) => setAdminReplyMode(ticket.id, msg),
-      onEdit: (msg) => setAdminEditMode(ticket.id, msg),
-      onDelete: (msg) => deleteAdminMessage(ticket.id, msg.id),
+      onReply: (msg) => {
+        if (ticket.status === "open") setAdminReplyMode(ticket.id, msg);
+      },
+      onEdit: (msg) => {
+        if (ticket.status === "open") setAdminEditMode(ticket.id, msg);
+      },
+      onDelete: (msg) => {
+        if (ticket.status === "open") deleteAdminMessage(ticket.id, msg.id);
+      },
       onJumpTo: (messageId) =>
         scrollToMessageElement(chatMessagesEl, messageId),
     });
@@ -1474,6 +1615,12 @@ function initAdminApp() {
   async function sendAdminMessage() {
     const text = chatInputEl.value.trim();
     if (!text || !SELECTED_TICKET_ID) return;
+
+    const ticketObj = ALL_TICKETS.find((t) => t.id === SELECTED_TICKET_ID);
+    if (!ticketObj || ticketObj.status === "closed") {
+      updateAdminChatState(ticketObj || null);
+      return;
+    }
 
     const modeType = adminMode.type;
     const msgId = adminMode.messageId;
@@ -1502,6 +1649,12 @@ function initAdminApp() {
 
       if (!res || !res.ok) {
         console.error("admin send/edit error:", res);
+        if (res && res.error === "ticket_closed") {
+          const updatedTicket = ALL_TICKETS.find(
+            (t) => t.id === SELECTED_TICKET_ID
+          );
+          updateAdminChatState(updatedTicket || null);
+        }
         return;
       }
 
@@ -1955,6 +2108,12 @@ function initAdminApp() {
         const t = ALL_TICKETS.find((x) => x.id === SELECTED_TICKET_ID);
         if (t) {
           selectTicket(t.id);
+        } else {
+          // tichetul poate a fost șters (după 1 săptămână de la închidere)
+          SELECTED_TICKET_ID = null;
+          chatHeaderEl.innerHTML = "<span>Niciun tichet selectat</span>";
+          chatMessagesEl.innerHTML = "";
+          updateAdminChatState(null);
         }
       }
 
