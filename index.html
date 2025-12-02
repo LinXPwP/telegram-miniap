@@ -14,59 +14,76 @@
 <body data-page="user">
   <div class="container">
     <div class="card card--user">
-      <!-- Linie pentru erori / mesaje de stare – ascunsă implicit -->
-      <p class="user-line" id="userLine" style="display:none;">Se încarcă utilizatorul...</p>
-
-      <!-- SHOP TAB (implicit activ) -->
-      <div id="shopTab" class="tab-section active">
-        <!-- header mic & compact doar cu credite -->
-        <div class="header-top header-top--shop">
-          <div class="credits">
-            Credite: <span class="value" id="creditsValue">-</span>
-          </div>
-        </div>
-
-        <div class="section-title">Categorii & produse</div>
-        <div id="categoriesContainer" class="categories"></div>
-
-        <div id="productPanel" class="product-panel" style="display:none;">
-          <div class="product-panel-header">
-            <div class="product-panel-name" id="panelName"></div>
-            <button class="product-panel-close" id="panelCloseBtn">×</button>
-          </div>
-          <div class="product-panel-desc" id="panelDesc"></div>
-          <div class="product-panel-price" id="panelPrice"></div>
-          <div class="qty-row">
-            <span class="qty-label">Cantitate:</span>
-            <input type="number" id="panelQty" min="1" value="1" />
-            <span id="panelQtyRange" class="qty-range"></span>
-          </div>
-          <button class="product-panel-buy" id="panelBuyBtn">
-            Cumpără și deschide tichet
-          </button>
-          <div class="status-bar" id="panelStatus"></div>
+      <!-- HEADER DOAR PENTRU SHOP (credite + buton Tichete) -->
+      <div id="shopHeader" class="header-top header-top--shop">
+        <button class="btn-ghost btn-go-tickets" id="goToTicketsBtn">Tichete</button>
+        <div class="credits">
+          Credite: <span class="value" id="creditsValue">-</span>
         </div>
       </div>
 
-      <!-- TICKETS TAB – chat aproape full-page -->
+      <!-- linie user – o folosim doar pentru mesaje de eroare -->
+      <p class="user-line" id="userLine"></p>
+
+      <!-- SHOP (secțiune principală) -->
+      <div id="shopTab" class="tab-section active">
+        <div class="section-title">Shop</div>
+        <div id="categoriesContainer" class="categories"></div>
+
+        <!-- POPUP PRODUS (overlay) -->
+        <div id="productPanel" class="product-panel" style="display:none;">
+          <div class="product-panel-card">
+            <div class="product-panel-header">
+              <div class="product-panel-name" id="panelName"></div>
+              <button class="product-panel-close" id="panelCloseBtn">×</button>
+            </div>
+            <div class="product-panel-desc" id="panelDesc"></div>
+            <div class="product-panel-price" id="panelPrice"></div>
+            <div class="qty-row">
+              <span class="qty-label">Cantitate:</span>
+              <input type="number" id="panelQty" min="1" value="1" />
+              <span id="panelQtyRange" class="qty-range"></span>
+            </div>
+            <button class="product-panel-buy" id="panelBuyBtn">
+              Cumpără și deschide tichet
+            </button>
+            <div class="status-bar" id="panelStatus"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TICKETS (full page chat) -->
       <div id="ticketsTab" class="tab-section">
         <div class="chat-layout">
-          <!-- Chat principal – ocupă aproape toată pagina -->
+          <!-- Sidebar listă tichete (drawer) -->
+          <div class="chat-sidebar" id="chatList"></div>
+
+          <!-- Chat principal -->
           <div class="chat-main">
-            <div class="chat-header">
+            <div class="chat-header" id="chatHeader">
               <div class="chat-header-left">
-                <!-- buton 3 linii (burger) stânga sus -->
-                <button class="tickets-menu-toggle" id="ticketsMenuToggle" aria-label="Deschide lista de tichete">
+                <!-- 3 linii stânga sus -->
+                <button
+                  class="tickets-menu-toggle"
+                  id="ticketsMenuToggle"
+                  aria-label="Deschide lista de tichete"
+                >
                   <span></span>
                   <span></span>
                   <span></span>
                 </button>
-                <!-- titlu tichet: username - product -->
-                <span class="chat-title-main" id="chatHeaderTitle">Niciun tichet selectat</span>
+
+                <!-- username - product -->
+                <div class="chat-title-main" id="ticketTitle">
+                  Niciun tichet selectat
+                </div>
               </div>
+
               <div class="chat-header-right">
-                <!-- buton închidere tichet dreapta sus -->
-                <button class="btn-ghost btn-close-ticket" id="userTicketCloseBtn" disabled>Închide tichet</button>
+                <!-- buton Închide tichet (dreapta sus) -->
+                <button class="btn-ghost btn-close-ticket" id="userTicketCloseBtn">
+                  Închide tichet
+                </button>
               </div>
             </div>
 
@@ -82,17 +99,16 @@
               <button id="chatSendBtn">Trimite</button>
             </div>
 
-            <!-- bară jos-stânga cu buton săgeată pentru întoarcere la Shop -->
+            <!-- stânga jos – back la shop -->
             <div class="chat-bottom-bar">
-              <button class="btn-ghost btn-back-shop" id="backToShopBtn">← Înapoi la shop</button>
+              <button class="btn-ghost btn-back-shop" id="backToShopBtn">
+                ← Înapoi la shop
+              </button>
             </div>
           </div>
-
-          <!-- Sidebar-ul cu lista de tichete (drawer care glisează din stânga) -->
-          <div class="chat-sidebar" id="chatList"></div>
         </div>
 
-        <!-- Backdrop pentru drawer-ul cu tichete -->
+        <!-- Backdrop pentru drawer lista tichete -->
         <div class="tickets-backdrop" id="ticketsBackdrop"></div>
       </div>
 
