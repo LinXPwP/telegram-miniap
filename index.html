@@ -12,22 +12,57 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body data-page="user">
-  <div class="container">
-    <div class="card card--user">
-      <!-- HEADER DOAR PENTRU SHOP (credite + buton Tichete) -->
-      <div id="shopHeader" class="header-top header-top--shop">
-        <button class="btn-ghost btn-go-tickets" id="goToTicketsBtn">Tichete</button>
-        <div class="credits">
-          Credite: <span class="value" id="creditsValue">-</span>
+  <div class="page-shell">
+    <div class="hero">
+      <div class="hero__text">
+        <div class="pill">MiniApp · Shop & Support</div>
+        <h1>Experiență fluentă în shop și tichete</h1>
+        <p>
+          Cumpără produsele tale preferate și deschide tichete direct din aceeași
+          interfață. Totul în stil negru-roșu, cu focus pe claritate și viteză.
+        </p>
+        <div class="hero__actions">
+          <button class="btn-primary" id="goToTicketsBtn">Tichete</button>
+          <div class="balance-card" id="shopHeader">
+            <div class="label">Credite</div>
+            <div class="value" id="creditsValue">-</div>
+            <span class="chip chip--soft">live</span>
+          </div>
         </div>
       </div>
+      <div class="hero__stats">
+        <div class="stat-card">
+          <div class="stat-label">Flux instant</div>
+          <div class="stat-value">Shop & Chat</div>
+          <p>Comanzi, deschizi tichete și primești răspuns rapid, fără tab-uri.</p>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Design dark</div>
+          <div class="stat-value">Black · Red</div>
+          <p>Suprafețe de sticlă, accente roșii și layout aerisit pentru mobile.</p>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Control total</div>
+          <div class="stat-value">Simplu</div>
+          <p>Adaugi în coș, vezi limite și confirmi plata în câțiva pași.</p>
+        </div>
+      </div>
+    </div>
 
-      <!-- linie user – o folosim doar pentru mesaje de eroare -->
+    <div class="card card--user">
       <p class="user-line" id="userLine"></p>
 
-      <!-- SHOP (secțiune principală) -->
       <div id="shopTab" class="tab-section active">
-        <div class="section-title">Shop</div>
+        <div class="tab-header">
+          <div>
+            <div class="section-eyebrow">Shop live</div>
+            <div class="section-title">Categorie & produse</div>
+          </div>
+          <div class="section-actions">
+            <span class="chip">Selectează un produs pentru detalii</span>
+          </div>
+        </div>
+
         <div id="categoriesContainer" class="categories"></div>
 
         <!-- POPUP PRODUS (overlay) -->
@@ -52,17 +87,23 @@
         </div>
       </div>
 
-      <!-- TICKETS (full page chat) -->
       <div id="ticketsTab" class="tab-section">
+        <div class="tab-header">
+          <div>
+            <div class="section-eyebrow">Suport</div>
+            <div class="section-title">Tichetele tale</div>
+          </div>
+          <div class="section-actions">
+            <span class="chip chip--soft">live updates</span>
+          </div>
+        </div>
+
         <div class="chat-layout">
-          <!-- Sidebar listă tichete (drawer) -->
           <div class="chat-sidebar" id="chatList"></div>
 
-          <!-- Chat principal -->
           <div class="chat-main">
             <div class="chat-header" id="chatHeader">
               <div class="chat-header-left">
-                <!-- 3 linii stânga sus -->
                 <button
                   class="tickets-menu-toggle"
                   id="ticketsMenuToggle"
@@ -73,14 +114,12 @@
                   <span></span>
                 </button>
 
-                <!-- username - product -->
                 <div class="chat-title-main" id="ticketTitle">
                   Niciun tichet selectat
                 </div>
               </div>
 
               <div class="chat-header-right">
-                <!-- buton Închide tichet (dreapta sus) -->
                 <button class="btn-ghost btn-close-ticket" id="userTicketCloseBtn">
                   Închide tichet
                 </button>
@@ -90,7 +129,6 @@
             <div class="chat-messages" id="chatMessages"></div>
 
             <div class="chat-input">
-              <!-- bara REPLY + input+buton, JS le reorganizează -->
               <input
                 id="chatInput"
                 placeholder="Scrie un mesaj către admin..."
@@ -99,7 +137,6 @@
               <button id="chatSendBtn">Trimite</button>
             </div>
 
-            <!-- stânga jos – back la shop -->
             <div class="chat-bottom-bar">
               <button class="btn-ghost btn-back-shop" id="backToShopBtn">
                 ← Înapoi la shop
@@ -108,7 +145,6 @@
           </div>
         </div>
 
-        <!-- Backdrop pentru drawer lista tichete -->
         <div class="tickets-backdrop" id="ticketsBackdrop"></div>
       </div>
 
