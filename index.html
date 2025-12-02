@@ -16,10 +16,10 @@
     <div class="hero hero--revamp">
       <div class="hero__text hero__text--revamp">
         <div class="pill pill--glow">MiniApp · Shop & Support</div>
-        <h1>Shop și suport, în același ecran</h1>
+        <h1>Shop & suport într-un singur flux</h1>
         <p>
-          Comanzi, vezi creditele disponibile și deschizi tichet imediat,
-          fără să ieși din flux.
+          Interfață curată, cu acțiuni clare: adaugi în coș, vezi creditele și
+          deschizi tichete fără să părăsești experiența principală.
         </p>
 
         <div class="hero__actions">
@@ -27,83 +27,47 @@
             Deschide un tichet
           </button>
           <button class="btn-ghost hero__ghost" type="button" id="heroShopBtn">
-            Vezi shop-ul
+            Mergi la shop
           </button>
         </div>
-
-        <div class="hero__meta hero__meta--grid">
-          <div class="meta-card">
-            <span class="meta-dot meta-dot--pulse"></span>
-            <div>
-              <div class="meta-label">Credite la vedere</div>
-              <div class="meta-value">Disponibile direct în antetul shop-ului</div>
-            </div>
-          </div>
-          <div class="meta-card">
-            <span class="meta-dot meta-dot--soft"></span>
-            <div>
-              <div class="meta-label">Chat lângă comandă</div>
-              <div class="meta-value">Tichete deschise automat după cumpărare</div>
-            </div>
-          </div>
+        <div class="hero__meta">
+          <span class="chip chip--soft">Live sync</span>
+          <span class="hero__divider"></span>
+          <span class="hero__meta-text">Comenzi și suport aliniate în timp real</span>
         </div>
       </div>
 
       <div class="hero__panel hero__panel--revamp">
-        <div class="status-card" id="shopHeader">
-          <div class="status-card__top">
-            <div>
-              <div class="label">Credite disponibile</div>
-              <div class="value" id="creditsValue">-</div>
-            </div>
-            <div class="status-tag">actualizare după fiecare comandă</div>
+        <div class="balance-card balance-card--hero" id="shopHeader">
+          <div>
+            <div class="label">Credite active</div>
+            <div class="value" id="creditsValue">-</div>
           </div>
-          <div class="status-card__grid">
-            <div class="status-pill">
-              <span class="status-icon">⚡</span>
-              <div>
-                <div class="status-label">Checkout clar</div>
-                <div class="status-sub">2 pași până la confirmare</div>
-              </div>
-            </div>
-            <div class="status-pill">
-              <span class="status-icon">💬</span>
-              <div>
-                <div class="status-label">Suport dedicat</div>
-                <div class="status-sub">Tichet deschis odată cu comanda</div>
-              </div>
-            </div>
-          </div>
+          <span class="chip chip--soft">actualizat live</span>
         </div>
 
-        <div class="flow-card">
-          <div class="flow-card__header">
-            <div>
-              <div class="flow-eyebrow">3 pași rapizi</div>
-              <div class="flow-title">Shop + chat simplificat</div>
-            </div>
-            <span class="chip chip--soft">ghid vizibil</span>
-          </div>
-          <div class="flow-steps">
-            <div class="flow-step">
-              <span class="flow-bullet">1</span>
+        <div class="panel-card">
+          <div class="panel-card__title">Experiență revitalizată</div>
+          <div class="panel-card__list">
+            <div class="panel-feature">
+              <span class="panel-dot"></span>
               <div>
-                <div class="flow-step__title">Alegi produsul</div>
-                <p>Grupat pe categorii, cu descrieri și limite clare.</p>
+                <div class="panel-feature__title">Checkout lucid</div>
+                <p>Selecție, cantități și confirmare într-un flux compact.</p>
               </div>
             </div>
-            <div class="flow-step">
-              <span class="flow-bullet">2</span>
+            <div class="panel-feature">
+              <span class="panel-dot"></span>
               <div>
-                <div class="flow-step__title">Confirmi și deschizi tichet</div>
-                <p>Checkout-ul creează automat conversația cu adminul.</p>
+                <div class="panel-feature__title">Suport dedicat</div>
+                <p>Chat-ul de tichete rămâne lângă shop pentru răspunsuri rapide.</p>
               </div>
             </div>
-            <div class="flow-step">
-              <span class="flow-bullet">3</span>
+            <div class="panel-feature">
+              <span class="panel-dot"></span>
               <div>
-                <div class="flow-step__title">Trimiți mesaje pe loc</div>
-                <p>Chat-ul rămâne lângă shop, cu actualizări pe loc.</p>
+                <div class="panel-feature__title">UI fresh</div>
+                <p>Carduri de sticlă, gradient roșu și butoane reproiectate.</p>
               </div>
             </div>
           </div>
