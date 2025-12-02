@@ -395,6 +395,7 @@ function initUserApp() {
   }
 
   const creditsValueEl = document.getElementById("creditsValue");
+  const creditsBadgeValueEl = document.getElementById("creditsBadgeValue");
   const userLineEl = document.getElementById("userLine");
 
   const categoriesContainer = document.getElementById("categoriesContainer");
@@ -425,6 +426,7 @@ function initUserApp() {
   const ticketsTabEl = document.getElementById("ticketsTab");
   const shopHeaderEl = document.getElementById("shopHeader");
   const goToTicketsBtn = document.getElementById("goToTicketsBtn");
+  const heroShopBtn = document.getElementById("heroShopBtn");
   const backToShopBtn = document.getElementById("backToShopBtn");
 
   const chatInputContainer = document.querySelector(
@@ -457,6 +459,15 @@ function initUserApp() {
   if (goToTicketsBtn) {
     goToTicketsBtn.addEventListener("click", () => {
       showTicketsTab();
+    });
+  }
+
+  if (heroShopBtn) {
+    heroShopBtn.addEventListener("click", () => {
+      showShopTab();
+      if (categoriesContainer) {
+        categoriesContainer.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
     });
   }
 
@@ -593,9 +604,16 @@ function initUserApp() {
     return tab && tab.classList.contains("active");
   }
 
+  function updateCreditsUI() {
+    if (!CURRENT_USER) return;
+    const value = CURRENT_USER.credits;
+    if (creditsValueEl) creditsValueEl.textContent = value;
+    if (creditsBadgeValueEl) creditsBadgeValueEl.textContent = value;
+  }
+
   function renderUserHeader() {
     if (!CURRENT_USER) return;
-    creditsValueEl.textContent = CURRENT_USER.credits;
+    updateCreditsUI();
     const name =
       CURRENT_USER.username && CURRENT_USER.username !== "fara_username"
         ? "@" + CURRENT_USER.username
@@ -735,7 +753,7 @@ function initUserApp() {
       }
 
       CURRENT_USER.credits = res.new_balance;
-      creditsValueEl.textContent = CURRENT_USER.credits;
+      updateCreditsUI();
 
       const newTicket = res.ticket;
       CURRENT_TICKETS.push(newTicket);
