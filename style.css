@@ -169,6 +169,13 @@ body[data-page="admin"] .container {
   color: var(--accent-soft);
 }
 
+/* TITLU + SUBTITLU + USER-LINE SUNT ASCUNSE PE PAGINA DE USER */
+body[data-page="user"] h1,
+body[data-page="user"] .subtitle,
+body[data-page="user"] .user-line {
+  display: none;
+}
+
 h1 {
   margin: 2px 0 0;
   font-size: 18px;
@@ -203,6 +210,11 @@ h1 {
   border: 1px solid rgba(255, 255, 255, 0.05);
   margin-bottom: 10px;
   overflow: hidden;
+}
+
+/* TABS USER – ASCUNSE DIN UI (logică păstrată în JS) */
+body[data-page="user"] .tabs--user {
+  display: none;
 }
 
 .tab-btn {
@@ -504,6 +516,33 @@ h1 {
   flex: 1;
 }
 
+/* HEADER NOU SUS ÎN CHAT – 3 LINES + TITLU + CLOSE */
+
+.chat-main-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.7);
+  background: #26282c;
+}
+
+.chat-main-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chat-ticket-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.chat-main-header-right {
+  display: flex;
+  align-items: center;
+}
+
 .chat-header {
   padding: 7px 10px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.6);
@@ -567,12 +606,12 @@ body[data-page="user"] #ticketsTab.tickets-drawer-open .tickets-backdrop {
   pointer-events: auto;
 }
 
-/* buton 3 linii */
+/* buton 3 linii – ACUM RELATIV ÎN HEADER, NU FIXED SUS */
 
 body[data-page="user"] .tickets-menu-toggle {
-  position: fixed;
-  top: 6px;
-  left: 10px;
+  position: relative;
+  top: 0;
+  left: 0;
   width: 32px;
   height: 24px;
   border-radius: 999px;
@@ -935,6 +974,17 @@ body[data-page="admin"] .chat-sidebar {
   border-color: rgba(255, 255, 255, 0.26);
   color: var(--text);
   transform: translateY(-0.5px);
+}
+
+/* BUTON JOS STÂNGA – ÎNAPOI LA SHOP */
+
+.back-to-shop-btn {
+  margin-top: 8px;
+  align-self: flex-start;
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 /* ============================
