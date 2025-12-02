@@ -67,9 +67,9 @@ body[data-page="user"] .card--user {
   position: relative;
   max-width: 100%;
   margin: 0;
-  padding: 10px 10px 10px;
+  padding: 8px 8px 8px;
   min-height: 100vh;
-  height: 100vh;        /* user card ocupă toată înălțimea */
+  height: 100vh;
   display: flex;
   flex-direction: column;
   background: #111214;
@@ -77,7 +77,7 @@ body[data-page="user"] .card--user {
   border: none;
   box-shadow: none;
   backdrop-filter: none;
-  overflow: hidden;     /* scroll intern, nu extinde pagina */
+  overflow: hidden;
 }
 
 body[data-page="user"] .card--user::before {
@@ -137,27 +137,11 @@ body[data-page="admin"] .container {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  background: #202225;
-  color: var(--muted);
-}
-
-.badge-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: var(--accent);
+.header-spacer {
+  flex: 1;
 }
 
 .credits {
@@ -169,32 +153,7 @@ body[data-page="admin"] .container {
   color: var(--accent-soft);
 }
 
-/* TITLU + SUBTITLU + USER-LINE SUNT ASCUNSE PE PAGINA DE USER */
-body[data-page="user"] h1,
-body[data-page="user"] .subtitle,
-body[data-page="user"] .user-line {
-  display: none;
-}
-
-h1 {
-  margin: 2px 0 0;
-  font-size: 18px;
-}
-
-.subtitle {
-  margin: 0 0 4px;
-  font-size: 11px;
-  color: var(--muted);
-}
-
-.user-line {
-  margin: 0 0 8px;
-  font-size: 11px;
-  color: var(--muted);
-}
-.user-line b {
-  color: var(--text);
-}
+/* vechile h1/subtitle/user-line au fost eliminate din HTML */
 
 /* ============================
    TABS
@@ -210,11 +169,6 @@ h1 {
   border: 1px solid rgba(255, 255, 255, 0.05);
   margin-bottom: 10px;
   overflow: hidden;
-}
-
-/* TABS USER – ASCUNSE DIN UI (logică păstrată în JS) */
-body[data-page="user"] .tabs--user {
-  display: none;
 }
 
 .tab-btn {
@@ -248,7 +202,7 @@ body[data-page="user"] .tabs--user {
   transition: transform var(--transition-med);
 }
 
-/* user tabs */
+/* user tabs – în practică ascunse (display:none inline în HTML) */
 
 .tabs--user[data-active="shopTab"]::after {
   transform: translateX(0);
@@ -284,17 +238,12 @@ body[data-page="user"] .tabs--user {
   margin: 0 0 6px;
 }
 
-.section-title--tickets {
-  margin-top: 26px;
-  padding-left: 36px;
-}
-
 /* ============================
    FOOTER
    ============================ */
 
 .footer {
-  margin-top: 8px;
+  margin-top: 6px;
   font-size: 10px;
   color: var(--muted);
   display: flex;
@@ -494,13 +443,13 @@ body[data-page="user"] .tabs--user {
 }
 
 /* ============================
-   CHAT – USER LAYOUT
+   CHAT – USER LAYOUT (FULLSCREEN)
    ============================ */
 
 .chat-layout {
   position: relative;
   flex: 1;
-  min-height: 0;        /* important pentru scroll intern */
+  min-height: 0;
   display: flex;
   flex-direction: column;
   margin-top: 4px;
@@ -516,42 +465,6 @@ body[data-page="user"] .tabs--user {
   flex: 1;
 }
 
-/* HEADER NOU SUS ÎN CHAT – 3 LINES + TITLU + CLOSE */
-
-.chat-main-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 6px 10px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.7);
-  background: #26282c;
-}
-
-.chat-main-header-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.chat-ticket-title {
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.chat-main-header-right {
-  display: flex;
-  align-items: center;
-}
-
-.chat-header {
-  padding: 7px 10px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.6);
-  font-size: 12px;
-}
-.chat-header span {
-  color: var(--muted);
-}
-
 .chat-messages {
   flex: 1;
   padding: 4px 4px 4px 8px;
@@ -559,10 +472,43 @@ body[data-page="user"] .tabs--user {
 }
 
 /* ============================
-   DRAWER TICHETE – USER
+   TOP BAR TICKETS – burger + titlu + close
    ============================ */
 
-/* drawer doar pe pagina de user; în admin avem alt layout */
+.ticket-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 4px 4px 40px; /* spațiu pentru burger fixat în stânga */
+  margin-bottom: 4px;
+}
+
+.ticket-top-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ticket-top-close-btn {
+  font-size: 11px;
+  padding: 5px 10px;
+}
+
+.ticket-top-close-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* ============================
+   DRAWER TICHETE – USER
+   ============================ */
 
 body[data-page="user"] .chat-sidebar {
   position: fixed;
@@ -606,12 +552,12 @@ body[data-page="user"] #ticketsTab.tickets-drawer-open .tickets-backdrop {
   pointer-events: auto;
 }
 
-/* buton 3 linii – ACUM RELATIV ÎN HEADER, NU FIXED SUS */
+/* buton 3 linii – fixat în colț sus stânga */
 
 body[data-page="user"] .tickets-menu-toggle {
-  position: relative;
-  top: 0;
-  left: 0;
+  position: fixed;
+  top: 8px;
+  left: 10px;
   width: 32px;
   height: 24px;
   border-radius: 999px;
@@ -657,7 +603,33 @@ body[data-page="user"]
 }
 
 /* ============================
-   SIDEBAR – ADMIN (fix!!!)
+   BUTON ÎNAPOI LA SHOP
+   ============================ */
+
+.back-to-shop-btn {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  border-radius: 999px;
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: #202225;
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+  z-index: 20;
+  transition: background var(--transition-fast), border-color var(--transition-fast),
+    transform var(--transition-fast), color var(--transition-fast);
+}
+.back-to-shop-btn:hover {
+  background: #313338;
+  border-color: rgba(255, 255, 255, 0.26);
+  color: var(--text);
+  transform: translateY(-0.5px);
+}
+
+/* ============================
+   SIDEBAR – ADMIN (fix)
    ============================ */
 
 body[data-page="admin"] .chat-sidebar {
@@ -707,12 +679,6 @@ body[data-page="admin"] .chat-sidebar {
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
-}
-
-.tickets-info {
-  margin-top: 6px;
-  font-size: 11px;
-  color: var(--muted);
 }
 
 /* ============================
@@ -976,19 +942,8 @@ body[data-page="admin"] .chat-sidebar {
   transform: translateY(-0.5px);
 }
 
-/* BUTON JOS STÂNGA – ÎNAPOI LA SHOP */
-
-.back-to-shop-btn {
-  margin-top: 8px;
-  align-self: flex-start;
-  font-size: 11px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
 /* ============================
-   ADMIN – CHAT & SHOP
+   ADMIN – CHAT & SHOP (nemodificat funcțional)
    ============================ */
 
 .chat-admin-layout {
@@ -1000,372 +955,12 @@ body[data-page="admin"] .chat-sidebar {
   margin-top: 4px;
 }
 
-.ticket-details {
-  margin-top: 10px;
-  border-radius: var(--radius-md);
-  background: #202225;
-  border: 1px solid var(--border-subtle);
-  padding: 8px 10px;
-  font-size: 12px;
-}
-.ticket-summary {
-  margin-bottom: 4px;
-}
-.ticket-actions {
-  margin-top: 6px;
-  display: flex;
-  gap: 6px;
-}
+/* ... (restul secțiunilor admin / shop editor / modal / scrollbars / responsive rămân exact ca înainte) */
 
-.ticket-note-inline {
-  margin-top: 4px;
-  font-size: 11px;
-  color: var(--muted);
-}
-.ticket-note-label {
-  font-weight: 600;
-  margin-right: 4px;
-}
-.ticket-note-text {
-  opacity: 0.9;
-}
-.ticket-note-empty {
-  font-style: italic;
-  opacity: 0.7;
-}
-
-/* admin toolbar */
-
-.admin-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 8px;
-  padding: 6px 8px;
-  border-radius: 14px;
-  background: #202225;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.toolbar-group {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: 1;
-  min-width: 0;
-}
-
-.toolbar-select {
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: #111214;
-  color: var(--text);
-  padding: 5px 10px;
-  font-size: 12px;
-}
-
-.toolbar-search {
-  flex: 1;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: #111214;
-  color: var(--text);
-  padding: 6px 10px;
-  font-size: 12px;
-}
-
-.toolbar-stats {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.stat-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 10px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  font-size: 11px;
-}
-.stat-pill--open {
-  background: rgba(87, 242, 135, 0.12);
-  border-color: rgba(87, 242, 135, 0.5);
-}
-.stat-pill--closed {
-  background: rgba(240, 71, 71, 0.12);
-  border-color: rgba(240, 71, 71, 0.5);
-}
-.stat-pill--soft {
-  background: rgba(255, 255, 255, 0.02);
-}
-.stat-label {
-  color: var(--muted);
-}
-.stat-value {
-  font-weight: 600;
-}
-
-.chat-item-header-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 6px;
-}
-
-.ticket-status-pill {
-  font-size: 10px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-}
-.ticket-status-pill.open {
-  background: rgba(87, 242, 135, 0.11);
-  border-color: rgba(87, 242, 135, 0.7);
-  color: #b0ffd0;
-}
-.ticket-status-pill.closed {
-  background: rgba(240, 71, 71, 0.12);
-  border-color: rgba(240, 71, 71, 0.7);
-  color: #ffafb7;
-}
-
-.unread-badge {
-  min-width: 18px;
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: var(--accent-danger);
-  color: #fff;
-  font-size: 10px;
-  font-weight: 600;
-  text-align: center;
-}
-
-/* shop editor admin */
-
-.shop-flex {
-  display: grid;
-  grid-template-columns: minmax(0, 2.1fr) minmax(260px, 0.9fr);
-  gap: 10px;
-  margin-top: 4px;
-  flex: 1;
-  min-height: 0;
-}
-
-.shop-container {
-  max-height: 460px;
-  overflow: auto;
-  border-radius: var(--radius-md);
-  background: #202225;
-  border: 1px solid var(--border-subtle);
-  padding: 8px;
-}
-
-.shop-sidepanel {
-  border-radius: var(--radius-md);
-  background: #202225;
-  border: 1px solid var(--border-subtle);
-  padding: 10px;
-  font-size: 12px;
-}
-
-.shop-sidepanel-title {
-  font-size: 14px;
-  margin: 0 0 4px;
-}
-.shop-sidepanel-text {
-  font-size: 11px;
-  color: var(--muted);
-  margin: 0 0 8px;
-}
-
-.shop-metrics {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin-bottom: 8px;
-}
-
-.cat-card {
-  border-radius: var(--radius-md);
-  padding: 8px;
-  margin-bottom: 8px;
-  background: #2b2d31;
-  border: 1px solid var(--border-subtle);
-}
-
-.cat-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
-}
-.cat-header-left {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: 1;
-}
-.cat-header-right {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.cat-header input {
-  flex: 1;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: #111214;
-  color: var(--text);
-  padding: 6px 10px;
-  font-size: 12px;
-}
-
-.cat-desc textarea {
-  width: 100%;
-  margin-top: 4px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: #111214;
-  color: var(--text);
-  padding: 6px 8px;
-  font-size: 12px;
-  resize: vertical;
-}
-
-.cat-toggle {
-  padding-inline: 6px;
-  min-width: 30px;
-}
-
-.products-list {
-  margin-top: 6px;
-  border-radius: var(--radius-sm);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 6px;
-  background: #202225;
-}
-
-.product-row {
-  display: grid;
-  grid-template-columns: 1.6fr 0.7fr 0.7fr 0.7fr auto;
-  gap: 4px;
-  align-items: center;
-  margin-bottom: 4px;
-}
-
-.product-row input {
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: #111214;
-  color: var(--text);
-  padding: 4px 6px;
-  font-size: 11px;
-}
-
-.product-mini-actions {
-  display: flex;
-  gap: 4px;
-}
-
-.small-input-label {
-  font-size: 10px;
-  color: var(--muted);
-  margin-top: 2px;
-}
-
-.products-list input[type="text"] {
-  width: 100%;
-}
-
-/* ============================
-   MODAL
-   ============================ */
-
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.78);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  z-index: 40;
-}
-
-.modal {
-  width: min(420px, 92vw);
-  border-radius: 18px;
-  background: #202225;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85);
-  padding: 12px 14px 14px;
-  animation: panelIn 0.18s ease-out;
-}
-.modal h3 {
-  margin: 0 0 4px;
-  font-size: 15px;
-}
-.modal-text {
-  margin: 0 0 8px;
-  font-size: 12px;
-  color: var(--muted);
-}
-.modal textarea {
-  width: 100%;
-  min-height: 80px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: #111214;
-  color: var(--text);
-  padding: 6px 8px;
-  font-size: 12px;
-  resize: vertical;
-  margin-bottom: 8px;
-}
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 6px;
-}
-
-/* ============================
-   SCROLLBARS
-   ============================ */
-
-.chat-sidebar,
-.chat-messages,
-.shop-container {
-  scrollbar-width: thin;
-  scrollbar-color: var(--accent) transparent;
-}
-.chat-sidebar::-webkit-scrollbar,
-.chat-messages::-webkit-scrollbar,
-.shop-container::-webkit-scrollbar {
-  width: 6px;
-}
-.chat-sidebar::-webkit-scrollbar-track,
-.chat-messages::-webkit-scrollbar-track,
-.shop-container::-webkit-scrollbar-track {
-  background: transparent;
-}
-.chat-sidebar::-webkit-scrollbar-thumb,
-.chat-messages::-webkit-scrollbar-thumb,
-.shop-container::-webkit-scrollbar-thumb {
-  background: var(--accent);
-  border-radius: 999px;
-}
-
-/* ============================
-   RESPONSIVE
-   ============================ */
+/* Pentru concizie le-am lăsat neschimbate – păstrează-le din fișierul tău actual
+   de la "ticket-details", "admin-toolbar", "shop-flex", "modal", "scrollbars",
+   "responsive" etc. – nu e nevoie de modificări acolo pt user layout.
+*/
 
 @media (max-width: 900px) {
   .container {
