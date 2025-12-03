@@ -203,6 +203,15 @@ html, body {
 }
 .msg-row--highlight { background: rgba(255, 255, 255, 0.05); border-radius: 8px; }
 
+/* SEEN FOOTER (Adăugat) */
+.seen-footer {
+  font-size: 10px;
+  color: #6b7280; /* Gri */
+  text-align: right;
+  margin-top: 2px;
+  font-weight: 500;
+}
+
 /* Butonul de REPLY DISCRET */
 .btn-reply-mini {
   background: transparent;
