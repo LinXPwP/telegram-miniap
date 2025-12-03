@@ -1,5 +1,4 @@
-// app.js – Versiune Finală (Shop + Tickets + Chat)
-// Include: Smart Polling, Anti-Flicker, Modal Fix, Reply Button, Full User Data
+// app.js – Versiune Finală User (Cu Seen System)
 
 const API_URL = "https://api.redgen.vip/";
 
@@ -20,11 +19,7 @@ function createSmartPoll(fetchFn, isEnabledFn, options = {}) {
 
   async function tick() {
     if (!active) return;
-
-    if (!isEnabledFn || !isEnabledFn()) {
-      schedule(maxInterval);
-      return;
-    }
+    if (!isEnabledFn || !isEnabledFn()) { schedule(maxInterval); return; }
 
     try {
       const data = await fetchFn();
@@ -47,7 +42,6 @@ function createSmartPoll(fetchFn, isEnabledFn, options = {}) {
       console.error("[smartPoll] error:", e);
       currentInterval = Math.min(maxInterval, currentInterval + backoffStep);
     }
-
     schedule(currentInterval);
   }
 
@@ -58,24 +52,9 @@ function createSmartPoll(fetchFn, isEnabledFn, options = {}) {
   }
 
   return {
-    start() {
-      if (active) return;
-      active = true;
-      idleCount = 0;
-      currentInterval = minInterval;
-      tick();
-    },
-    stop() {
-      active = false;
-      if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = null;
-    },
-    bumpFast() {
-      if (!active) return;
-      idleCount = 0;
-      currentInterval = minInterval;
-      schedule(currentInterval);
-    },
+    start() { if (active) return; active = true; idleCount = 0; currentInterval = minInterval; tick(); },
+    stop() { active = false; if (timeoutId) clearTimeout(timeoutId); timeoutId = null; },
+    bumpFast() { if (!active) return; idleCount = 0; currentInterval = minInterval; schedule(currentInterval); },
   };
 }
 
@@ -94,6 +73,22 @@ function formatTimestamp(ts) {
   return `${day}/${month}, ${hours}:${mins}`;
 }
 
+// Funcție nouă pentru "Văzut acum X minute"
+function timeAgo(ts) {
+    if (!ts) return "";
+    const now = new Date();
+    const then = new Date(ts);
+    const diff = Math.floor((now - then) / 1000); // secunde
+
+    if (diff < 60) return "acum";
+    const min = Math.floor(diff / 60);
+    if (min < 60) return `${min}m`;
+    const h = Math.floor(min / 60);
+    if (h < 24) return `${h}h`;
+    const d = Math.floor(h / 24);
+    return `${d}z`;
+}
+
 function isNearBottom(container, thresholdPx = 150) {
   if (!container) return true;
   const { scrollTop, scrollHeight, clientHeight } = container;
@@ -103,14 +98,12 @@ function isNearBottom(container, thresholdPx = 150) {
 function smartScrollToBottom(container, force = false) {
   if (!container) return;
   if (force || isNearBottom(container)) {
-    requestAnimationFrame(() => {
-        container.scrollTop = container.scrollHeight;
-    });
+    requestAnimationFrame(() => { container.scrollTop = container.scrollHeight; });
   }
 }
 
 /* ============================
-   3. RENDER MESAJE (Discord Style & Anti-Flicker)
+   3. RENDER MESAJE (Discord Style & SEEN Logic)
    ============================ */
 
 function renderDiscordMessages(messages, options) {
@@ -120,13 +113,13 @@ function renderDiscordMessages(messages, options) {
     canReply,
     onReply,
     onJumpTo,
+    seenConfig // { targetId: string, text: string } - Mesajul sub care apare "Văzut"
   } = options;
 
   if (!container) return;
-  
   const wasNearBottom = isNearBottom(container);
 
-  // Gestionare Placeholder (Empty State)
+  // Empty State
   if (!messages || messages.length === 0) {
       if (!container.querySelector('.chat-placeholder')) {
          container.innerHTML = `
@@ -142,10 +135,7 @@ function renderDiscordMessages(messages, options) {
   if (placeholder) placeholder.remove();
 
   const msgById = {};
-  messages.forEach((m) => {
-    if (m && m.id) msgById[m.id] = m;
-  });
-
+  messages.forEach((m) => { if (m && m.id) msgById[m.id] = m; });
   const processedIds = new Set();
 
   messages.forEach((m) => {
@@ -153,8 +143,6 @@ function renderDiscordMessages(messages, options) {
     processedIds.add(String(m.id));
 
     let row = container.querySelector(`.msg-row[data-message-id="${m.id}"]`);
-
-    // --- Construcție HTML Componente ---
 
     // 1. Reply Preview
     let replyHtml = '';
@@ -181,14 +169,10 @@ function renderDiscordMessages(messages, options) {
         textContent = "Mesaj șters";
     }
 
-    // 4. Buton Reply (Iconiță sus-dreapta)
+    // 4. Action Buttons
     let actionButtons = "";
     if (canReply && !m.deleted) {
-        actionButtons = `
-            <button class="btn-reply-mini" title="Răspunde">
-                ↩ Reply
-            </button>
-        `;
+        actionButtons = `<button class="btn-reply-mini" title="Răspunde">↩ Reply</button>`;
     }
 
     // HTML-ul interior
@@ -206,11 +190,10 @@ function renderDiscordMessages(messages, options) {
                 ${replyHtml}
                 <div class="${textClass}">${textContent}</div>
             </div>
-        </div>
+            </div>
     `;
 
     if (!row) {
-        // CREARE
         row = document.createElement("div");
         row.className = "msg-row";
         row.dataset.messageId = m.id;
@@ -218,20 +201,32 @@ function renderDiscordMessages(messages, options) {
         attachMessageEvents(row, m, onReply, onJumpTo);
         container.appendChild(row);
     } else {
-        // ACTUALIZARE (Doar dacă s-a schimbat conținutul)
-        if (row.innerHTML !== innerHTML) {
-            row.innerHTML = innerHTML;
+        // Update doar daca e diferit (dar ignoram seen footer-ul din comparatie pentru moment)
+        // Simplificare: rescriem tot daca se schimba textul
+        if (!row.innerHTML.includes(textContent)) { 
+            row.innerHTML = innerHTML; 
             attachMessageEvents(row, m, onReply, onJumpTo);
         }
     }
+
+    // --- LOGICA SEEN (Dynamic Injection) ---
+    // Curățăm orice seen footer vechi din acest rând
+    const existingSeen = row.querySelector('.seen-footer');
+    if (existingSeen) existingSeen.remove();
+
+    // Dacă acest mesaj este cel "targetat" pentru seen
+    if (seenConfig && m.id === seenConfig.targetId) {
+        const seenDiv = document.createElement("div");
+        seenDiv.className = "seen-footer";
+        seenDiv.textContent = seenConfig.text;
+        row.querySelector(".msg-content").appendChild(seenDiv);
+    }
   });
 
-  // Curățare mesaje șterse
+  // Cleanup
   Array.from(container.children).forEach(child => {
       const id = child.dataset.messageId;
-      if (id && !processedIds.has(id)) {
-          child.remove();
-      }
+      if (id && !processedIds.has(id)) child.remove();
   });
 
   smartScrollToBottom(container, wasNearBottom);
@@ -275,51 +270,13 @@ function initUserApp() {
   let CURRENT_SHOP = null;
   let CURRENT_TICKETS = [];
   let SELECTED_TICKET_ID = null;
-  let USER_LAST_SEEN = {};
-
-  // --- LocalStorage ---
-  function loadUserSeen() {
-    try {
-      const raw = localStorage.getItem("user_ticket_seen");
-      if (raw) USER_LAST_SEEN = JSON.parse(raw);
-    } catch (e) { USER_LAST_SEEN = {}; }
-  }
-
-  function saveUserSeen() {
-    try { localStorage.setItem("user_ticket_seen", JSON.stringify(USER_LAST_SEEN)); } catch (e) {}
-  }
-
-  function markTicketReadUser(ticket) {
-    if (!ticket) return;
-    const msgs = ticket.messages || [];
-    if (!msgs.length) return;
-    const last = msgs[msgs.length - 1];
-    USER_LAST_SEEN[String(ticket.id)] = last.id;
-    saveUserSeen();
-  }
-
-  function getUnreadCountUser(ticket) {
-    const msgs = ticket.messages || [];
-    if (!msgs.length) return 0;
-    const lastSeenId = USER_LAST_SEEN[String(ticket.id)];
-    let startIndex = -1;
-    if (lastSeenId) startIndex = msgs.findIndex((m) => m && m.id === lastSeenId);
-    let count = 0;
-    for (let i = startIndex + 1; i < msgs.length; i++) {
-      const m = msgs[i];
-      if (m && !m.deleted && m.from === "admin") count++;
-    }
-    return count;
-  }
-
-  loadUserSeen();
 
   let userActiveUntil = 0;
   function bumpUserActive(extraMs = 25000) {
     userActiveUntil = Math.max(userActiveUntil, Date.now() + extraMs);
   }
 
-  // --- Elemente DOM ---
+  // Elemente DOM
   const creditsValueEl = document.getElementById("creditsValue");
   const userLineEl = document.getElementById("userLine");
   const categoriesContainer = document.getElementById("categoriesContainer");
@@ -422,24 +379,15 @@ function initUserApp() {
   }
   updateUserChatState(null);
 
-  /* ===== Drawer Logic ===== */
   function openTicketsDrawer() { if (ticketsTabEl) ticketsTabEl.classList.add("tickets-drawer-open"); }
   function closeTicketsDrawer() { if (ticketsTabEl) ticketsTabEl.classList.remove("tickets-drawer-open"); }
-  function toggleTicketsDrawer() {
-    if (ticketsTabEl) ticketsTabEl.classList.toggle("tickets-drawer-open");
-  }
+  function toggleTicketsDrawer() { if (ticketsTabEl) ticketsTabEl.classList.toggle("tickets-drawer-open"); }
 
-  /* ===== API Call (CU DEBUGGING ÎMBUNĂTĂȚIT) ===== */
+  /* ===== API Call ===== */
   function apiCall(action, extraPayload = {}) {
-    const payload = {
-      action,
-      user: CURRENT_USER,
-      ...extraPayload,
-    };
-    
+    const payload = { action, user: CURRENT_USER, ...extraPayload };
     return fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     }).then(async (r) => {
         if (!r.ok) {
@@ -560,7 +508,12 @@ function initUserApp() {
       let item = chatListEl.querySelector(`.chat-item[data-ticket-id="${t.id}"]`);
       const msgs = t.messages || [];
       const lastMsg = msgs.length ? msgs[msgs.length - 1].text : "Tichet nou";
-      const unreadCount = getUnreadCountUser(t);
+      
+      // LOGICĂ BADGE NECITITE (User vede badge dacă Admin a scris)
+      // Presupunem că last_read_user este ID-ul ultimului mesaj văzut de User
+      // Trebuie calculat unread
+      const unreadCount = calculateUserUnread(t);
+
       const badgeHtml = (unreadCount > 0 && t.status === "open") ? `<span class="unread-badge">${unreadCount}</span>` : "";
       const statusClass = t.status === "open" ? "open" : "closed";
       const statusText = t.status === "open" ? "Open" : "Closed";
@@ -593,10 +546,28 @@ function initUserApp() {
     });
   }
 
+  function calculateUserUnread(ticket) {
+      if(!ticket.messages) return 0;
+      const lastRead = ticket.last_read_user || "";
+      let count = 0;
+      let start = (lastRead === "") ? true : false;
+      for (let m of ticket.messages) {
+          if (m.id === lastRead) { start = true; continue; }
+          if (start && m.from === 'admin') count++; // Numărăm mesajele de la admin necitite
+      }
+      if (!lastRead) return ticket.messages.filter(m => m.from === 'admin').length;
+      return count;
+  }
+
   function selectTicketUser(ticketId) {
     SELECTED_TICKET_ID = ticketId;
     const t = CURRENT_TICKETS.find((x) => x.id === ticketId);
-    if (t) markTicketReadUser(t);
+    
+    // MARK SEEN: Când userul selectează tichetul, anunță serverul
+    if (t) {
+        apiCall("mark_seen", { ticket_id: ticketId });
+    }
+
     renderTicketsListUser();
     if (!t) { chatMessagesEl.innerHTML = ""; updateUserChatState(null); return; }
     if (ticketTitleEl) ticketTitleEl.textContent = `${t.product_name || "Tichet"} #${t.id}`;
@@ -604,10 +575,43 @@ function initUserApp() {
   }
 
   function renderUserMessages(ticket) {
+    // 1. Identificăm ultimul mesaj trimis de USER
+    let lastUserMsgId = null;
+    if (ticket.messages) {
+        for (let i = ticket.messages.length - 1; i >= 0; i--) {
+            const m = ticket.messages[i];
+            // Verificăm dacă e mesajul userului (from user) și nu e șters
+            if (m.from === 'user' && !m.deleted) {
+                lastUserMsgId = m.id;
+                break;
+            }
+        }
+    }
+
+    // 2. Verificăm dacă ADMINUL a citit acest mesaj
+    // t.last_read_admin este ID-ul ultimului mesaj văzut de Admin
+    let seenConfig = null;
+    if (lastUserMsgId && ticket.last_read_admin) {
+        const idxUserMsg = ticket.messages.findIndex(m => m.id === lastUserMsgId);
+        const idxAdminRead = ticket.messages.findIndex(m => m.id === ticket.last_read_admin);
+
+        // Dacă Admin a citit un mesaj care este după sau egal cu ultimul mesaj al userului
+        if (idxAdminRead >= idxUserMsg) {
+             const timeString = timeAgo(ticket.last_read_admin_at);
+             seenConfig = {
+                 targetId: lastUserMsgId,
+                 text: `Văzut ${timeString}`
+             };
+        }
+    }
+
     renderDiscordMessages(ticket.messages || [], {
-      container: chatMessagesEl, ticket, canReply: ticket.status === "open",
+      container: chatMessagesEl, 
+      ticket, 
+      canReply: ticket.status === "open",
       onReply: (msg) => { if (ticket.status === "open") setUserReplyMode(msg); },
       onJumpTo: (mid) => scrollToMessageElement(chatMessagesEl, mid),
+      seenConfig: seenConfig // Pasăm configurația de seen
     });
   }
 
@@ -663,7 +667,13 @@ function initUserApp() {
       CURRENT_TICKETS = res.tickets || [];
       if (SELECTED_TICKET_ID) {
          const t = CURRENT_TICKETS.find(x => x.id === SELECTED_TICKET_ID);
-         if(t) { markTicketReadUser(t); renderUserMessages(t); updateUserChatState(t); }
+         if(t) { 
+             // Mark Seen doar dacă userul e activ pe acest tichet (update while reading)
+             // Dar pentru eficiență, apiCall mark_seen se face de obicei doar la select/focus
+             // Putem lăsa doar render pentru a vedea reply-urile adminului
+             renderUserMessages(t); 
+             updateUserChatState(t); 
+         }
       }
       renderTicketsListUser();
       return CURRENT_TICKETS;
@@ -694,7 +704,6 @@ function initUserApp() {
        userLineEl.textContent = "Lipsă date user."; userLineEl.style.display = "block"; return;
     }
     
-    // FIX: RESTAURAT DATE COMPLETE UTILIZATOR PENTRU A EVITA EROAREA DE CONEXIUNE
     CURRENT_USER = { 
         id: user.id, 
         username: user.username || null,
@@ -715,7 +724,6 @@ function initUserApp() {
       showShopTab();
     } catch (err) {
       console.error(err);
-      // AFIȘARE EROARE SPECIFICĂ PENTRU DEBUG
       userLineEl.textContent = `Eroare: ${err.message || "Conexiune"}`;
       userLineEl.style.display = "block";
     }
