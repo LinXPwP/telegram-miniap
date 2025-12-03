@@ -644,17 +644,36 @@ function initUserApp() {
   function userCloseCurrentTicket() {
     if (!SELECTED_TICKET_ID) return;
     
-    // INLOCUIRE CONFIRM STANDARD CU POP-UP CUSTOM
+    // Deschide Pop-up-ul Custom
     openConfirmModal(async () => {
         try {
           const res = await apiCall("user_close_ticket", { ticket_id: SELECTED_TICKET_ID });
-          if (res.ok && res.ticket) {
-              const idx = CURRENT_TICKETS.findIndex(x => x.id === res.ticket.id);
-              if (idx >= 0) CURRENT_TICKETS[idx] = res.ticket;
-              selectTicketUser(res.ticket.id);
+          
+          if (res.ok) {
+              // 1. Găsim tichetul în lista locală
+              const idx = CURRENT_TICKETS.findIndex(x => x.id === SELECTED_TICKET_ID);
+              if (idx >= 0) {
+                  // 2. Îl actualizăm cu ce vine de la server SAU îl forțăm local la 'closed'
+                  if (res.ticket) {
+                      CURRENT_TICKETS[idx] = res.ticket;
+                  } else {
+                      CURRENT_TICKETS[idx].status = "closed"; // Fallback sigur
+                  }
+                  
+                  // 3. Re-selectăm tichetul actualizat pentru a refacere UI-ul (input disabled, buton ascuns)
+                  selectTicketUser(CURRENT_TICKETS[idx].id);
+              }
+              
+              // 4. Actualizăm și lista din stânga (să apară "Closed")
+              renderTicketsListUser();
           }
-          bumpUserActive(); userTicketsPoller.bumpFast();
-        } catch (err) { console.error(err); }
+          
+          bumpUserActive(); 
+          userTicketsPoller.bumpFast();
+        } catch (err) { 
+            console.error(err); 
+            // Opțional: alert("Eroare la închidere tichet.");
+        }
     });
   }
 
