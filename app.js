@@ -1,4 +1,4 @@
-// app.js – Versiune Finală User (Cu Seen System)
+// app.js – Versiune Finală User (Fix: Seen Instant & Badge Logic)
 
 const API_URL = "https://api.redgen.vip/";
 
@@ -59,9 +59,8 @@ function createSmartPoll(fetchFn, isEnabledFn, options = {}) {
 }
 
 /* ============================
-   2. UTILITARE (Formatare Timp & Scroll)
+   2. UTILITARE
    ============================ */
-
 function formatTimestamp(ts) {
   if (!ts) return "";
   const d = new Date(ts);
@@ -73,12 +72,11 @@ function formatTimestamp(ts) {
   return `${day}/${month}, ${hours}:${mins}`;
 }
 
-// Funcție nouă pentru "Văzut acum X minute"
 function timeAgo(ts) {
     if (!ts) return "";
     const now = new Date();
     const then = new Date(ts);
-    const diff = Math.floor((now - then) / 1000); // secunde
+    const diff = Math.floor((now - then) / 1000); 
 
     if (diff < 60) return "acum";
     const min = Math.floor(diff / 60);
@@ -103,23 +101,14 @@ function smartScrollToBottom(container, force = false) {
 }
 
 /* ============================
-   3. RENDER MESAJE (Discord Style & SEEN Logic)
+   3. RENDER MESAJE
    ============================ */
-
 function renderDiscordMessages(messages, options) {
-  const {
-    container,
-    ticket,
-    canReply,
-    onReply,
-    onJumpTo,
-    seenConfig // { targetId: string, text: string } - Mesajul sub care apare "Văzut"
-  } = options;
+  const { container, ticket, canReply, onReply, onJumpTo, seenConfig } = options;
 
   if (!container) return;
   const wasNearBottom = isNearBottom(container);
 
-  // Empty State
   if (!messages || messages.length === 0) {
       if (!container.querySelector('.chat-placeholder')) {
          container.innerHTML = `
@@ -144,7 +133,6 @@ function renderDiscordMessages(messages, options) {
 
     let row = container.querySelector(`.msg-row[data-message-id="${m.id}"]`);
 
-    // 1. Reply Preview
     let replyHtml = '';
     if (m.reply_to && msgById[m.reply_to]) {
         const origin = msgById[m.reply_to];
@@ -156,12 +144,10 @@ function renderDiscordMessages(messages, options) {
         `;
     }
 
-    // 2. Avatar & Header
     const senderName = m.sender || (m.from === "system" ? "System" : "User");
     const initial = (senderName || "?").slice(0, 1).toUpperCase();
     const adminClass = m.from === "admin" ? "msg-username--admin" : "";
     
-    // 3. Text Content
     let textClass = "msg-text";
     let textContent = m.text;
     if (m.deleted) {
@@ -169,13 +155,11 @@ function renderDiscordMessages(messages, options) {
         textContent = "Mesaj șters";
     }
 
-    // 4. Action Buttons
     let actionButtons = "";
     if (canReply && !m.deleted) {
         actionButtons = `<button class="btn-reply-mini" title="Răspunde">↩ Reply</button>`;
     }
 
-    // HTML-ul interior
     const innerHTML = `
         <div class="msg-avatar">${initial}</div>
         <div class="msg-content">
@@ -190,7 +174,7 @@ function renderDiscordMessages(messages, options) {
                 ${replyHtml}
                 <div class="${textClass}">${textContent}</div>
             </div>
-            </div>
+        </div>
     `;
 
     if (!row) {
@@ -201,20 +185,16 @@ function renderDiscordMessages(messages, options) {
         attachMessageEvents(row, m, onReply, onJumpTo);
         container.appendChild(row);
     } else {
-        // Update doar daca e diferit (dar ignoram seen footer-ul din comparatie pentru moment)
-        // Simplificare: rescriem tot daca se schimba textul
         if (!row.innerHTML.includes(textContent)) { 
             row.innerHTML = innerHTML; 
             attachMessageEvents(row, m, onReply, onJumpTo);
         }
     }
 
-    // --- LOGICA SEEN (Dynamic Injection) ---
-    // Curățăm orice seen footer vechi din acest rând
+    // Seen Footer (Doar daca userul vede ce a citit adminul)
     const existingSeen = row.querySelector('.seen-footer');
     if (existingSeen) existingSeen.remove();
 
-    // Dacă acest mesaj este cel "targetat" pentru seen
     if (seenConfig && m.id === seenConfig.targetId) {
         const seenDiv = document.createElement("div");
         seenDiv.className = "seen-footer";
@@ -223,7 +203,6 @@ function renderDiscordMessages(messages, options) {
     }
   });
 
-  // Cleanup
   Array.from(container.children).forEach(child => {
       const id = child.dataset.messageId;
       if (id && !processedIds.has(id)) child.remove();
@@ -276,7 +255,7 @@ function initUserApp() {
     userActiveUntil = Math.max(userActiveUntil, Date.now() + extraMs);
   }
 
-  // Elemente DOM
+  // DOM Elements
   const creditsValueEl = document.getElementById("creditsValue");
   const userLineEl = document.getElementById("userLine");
   const categoriesContainer = document.getElementById("categoriesContainer");
@@ -328,7 +307,6 @@ function initUserApp() {
   if (goToTicketsBtn) goToTicketsBtn.addEventListener("click", showTicketsTab);
   if (backToShopBtn) backToShopBtn.addEventListener("click", showShopTab);
 
-  /* ===== Reply Bar Logic ===== */
   if (chatInputContainer && !chatInputContainer.querySelector(".chat-mode-bar")) {
     userModeBar = document.createElement("div");
     userModeBar.className = "chat-mode-bar";
@@ -486,7 +464,7 @@ function initUserApp() {
   if(panelCloseBtn) panelCloseBtn.onclick = closeProductPanel;
   if(panelBuyBtn) panelBuyBtn.onclick = buySelectedProduct;
 
-  /* ===== Ticket List (Anti-Flicker) ===== */
+  /* ===== Ticket List (FIX: BADGE DISPARE INSTANT) ===== */
   function renderTicketsListUser() {
     if (!CURRENT_TICKETS || CURRENT_TICKETS.length === 0) {
       if (!chatListEl.querySelector('.no-tickets-msg')) {
@@ -509,10 +487,11 @@ function initUserApp() {
       const msgs = t.messages || [];
       const lastMsg = msgs.length ? msgs[msgs.length - 1].text : "Tichet nou";
       
-      // LOGICĂ BADGE NECITITE (User vede badge dacă Admin a scris)
-      // Presupunem că last_read_user este ID-ul ultimului mesaj văzut de User
-      // Trebuie calculat unread
-      const unreadCount = calculateUserUnread(t);
+      const isSelected = (t.id === SELECTED_TICKET_ID);
+      
+      // FIX 1: Dacă tichetul este selectat (deschis), badge-ul e 0 vizual, indiferent de server
+      let unreadCount = calculateUserUnread(t);
+      if (isSelected) unreadCount = 0;
 
       const badgeHtml = (unreadCount > 0 && t.status === "open") ? `<span class="unread-badge">${unreadCount}</span>` : "";
       const statusClass = t.status === "open" ? "open" : "closed";
@@ -536,7 +515,7 @@ function initUserApp() {
       } else {
         if (item.innerHTML !== innerHTML) item.innerHTML = innerHTML;
       }
-      if (t.id === SELECTED_TICKET_ID) item.classList.add("active");
+      if (isSelected) item.classList.add("active");
       else item.classList.remove("active");
       chatListEl.appendChild(item);
     });
@@ -553,7 +532,7 @@ function initUserApp() {
       let start = (lastRead === "") ? true : false;
       for (let m of ticket.messages) {
           if (m.id === lastRead) { start = true; continue; }
-          if (start && m.from === 'admin') count++; // Numărăm mesajele de la admin necitite
+          if (start && m.from === 'admin') count++; 
       }
       if (!lastRead) return ticket.messages.filter(m => m.from === 'admin').length;
       return count;
@@ -563,9 +542,11 @@ function initUserApp() {
     SELECTED_TICKET_ID = ticketId;
     const t = CURRENT_TICKETS.find((x) => x.id === ticketId);
     
-    // MARK SEEN: Când userul selectează tichetul, anunță serverul
+    // Trigger Mark Seen imediat la click
     if (t) {
         apiCall("mark_seen", { ticket_id: ticketId });
+        // Update local rapid (trick) pentru a reseta unread intern
+        if(t.messages.length) t.last_read_user = t.messages[t.messages.length - 1].id;
     }
 
     renderTicketsListUser();
@@ -575,12 +556,10 @@ function initUserApp() {
   }
 
   function renderUserMessages(ticket) {
-    // 1. Identificăm ultimul mesaj trimis de USER
     let lastUserMsgId = null;
     if (ticket.messages) {
         for (let i = ticket.messages.length - 1; i >= 0; i--) {
             const m = ticket.messages[i];
-            // Verificăm dacă e mesajul userului (from user) și nu e șters
             if (m.from === 'user' && !m.deleted) {
                 lastUserMsgId = m.id;
                 break;
@@ -588,14 +567,11 @@ function initUserApp() {
         }
     }
 
-    // 2. Verificăm dacă ADMINUL a citit acest mesaj
-    // t.last_read_admin este ID-ul ultimului mesaj văzut de Admin
     let seenConfig = null;
     if (lastUserMsgId && ticket.last_read_admin) {
         const idxUserMsg = ticket.messages.findIndex(m => m.id === lastUserMsgId);
         const idxAdminRead = ticket.messages.findIndex(m => m.id === ticket.last_read_admin);
 
-        // Dacă Admin a citit un mesaj care este după sau egal cu ultimul mesaj al userului
         if (idxAdminRead >= idxUserMsg) {
              const timeString = timeAgo(ticket.last_read_admin_at);
              seenConfig = {
@@ -611,7 +587,7 @@ function initUserApp() {
       canReply: ticket.status === "open",
       onReply: (msg) => { if (ticket.status === "open") setUserReplyMode(msg); },
       onJumpTo: (mid) => scrollToMessageElement(chatMessagesEl, mid),
-      seenConfig: seenConfig // Pasăm configurația de seen
+      seenConfig: seenConfig 
     });
   }
 
@@ -665,12 +641,23 @@ function initUserApp() {
       const res = await apiCall("user_get_tickets", {});
       if (!res.ok) return CURRENT_TICKETS;
       CURRENT_TICKETS = res.tickets || [];
+      
+      // FIX 2: SEEN REAL-TIME (Dacă sunt în chat și primesc mesaj nou)
       if (SELECTED_TICKET_ID) {
          const t = CURRENT_TICKETS.find(x => x.id === SELECTED_TICKET_ID);
          if(t) { 
-             // Mark Seen doar dacă userul e activ pe acest tichet (update while reading)
-             // Dar pentru eficiență, apiCall mark_seen se face de obicei doar la select/focus
-             // Putem lăsa doar render pentru a vedea reply-urile adminului
+             // Verificăm dacă sunt mesaje necitite reale (conform serverului)
+             const realUnreads = calculateUserUnread(t);
+
+             // Dacă sunt și suntem pe tichet => Mark Seen Instant
+             if (realUnreads > 0) {
+                 apiCall("mark_seen", { ticket_id: t.id });
+                 // Actualizăm local ca să nu apară necitite
+                 if(t.messages.length > 0) {
+                     t.last_read_user = t.messages[t.messages.length - 1].id;
+                 }
+             }
+
              renderUserMessages(t); 
              updateUserChatState(t); 
          }
