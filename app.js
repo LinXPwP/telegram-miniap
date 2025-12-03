@@ -1,4 +1,4 @@
-// app.js – Versiune Finală User (Cu Pop-up Confirmare Custom)
+// app.js – Versiune Finală User (Fix: Închidere Tichet & Modal Custom)
 
 const API_URL = "https://api.redgen.vip/";
 
@@ -285,7 +285,7 @@ function initUserApp() {
   const backToShopBtn = document.getElementById("backToShopBtn");
   const chatInputContainer = document.querySelector(".chat-input");
   
-  // -- NEW CONFIRMATION MODAL ELEMENTS --
+  // -- CONFIRMATION MODAL ELEMENTS --
   const confirmModal = document.getElementById("confirmActionModal");
   const confirmOkBtn = document.getElementById("confirmOkBtn");
   const confirmCancelBtn = document.getElementById("confirmCancelBtn");
@@ -619,23 +619,27 @@ function initUserApp() {
   }
 
   /* ============================
-     NEW: CUSTOM POPUP LOGIC
+     NEW: CUSTOM POPUP LOGIC & TICKET CLOSE
      ============================ */
   function openConfirmModal(onConfirm) {
-      if(!confirmModal) return;
+      if(!confirmModal) {
+          console.error("Modal not found");
+          return;
+      }
       confirmModal.style.display = "flex";
       
-      // Setup OK button
+      // Dacă userul apasă OK (Șterge/Închide)
       confirmOkBtn.onclick = () => {
           confirmModal.style.display = "none";
           if (typeof onConfirm === "function") onConfirm();
       };
 
-      // Setup Cancel button (and outside click)
+      // Dacă userul apasă Cancel
       confirmCancelBtn.onclick = () => {
           confirmModal.style.display = "none";
       };
       
+      // Click pe fundal
       confirmModal.onclick = (e) => {
           if(e.target === confirmModal) confirmModal.style.display = "none";
       }
@@ -653,26 +657,33 @@ function initUserApp() {
               // 1. Găsim tichetul în lista locală
               const idx = CURRENT_TICKETS.findIndex(x => x.id === SELECTED_TICKET_ID);
               if (idx >= 0) {
-                  // 2. Îl actualizăm cu ce vine de la server SAU îl forțăm local la 'closed'
+                  // 2. FORȚĂM UPDATE LOCAL (indiferent ce vine de la server, știm că e închis)
                   if (res.ticket) {
                       CURRENT_TICKETS[idx] = res.ticket;
                   } else {
-                      CURRENT_TICKETS[idx].status = "closed"; // Fallback sigur
+                      CURRENT_TICKETS[idx].status = "closed";
                   }
                   
-                  // 3. Re-selectăm tichetul actualizat pentru a refacere UI-ul (input disabled, buton ascuns)
-                  selectTicketUser(CURRENT_TICKETS[idx].id);
+                  // Asigurăm manual că statusul este 'closed' pentru UI
+                  CURRENT_TICKETS[idx].status = "closed"; 
+
+                  // 3. Re-randăm LISTA din stânga imediat
+                  renderTicketsListUser();
+
+                  // 4. Re-randăm CHATUL (ca să apară "Tichet închis" și input-ul disabled)
+                  const updatedTicket = CURRENT_TICKETS[idx];
+                  updateUserChatState(updatedTicket); 
+                  
+                  // Opțional: putem afișa un mesaj vizual că s-a închis, dacă funcția de mesaje suportă
+                  // renderUserMessages(updatedTicket); 
               }
-              
-              // 4. Actualizăm și lista din stânga (să apară "Closed")
-              renderTicketsListUser();
           }
           
           bumpUserActive(); 
           userTicketsPoller.bumpFast();
         } catch (err) { 
             console.error(err); 
-            // Opțional: alert("Eroare la închidere tichet.");
+            alert("Eroare de conexiune la închiderea tichetului.");
         }
     });
   }
@@ -688,7 +699,22 @@ function initUserApp() {
     try {
       const res = await apiCall("user_get_tickets", {});
       if (!res.ok) return CURRENT_TICKETS;
-      CURRENT_TICKETS = res.tickets || [];
+      
+      const newTickets = res.tickets || [];
+      
+      // Sincronizare inteligentă: Dacă avem un tichet selectat care tocmai a fost închis local,
+      // nu vrem ca serverul să ni-l suprascrie cu "open" dacă serverul are lag.
+      if (SELECTED_TICKET_ID) {
+          const localT = CURRENT_TICKETS.find(x => x.id === SELECTED_TICKET_ID);
+          const serverT = newTickets.find(x => x.id === SELECTED_TICKET_ID);
+          
+          // Dacă local e 'closed' și serverul zice 'open', păstrăm 'closed' o perioadă (debounce simplu)
+          if (localT && localT.status === 'closed' && serverT && serverT.status === 'open') {
+              serverT.status = 'closed';
+          }
+      }
+
+      CURRENT_TICKETS = newTickets;
       
       if (SELECTED_TICKET_ID) {
          const t = CURRENT_TICKETS.find(x => x.id === SELECTED_TICKET_ID);
