@@ -1,4 +1,4 @@
-// app.js – Versiune Finală User (Fix: Seen Instant & Badge Logic)
+// app.js – Versiune Finală User (Cu Pop-up Confirmare Custom)
 
 const API_URL = "https://api.redgen.vip/";
 
@@ -191,7 +191,7 @@ function renderDiscordMessages(messages, options) {
         }
     }
 
-    // Seen Footer (Doar daca userul vede ce a citit adminul)
+    // Seen Footer
     const existingSeen = row.querySelector('.seen-footer');
     if (existingSeen) existingSeen.remove();
 
@@ -284,6 +284,11 @@ function initUserApp() {
   const goToTicketsBtn = document.getElementById("goToTicketsBtn");
   const backToShopBtn = document.getElementById("backToShopBtn");
   const chatInputContainer = document.querySelector(".chat-input");
+  
+  // -- NEW CONFIRMATION MODAL ELEMENTS --
+  const confirmModal = document.getElementById("confirmActionModal");
+  const confirmOkBtn = document.getElementById("confirmOkBtn");
+  const confirmCancelBtn = document.getElementById("confirmCancelBtn");
   
   let userModeBar = null;
   let userMode = { type: null, messageId: null, previewText: "", sender: "" };
@@ -464,7 +469,7 @@ function initUserApp() {
   if(panelCloseBtn) panelCloseBtn.onclick = closeProductPanel;
   if(panelBuyBtn) panelBuyBtn.onclick = buySelectedProduct;
 
-  /* ===== Ticket List (FIX: BADGE DISPARE INSTANT) ===== */
+  /* ===== Ticket List ===== */
   function renderTicketsListUser() {
     if (!CURRENT_TICKETS || CURRENT_TICKETS.length === 0) {
       if (!chatListEl.querySelector('.no-tickets-msg')) {
@@ -489,7 +494,6 @@ function initUserApp() {
       
       const isSelected = (t.id === SELECTED_TICKET_ID);
       
-      // FIX 1: Dacă tichetul este selectat (deschis), badge-ul e 0 vizual, indiferent de server
       let unreadCount = calculateUserUnread(t);
       if (isSelected) unreadCount = 0;
 
@@ -542,10 +546,9 @@ function initUserApp() {
     SELECTED_TICKET_ID = ticketId;
     const t = CURRENT_TICKETS.find((x) => x.id === ticketId);
     
-    // Trigger Mark Seen imediat la click
+    // Trigger Mark Seen
     if (t) {
         apiCall("mark_seen", { ticket_id: ticketId });
-        // Update local rapid (trick) pentru a reseta unread intern
         if(t.messages.length) t.last_read_user = t.messages[t.messages.length - 1].id;
     }
 
@@ -615,18 +618,44 @@ function initUserApp() {
     } catch (err) { console.error(err); }
   }
 
-  async function userCloseCurrentTicket() {
-    if (!SELECTED_TICKET_ID) return;
-    if (!confirm("Ești sigur că vrei să închizi acest tichet?")) return;
-    try {
-      const res = await apiCall("user_close_ticket", { ticket_id: SELECTED_TICKET_ID });
-      if (res.ok && res.ticket) {
-          const idx = CURRENT_TICKETS.findIndex(x => x.id === res.ticket.id);
-          if (idx >= 0) CURRENT_TICKETS[idx] = res.ticket;
-          selectTicketUser(res.ticket.id);
+  /* ============================
+     NEW: CUSTOM POPUP LOGIC
+     ============================ */
+  function openConfirmModal(onConfirm) {
+      if(!confirmModal) return;
+      confirmModal.style.display = "flex";
+      
+      // Setup OK button
+      confirmOkBtn.onclick = () => {
+          confirmModal.style.display = "none";
+          if (typeof onConfirm === "function") onConfirm();
+      };
+
+      // Setup Cancel button (and outside click)
+      confirmCancelBtn.onclick = () => {
+          confirmModal.style.display = "none";
+      };
+      
+      confirmModal.onclick = (e) => {
+          if(e.target === confirmModal) confirmModal.style.display = "none";
       }
-      bumpUserActive(); userTicketsPoller.bumpFast();
-    } catch (err) { console.error(err); }
+  }
+
+  function userCloseCurrentTicket() {
+    if (!SELECTED_TICKET_ID) return;
+    
+    // INLOCUIRE CONFIRM STANDARD CU POP-UP CUSTOM
+    openConfirmModal(async () => {
+        try {
+          const res = await apiCall("user_close_ticket", { ticket_id: SELECTED_TICKET_ID });
+          if (res.ok && res.ticket) {
+              const idx = CURRENT_TICKETS.findIndex(x => x.id === res.ticket.id);
+              if (idx >= 0) CURRENT_TICKETS[idx] = res.ticket;
+              selectTicketUser(res.ticket.id);
+          }
+          bumpUserActive(); userTicketsPoller.bumpFast();
+        } catch (err) { console.error(err); }
+    });
   }
 
   chatSendBtn?.addEventListener("click", sendChatMessage);
@@ -642,22 +671,16 @@ function initUserApp() {
       if (!res.ok) return CURRENT_TICKETS;
       CURRENT_TICKETS = res.tickets || [];
       
-      // FIX 2: SEEN REAL-TIME (Dacă sunt în chat și primesc mesaj nou)
       if (SELECTED_TICKET_ID) {
          const t = CURRENT_TICKETS.find(x => x.id === SELECTED_TICKET_ID);
          if(t) { 
-             // Verificăm dacă sunt mesaje necitite reale (conform serverului)
              const realUnreads = calculateUserUnread(t);
-
-             // Dacă sunt și suntem pe tichet => Mark Seen Instant
              if (realUnreads > 0) {
                  apiCall("mark_seen", { ticket_id: t.id });
-                 // Actualizăm local ca să nu apară necitite
                  if(t.messages.length > 0) {
                      t.last_read_user = t.messages[t.messages.length - 1].id;
                  }
              }
-
              renderUserMessages(t); 
              updateUserChatState(t); 
          }
