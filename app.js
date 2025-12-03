@@ -581,25 +581,36 @@ function initUserApp() {
   if(panelCloseBtn) panelCloseBtn.onclick = closeProductPanel;
   if(panelBuyBtn) panelBuyBtn.onclick = buySelectedProduct;
 
-  /* ===== TICKET LIST ===== */
+  /* ===== TICKET LIST (OPTIMIZAT ANTI-FLICKER) ===== */
   function renderTicketsListUser() {
-    chatListEl.innerHTML = "";
+    // Dacă nu sunt tichete, afișăm mesajul doar dacă lista e goală sau nu conține deja mesajul
     if (!CURRENT_TICKETS || CURRENT_TICKETS.length === 0) {
-      chatListEl.innerHTML = '<div style="padding:20px; text-align:center; color:#555;">Nu ai tichete.</div>';
+      if (chatListEl.children.length === 0 || !chatListEl.querySelector('.no-tickets-msg')) {
+         chatListEl.innerHTML = '<div class="no-tickets-msg" style="padding:20px; text-align:center; color:#555;">Nu ai tichete.</div>';
+      }
       return;
     }
 
-    // Sortare: Open first, then ID desc
+    // Dacă avem tichete, scoatem mesajul de "Nu ai tichete" dacă există
+    const noMsg = chatListEl.querySelector('.no-tickets-msg');
+    if (noMsg) noMsg.remove();
+
+    // Sortare: Open first, apoi ID descrescător
     CURRENT_TICKETS.sort((a, b) => {
       if (a.status !== b.status) return a.status === "open" ? -1 : 1;
       return (b.id || 0) - (a.id || 0);
     });
 
-    CURRENT_TICKETS.forEach((t) => {
-      const item = document.createElement("div");
-      item.className = "chat-item";
-      if (t.id === SELECTED_TICKET_ID) item.classList.add("active");
+    // Set pentru a ține evidența ID-urilor procesate (pentru a șterge tichetele vechi care nu mai există)
+    const processedIds = new Set();
 
+    CURRENT_TICKETS.forEach((t) => {
+      processedIds.add(String(t.id));
+
+      // Încercăm să găsim elementul existent în DOM
+      let item = chatListEl.querySelector(`.chat-item[data-ticket-id="${t.id}"]`);
+      
+      // Datele pe care le afișăm
       const msgs = t.messages || [];
       const lastMsg = msgs.length ? msgs[msgs.length - 1].text : "Tichet nou";
       const unreadCount = getUnreadCountUser(t);
@@ -612,7 +623,8 @@ function initUserApp() {
       const statusClass = t.status === "open" ? "open" : "closed";
       const statusText = t.status === "open" ? "Open" : "Closed";
 
-      item.innerHTML = `
+      // HTML-ul interior
+      const innerHTML = `
         <div class="chat-item-header-row">
             <div class="chat-item-title">${t.product_name || "Comandă"}</div>
             <div style="display:flex;align-items:center;">
@@ -623,14 +635,48 @@ function initUserApp() {
         <div class="chat-item-line">${lastMsg}</div>
       `;
 
-      item.onclick = async () => {
-        selectTicketUser(t.id);
-        bumpUserActive();
-        closeTicketsDrawer();
-        userTicketsPoller.bumpFast();
-      };
+      if (!item) {
+        // CREARE: Elementul nu există, îl creăm
+        item = document.createElement("div");
+        item.className = "chat-item";
+        item.setAttribute("data-ticket-id", t.id);
+        
+        // Event listener-ul se adaugă o singură dată la creare
+        item.onclick = async () => {
+          selectTicketUser(t.id);
+          bumpUserActive();
+          closeTicketsDrawer();
+          userTicketsPoller.bumpFast();
+        };
 
+        item.innerHTML = innerHTML;
+        chatListEl.appendChild(item);
+      } else {
+        // ACTUALIZARE: Elementul există, actualizăm conținutul doar dacă e diferit
+        // Asta previne flicker-ul textului
+        if (item.innerHTML !== innerHTML) {
+            item.innerHTML = innerHTML;
+        }
+      }
+
+      // Gestionare clasă ACTIVE (fără să recreăm elementul)
+      if (t.id === SELECTED_TICKET_ID) {
+          if (!item.classList.contains("active")) item.classList.add("active");
+      } else {
+          if (item.classList.contains("active")) item.classList.remove("active");
+      }
+
+      // REORDONARE: appendChild pe un element existent îl mută la final.
+      // Deoarece iterăm prin array-ul deja sortat, asta va aranja elementele în DOM în ordinea corectă.
       chatListEl.appendChild(item);
+    });
+
+    // CURĂȚARE: Eliminăm din DOM tichetele care nu mai sunt în lista de la server
+    Array.from(chatListEl.children).forEach(child => {
+        const id = child.getAttribute("data-ticket-id");
+        if (id && !processedIds.has(id)) {
+            child.remove();
+        }
     });
   }
 
