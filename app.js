@@ -1,11 +1,10 @@
 // app.js – Versiune Completă & FIXATĂ
-// Include: Smart Polling, Anti-Flicker List & Chat, Modal Close fix, Reply Button logic
+// Include: Smart Polling, Anti-Flicker List & Chat, Modal Close fix, Reply Button logic UI
 
 const API_URL = "https://api.redgen.vip/";
 
 /* ============================
-   1. HELPER – SMART POLLING
-   (Gestionează intervalul de actualizare dinamic pentru a economisi resurse)
+   HELPER – SMART POLLING
    ============================ */
 function createSmartPoll(fetchFn, isEnabledFn, options = {}) {
   const minInterval = options.minInterval ?? 3000;
@@ -21,69 +20,42 @@ function createSmartPoll(fetchFn, isEnabledFn, options = {}) {
 
   async function tick() {
     if (!active) return;
-
     if (!isEnabledFn || !isEnabledFn()) {
-      schedule(maxInterval);
-      return;
+      schedule(maxInterval); return;
     }
-
     try {
       const data = await fetchFn();
       if (!active) return;
-
       if (data !== undefined) {
         const snap = JSON.stringify(data);
         if (lastSnapshot === null || snap !== lastSnapshot) {
-          lastSnapshot = snap;
-          idleCount = 0;
-          currentInterval = minInterval;
+          lastSnapshot = snap; idleCount = 0; currentInterval = minInterval;
         } else {
           idleCount += 1;
-          if (idleCount >= idleThreshold) {
-            currentInterval = Math.min(maxInterval, currentInterval + backoffStep);
-          }
+          if (idleCount >= idleThreshold) currentInterval = Math.min(maxInterval, currentInterval + backoffStep);
         }
       }
     } catch (e) {
       console.error("[smartPoll] error:", e);
       currentInterval = Math.min(maxInterval, currentInterval + backoffStep);
     }
-
     schedule(currentInterval);
   }
-
   function schedule(delay) {
     if (!active) return;
     if (timeoutId) clearTimeout(timeoutId);
     timeoutId = setTimeout(tick, delay);
   }
-
   return {
-    start() {
-      if (active) return;
-      active = true;
-      idleCount = 0;
-      currentInterval = minInterval;
-      tick();
-    },
-    stop() {
-      active = false;
-      if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = null;
-    },
-    bumpFast() {
-      if (!active) return;
-      idleCount = 0;
-      currentInterval = minInterval;
-      schedule(currentInterval);
-    },
+    start() { if (active) return; active = true; idleCount = 0; currentInterval = minInterval; tick(); },
+    stop() { active = false; if (timeoutId) clearTimeout(timeoutId); timeoutId = null; },
+    bumpFast() { if (!active) return; idleCount = 0; currentInterval = minInterval; schedule(currentInterval); },
   };
 }
 
 /* ============================
-   2. UTILITARE (Formatare Timp & Scroll)
+   UTIL
    ============================ */
-
 function formatTimestamp(ts) {
   if (!ts) return "";
   const d = new Date(ts);
@@ -104,65 +76,41 @@ function isNearBottom(container, thresholdPx = 150) {
 function smartScrollToBottom(container, force = false) {
   if (!container) return;
   if (force || isNearBottom(container)) {
-    // Folosim requestAnimationFrame pentru a evita săriturile bruște
-    requestAnimationFrame(() => {
-        container.scrollTop = container.scrollHeight;
-    });
+    requestAnimationFrame(() => { container.scrollTop = container.scrollHeight; });
   }
 }
 
 /* ============================
-   3. RENDER MESAJE (Discord Style & Anti-Flicker)
+   RENDER – MESAJE (ANTI-FLICKER + UI FIX)
    ============================ */
-
 function renderDiscordMessages(messages, options) {
-  const {
-    container,
-    ticket,
-    canReply,
-    onReply,
-    onJumpTo,
-  } = options;
-
+  const { container, ticket, canReply, onReply, onJumpTo } = options;
   if (!container) return;
   
-  // Salvăm poziția scroll-ului ca să știm dacă trebuie să dăm scroll jos
   const wasNearBottom = isNearBottom(container);
 
-  // Gestionare Placeholder (Empty State)
   if (!messages || messages.length === 0) {
       if (!container.querySelector('.chat-placeholder')) {
-         container.innerHTML = `
-            <div class="chat-placeholder">
-                <div class="icon">💬</div>
-                <p>Începe conversația...</p>
-            </div>`;
+         container.innerHTML = `<div class="chat-placeholder"><div class="icon">💬</div><p>Începe conversația...</p></div>`;
       }
       return;
   }
   
-  // Eliminăm placeholder-ul dacă există mesaje reale
   const placeholder = container.querySelector('.chat-placeholder');
   if (placeholder) placeholder.remove();
 
-  // Dicționar pentru acces rapid la mesajele originale (pentru reply preview)
   const msgById = {};
-  messages.forEach((m) => {
-    if (m && m.id) msgById[m.id] = m;
-  });
-
+  messages.forEach((m) => { if (m && m.id) msgById[m.id] = m; });
+  
   const processedIds = new Set();
 
   messages.forEach((m) => {
     if (!m) return;
     processedIds.add(String(m.id));
 
-    // Verificăm dacă mesajul există deja în DOM pentru a nu-l recrea (Anti-Flicker)
     let row = container.querySelector(`.msg-row[data-message-id="${m.id}"]`);
-
-    // --- Construcție HTML Componente ---
-
-    // 1. Reply Preview (dacă există)
+    
+    // --- HTML Components ---
     let replyHtml = '';
     if (m.reply_to && msgById[m.reply_to]) {
         const origin = msgById[m.reply_to];
@@ -174,12 +122,10 @@ function renderDiscordMessages(messages, options) {
         `;
     }
 
-    // 2. Avatar & Header
     const senderName = m.sender || (m.from === "system" ? "System" : "User");
     const initial = (senderName || "?").slice(0, 1).toUpperCase();
     const adminClass = m.from === "admin" ? "msg-username--admin" : "";
     
-    // 3. Text Content
     let textClass = "msg-text";
     let textContent = m.text;
     if (m.deleted) {
@@ -187,47 +133,37 @@ function renderDiscordMessages(messages, options) {
         textContent = "Mesaj șters";
     }
 
-    // 4. Buton Reply (Vizibil, nu doar click pe text)
-    let actionButtons = "";
+    // --- BUTTON REPLY NOU (Sus în header, dreapta) ---
+    let replyBtnHtml = "";
     if (canReply && !m.deleted) {
-        actionButtons = `
-            <div class="msg-actions">
-                <button class="btn-reply-icon">
-                    <span>↩</span> Răspunde
-                </button>
-            </div>
-        `;
+        replyBtnHtml = `<button class="btn-reply-mini">↩ Reply</button>`;
     }
 
-    // HTML-ul interior al rândului
     const innerHTML = `
         <div class="msg-avatar">${initial}</div>
         <div class="msg-content">
             <div class="msg-header-line">
-                <span class="msg-username ${adminClass}">${senderName}</span>
-                <span class="msg-timestamp">${formatTimestamp(m.ts)}</span>
+                <div class="msg-meta-group">
+                    <span class="msg-username ${adminClass}">${senderName}</span>
+                    <span class="msg-timestamp">${formatTimestamp(m.ts)}</span>
+                </div>
+                ${replyBtnHtml}
             </div>
             <div class="msg-bubble">
                 ${replyHtml}
                 <div class="${textClass}">${textContent}</div>
-                ${actionButtons}
             </div>
         </div>
     `;
 
     if (!row) {
-        // --- CREARE (Mesaj Nou) ---
         row = document.createElement("div");
         row.className = "msg-row";
         row.dataset.messageId = m.id;
         row.innerHTML = innerHTML;
-        
-        // Atașăm evenimentele o singură dată la creare
         attachMessageEvents(row, m, onReply, onJumpTo);
-        
         container.appendChild(row);
     } else {
-        // --- ACTUALIZARE (Doar dacă s-a schimbat conținutul) ---
         if (row.innerHTML !== innerHTML) {
             row.innerHTML = innerHTML;
             attachMessageEvents(row, m, onReply, onJumpTo);
@@ -235,29 +171,22 @@ function renderDiscordMessages(messages, options) {
     }
   });
 
-  // Curățare mesaje șterse din baza de date (dacă e cazul)
   Array.from(container.children).forEach(child => {
       const id = child.dataset.messageId;
-      if (id && !processedIds.has(id)) {
-          child.remove();
-      }
+      if (id && !processedIds.has(id)) child.remove();
   });
 
   smartScrollToBottom(container, wasNearBottom);
 }
 
-// Funcție separată pentru atașarea click-urilor pe elementele mesajului
 function attachMessageEvents(rowElement, messageData, onReply, onJumpTo) {
-    // Click pe butonul de reply
-    const replyBtn = rowElement.querySelector('.btn-reply-icon');
+    const replyBtn = rowElement.querySelector('.btn-reply-mini');
     if (replyBtn) {
         replyBtn.onclick = (e) => {
             e.stopPropagation();
             if (typeof onReply === 'function') onReply(messageData);
         };
     }
-
-    // Click pe preview-ul de reply (Jump to)
     const preview = rowElement.querySelector('.msg-reply-preview');
     if (preview) {
         preview.onclick = (e) => {
@@ -270,83 +199,43 @@ function attachMessageEvents(rowElement, messageData, onReply, onJumpTo) {
 
 function scrollToMessageElement(container, messageId) {
   if (!container) return;
-  const row = container.querySelector(
-    `.msg-row[data-message-id="${messageId}"]`
-  );
+  const row = container.querySelector(`.msg-row[data-message-id="${messageId}"]`);
   if (!row) return;
-  
   row.classList.add("msg-row--highlight");
   row.scrollIntoView({ behavior: "smooth", block: "center" });
-  setTimeout(() => {
-    row.classList.remove("msg-row--highlight");
-  }, 1200);
+  setTimeout(() => { row.classList.remove("msg-row--highlight"); }, 1500);
 }
 
 /* ============================
-   4. LOGICA PRINCIPALĂ (INIT APP)
+   USER MINIAPP MAIN
    ============================ */
-
 function initUserApp() {
   const tg = window.Telegram?.WebApp;
-
   let CURRENT_USER = null;
   let CURRENT_SHOP = null;
   let CURRENT_TICKETS = [];
   let SELECTED_TICKET_ID = null;
   let USER_LAST_SEEN = {};
 
-  // --- LocalStorage pentru Unread Count ---
-  function loadUserSeen() {
-    try {
-      const raw = localStorage.getItem("user_ticket_seen");
-      if (raw) USER_LAST_SEEN = JSON.parse(raw);
-    } catch (e) { USER_LAST_SEEN = {}; }
-  }
-
-  function saveUserSeen() {
-    try { localStorage.setItem("user_ticket_seen", JSON.stringify(USER_LAST_SEEN)); } catch (e) {}
-  }
-
-  function markTicketReadUser(ticket) {
-    if (!ticket) return;
-    const msgs = ticket.messages || [];
-    if (!msgs.length) return;
-    const last = msgs[msgs.length - 1];
-    USER_LAST_SEEN[String(ticket.id)] = last.id;
-    saveUserSeen();
-  }
-
-  function getUnreadCountUser(ticket) {
-    const msgs = ticket.messages || [];
-    if (!msgs.length) return 0;
-    const lastSeenId = USER_LAST_SEEN[String(ticket.id)];
-    
-    let startIndex = -1;
-    if (lastSeenId) {
-      startIndex = msgs.findIndex((m) => m && m.id === lastSeenId);
-    }
-
-    let count = 0;
-    for (let i = startIndex + 1; i < msgs.length; i++) {
-      const m = msgs[i];
-      if (m && !m.deleted && m.from === "admin") count++;
-    }
-    return count;
+  function loadUserSeen() { try { const r=localStorage.getItem("user_ticket_seen"); if(r) USER_LAST_SEEN=JSON.parse(r); else USER_LAST_SEEN={}; } catch(e){ USER_LAST_SEEN={}; } }
+  function saveUserSeen() { try { localStorage.setItem("user_ticket_seen", JSON.stringify(USER_LAST_SEEN)); } catch(e){} }
+  function markTicketReadUser(t) { if(!t)return; const msgs=t.messages||[]; if(!msgs.length)return; USER_LAST_SEEN[String(t.id)]=msgs[msgs.length-1].id; saveUserSeen(); }
+  function getUnreadCountUser(t) { 
+      const msgs=t.messages||[]; if(!msgs.length)return 0; 
+      const last=USER_LAST_SEEN[String(t.id)]; 
+      let idx = last ? msgs.findIndex(m=>m.id===last) : -1;
+      let c=0; for(let i=idx+1; i<msgs.length; i++){ if(msgs[i]&&!msgs[i].deleted&&msgs[i].from==="admin") c++; }
+      return c; 
   }
 
   loadUserSeen();
-
   let userActiveUntil = 0;
-  function bumpUserActive(extraMs = 25000) {
-    userActiveUntil = Math.max(userActiveUntil, Date.now() + extraMs);
-  }
+  function bumpUserActive(extraMs=25000) { userActiveUntil = Math.max(userActiveUntil, Date.now()+extraMs); }
 
-  // --- Elemente DOM ---
+  // DOM Elements
   const creditsValueEl = document.getElementById("creditsValue");
   const userLineEl = document.getElementById("userLine");
   const categoriesContainer = document.getElementById("categoriesContainer");
-  
-  // Modal Produs
   const productPanelEl = document.getElementById("productPanel");
   const panelNameEl = document.getElementById("panelName");
   const panelDescEl = document.getElementById("panelDesc");
@@ -358,7 +247,6 @@ function initUserApp() {
   const panelStatusEl = document.getElementById("panelStatus");
   let SELECTED_PRODUCT = null;
 
-  // Chat
   const chatListEl = document.getElementById("chatList");
   const ticketTitleEl = document.getElementById("ticketTitle");
   const chatMessagesEl = document.getElementById("chatMessages");
@@ -367,28 +255,23 @@ function initUserApp() {
   const userTicketCloseBtn = document.getElementById("userTicketCloseBtn");
   const ticketsMenuToggle = document.getElementById("ticketsMenuToggle");
   const ticketsBackdrop = document.getElementById("ticketsBackdrop");
-
-  // Navigare & Tabs
   const shopTabEl = document.getElementById("shopTab");
   const ticketsTabEl = document.getElementById("ticketsTab");
   const shopHeaderEl = document.getElementById("shopHeader");
   const goToTicketsBtn = document.getElementById("goToTicketsBtn");
   const backToShopBtn = document.getElementById("backToShopBtn");
-
-  // Chat Input Wrapper (pentru Reply Bar)
   const chatInputContainer = document.querySelector(".chat-input");
   
   let userModeBar = null;
   let userMode = { type: null, messageId: null, previewText: "", sender: "" };
 
-  /* ===== Navigare ===== */
+  /* Navigation */
   function showShopTab() {
     if (shopTabEl) shopTabEl.classList.add("active");
     if (ticketsTabEl) ticketsTabEl.classList.remove("active");
     if (shopHeaderEl) shopHeaderEl.style.display = "flex";
     userTicketsPoller.stop();
   }
-
   function showTicketsTab() {
     if (shopTabEl) shopTabEl.classList.remove("active");
     if (ticketsTabEl) ticketsTabEl.classList.add("active");
@@ -396,450 +279,270 @@ function initUserApp() {
     bumpUserActive();
     userTicketsPoller.start();
   }
-
   if (goToTicketsBtn) goToTicketsBtn.addEventListener("click", showTicketsTab);
   if (backToShopBtn) backToShopBtn.addEventListener("click", showShopTab);
 
-  /* ===== Reply Bar Logic ===== */
+  /* Reply Bar UI */
   if (chatInputContainer && !chatInputContainer.querySelector(".chat-mode-bar")) {
     userModeBar = document.createElement("div");
     userModeBar.className = "chat-mode-bar";
     userModeBar.style.display = "none";
-    
-    const span = document.createElement("span");
-    span.className = "chat-mode-text";
-    
-    const btn = document.createElement("button");
-    btn.textContent = "Anulează";
-    btn.addEventListener("click", clearUserMode);
-    
-    userModeBar.appendChild(span);
-    userModeBar.appendChild(btn);
+    const span = document.createElement("span"); span.className = "chat-mode-text";
+    const btn = document.createElement("button"); btn.textContent = "Anulează";
+    btn.onclick = clearUserMode;
+    userModeBar.appendChild(span); userModeBar.appendChild(btn);
     chatInputContainer.prepend(userModeBar);
   }
-
   function clearUserMode() {
     if (!userModeBar) return;
     userMode = { type: null, messageId: null, previewText: "", sender: "" };
     userModeBar.style.display = "none";
   }
-
   function setUserReplyMode(msg) {
     if (!userModeBar) return;
-    userMode.type = "reply";
-    userMode.messageId = msg.id;
-    userMode.previewText = (msg.text || "").slice(0, 50);
-    userMode.sender = msg.sender || "User";
-    
-    const textEl = userModeBar.querySelector(".chat-mode-text");
-    textEl.textContent = `Răspunzi lui ${userMode.sender}: "${userMode.previewText}..."`;
-    
+    userMode.type = "reply"; userMode.messageId = msg.id;
+    userMode.previewText = (msg.text||"").slice(0, 50); userMode.sender = msg.sender||"User";
+    userModeBar.querySelector(".chat-mode-text").textContent = `Răspunzi lui ${userMode.sender}: "${userMode.previewText}..."`;
     userModeBar.style.display = "flex";
     chatInputEl.focus();
   }
 
   function updateUserChatState(ticket) {
     if (!chatInputEl || !chatSendBtn) return;
-
     if (!ticket) {
-      chatInputEl.disabled = true;
-      chatSendBtn.disabled = true;
-      chatInputEl.placeholder = "Alege un tichet din meniu...";
+      chatInputEl.disabled = true; chatSendBtn.disabled = true;
+      chatInputEl.placeholder = "Selectează un tichet...";
       clearUserMode();
-      if (userTicketCloseBtn) userTicketCloseBtn.style.display = "none";
-      if (ticketTitleEl) ticketTitleEl.textContent = "Niciun tichet selectat";
+      if(userTicketCloseBtn) userTicketCloseBtn.style.display = "none";
+      if(ticketTitleEl) ticketTitleEl.textContent = "Niciun tichet selectat";
       return;
     }
-
     const isClosed = ticket.status === "closed";
-    chatInputEl.disabled = isClosed;
-    chatSendBtn.disabled = isClosed;
+    chatInputEl.disabled = isClosed; chatSendBtn.disabled = isClosed;
     chatInputEl.placeholder = isClosed ? "Tichet închis." : "Scrie un mesaj...";
-
-    if (userTicketCloseBtn) userTicketCloseBtn.style.display = isClosed ? "none" : "block";
-    if (isClosed) clearUserMode();
-  }
-  updateUserChatState(null);
-
-  /* ===== Drawer Logic ===== */
-  function openTicketsDrawer() { if (ticketsTabEl) ticketsTabEl.classList.add("tickets-drawer-open"); }
-  function closeTicketsDrawer() { if (ticketsTabEl) ticketsTabEl.classList.remove("tickets-drawer-open"); }
-  function toggleTicketsDrawer() {
-    if (ticketsTabEl) {
-        ticketsTabEl.classList.toggle("tickets-drawer-open");
-    }
+    if(userTicketCloseBtn) userTicketCloseBtn.style.display = isClosed ? "none" : "block";
+    if(isClosed) clearUserMode();
   }
 
-  /* ===== API Call ===== */
-  function apiCall(action, extraPayload = {}) {
+  /* Drawer */
+  function closeTicketsDrawer() { if(ticketsTabEl) ticketsTabEl.classList.remove("tickets-drawer-open"); }
+  function toggleTicketsDrawer() { if(ticketsTabEl) ticketsTabEl.classList.toggle("tickets-drawer-open"); }
+
+  /* API */
+  function apiCall(action, extraPayload={}) {
     return fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action, user: CURRENT_USER, ...extraPayload }),
-    }).then((r) => r.json());
+      method: "POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ action, user: CURRENT_USER, ...extraPayload })
+    }).then(r=>r.json());
   }
 
-  function isTicketsTabActive() {
-    const tab = document.getElementById("ticketsTab");
-    return tab && tab.classList.contains("active");
-  }
-
-  function renderUserHeader() {
-    if (!CURRENT_USER) return;
-    creditsValueEl.textContent = CURRENT_USER.credits;
-    const name = CURRENT_USER.username ? "@" + CURRENT_USER.username : `ID ${CURRENT_USER.id}`;
-    userLineEl.innerHTML = `Utilizator: <b>${name}</b>`;
-  }
-
-  /* ===== Render Shop ===== */
+  /* Shop Logic */
   function renderShop(shop) {
     categoriesContainer.innerHTML = "";
-    if (!shop || !shop.categories) return;
-
-    shop.categories.forEach((cat) => {
-      const catDiv = document.createElement("div"); catDiv.className = "category";
-      catDiv.innerHTML = `
-        <div class="category-header">
-            <div class="category-name">${cat.name}</div>
-            <div class="category-pill">cat</div>
-        </div>
-        ${cat.description ? `<div class="category-desc">${cat.description}</div>` : ""}
-        <div class="products"></div>
-      `;
-      
-      const productsDiv = catDiv.querySelector(".products");
-
-      (cat.products || []).forEach((prod) => {
-        const prodDiv = document.createElement("div"); prodDiv.className = "product";
-        prodDiv.innerHTML = `
-            <div class="product-main">
-                <div class="product-name">${prod.name}</div>
-                <div class="product-desc">${prod.description || ""}</div>
-            </div>
-            <div class="product-right">
-                <div class="product-price">${prod.price} CRD</div>
-                <button class="product-btn">DETALII</button>
-            </div>
+    if(!shop?.categories) return;
+    shop.categories.forEach(cat => {
+        const d=document.createElement("div"); d.className="category";
+        d.innerHTML = `
+          <div class="category-header"><div class="category-name">${cat.name}</div><div class="category-pill">cat</div></div>
+          ${cat.description ? `<div class="category-desc">${cat.description}</div>` : ""}
+          <div class="products"></div>
         `;
-        prodDiv.onclick = () => openProductPanel(prod);
-        productsDiv.appendChild(prodDiv);
-      });
-      categoriesContainer.appendChild(catDiv);
+        const pCont = d.querySelector(".products");
+        (cat.products||[]).forEach(prod => {
+            const p = document.createElement("div"); p.className="product";
+            p.innerHTML=`
+              <div class="product-main"><div class="product-name">${prod.name}</div><div class="product-desc">${prod.description||""}</div></div>
+              <div class="product-right"><div class="product-price">${prod.price} CRD</div><button class="product-btn">DETALII</button></div>
+            `;
+            p.onclick = () => openProductPanel(prod);
+            pCont.appendChild(p);
+        });
+        categoriesContainer.appendChild(d);
     });
   }
 
-  /* ===== Modal Logic ===== */
+  /* Modal Logic */
   function openProductPanel(prod) {
-    SELECTED_PRODUCT = prod;
-    panelStatusEl.textContent = ""; panelStatusEl.className = "status-message";
-    panelNameEl.textContent = prod.name;
-    panelDescEl.textContent = prod.description || "";
-    panelPriceEl.textContent = `${prod.price} CRD`;
-    const min = prod.min_qty || 1;
-    const max = prod.max_qty || min;
-    panelQtyEl.min = min; panelQtyEl.max = max; panelQtyEl.value = min;
-    panelQtyRangeEl.textContent = `(min ${min}, max ${max})`;
-    productPanelEl.style.display = "flex";
+      SELECTED_PRODUCT = prod;
+      panelStatusEl.className="status-message"; panelStatusEl.textContent="";
+      panelNameEl.textContent = prod.name; panelDescEl.textContent = prod.description||"";
+      panelPriceEl.textContent = `${prod.price} CRD`;
+      panelQtyEl.min = prod.min_qty||1; panelQtyEl.max = prod.max_qty||prod.min_qty||1; panelQtyEl.value = panelQtyEl.min;
+      panelQtyRangeEl.textContent = `(min ${panelQtyEl.min}, max ${panelQtyEl.max})`;
+      productPanelEl.style.display = "flex";
   }
-
-  function closeProductPanel() {
-    SELECTED_PRODUCT = null;
-    productPanelEl.style.display = "none";
-  }
-
-  // FIX: Închidere la click în exterior
-  if (productPanelEl) {
-      productPanelEl.addEventListener("click", (e) => {
-          if (e.target === productPanelEl) closeProductPanel();
-      });
-  }
-
-  async function buySelectedProduct() {
-    if (!SELECTED_PRODUCT || !CURRENT_USER) return;
-    const qty = Number(panelQtyEl.value || 0);
-    const prod = SELECTED_PRODUCT;
-
-    panelStatusEl.textContent = "Se procesează...";
-    panelStatusEl.className = "status-message";
-
-    try {
-      const res = await apiCall("buy_product", { product_id: prod.id, qty: qty });
-
-      if (!res.ok) {
-        panelStatusEl.className = "status-message status-error";
-        if (res.error === "not_enough_credits") {
-            panelStatusEl.textContent = `Fonduri insuficiente.`;
-        } else {
-            panelStatusEl.textContent = "Eroare: " + (res.error || "necunoscută");
-        }
-        return;
-      }
-
-      CURRENT_USER.credits = res.new_balance;
-      creditsValueEl.textContent = CURRENT_USER.credits;
-
-      const newTicket = res.ticket;
-      CURRENT_TICKETS.push(newTicket);
-      
-      renderTicketsListUser();
-      selectTicketUser(newTicket.id);
-
-      panelStatusEl.className = "status-message status-ok";
-      panelStatusEl.textContent = `Succes! Tichet #${newTicket.id} creat.`;
-
-      setTimeout(() => { closeProductPanel(); showTicketsTab(); }, 1000);
-      bumpUserActive();
-      userTicketsPoller.bumpFast();
-
-    } catch (err) {
-      console.error(err);
-      panelStatusEl.className = "status-message status-error";
-      panelStatusEl.textContent = "Eroare rețea.";
-    }
-  }
-
+  function closeProductPanel() { SELECTED_PRODUCT=null; productPanelEl.style.display="none"; }
+  if(productPanelEl) productPanelEl.addEventListener("click", e => { if(e.target===productPanelEl) closeProductPanel(); });
   if(panelCloseBtn) panelCloseBtn.onclick = closeProductPanel;
+  
+  async function buySelectedProduct() {
+      if(!SELECTED_PRODUCT || !CURRENT_USER) return;
+      const qty = Number(panelQtyEl.value);
+      panelStatusEl.textContent = "Procesare...";
+      try {
+          const res = await apiCall("buy_product", { product_id: SELECTED_PRODUCT.id, qty });
+          if(!res.ok) {
+              panelStatusEl.className="status-message status-error";
+              panelStatusEl.textContent = res.error === "not_enough_credits" ? `Fonduri insuficiente.` : `Eroare: ${res.error}`;
+              return;
+          }
+          CURRENT_USER.credits = res.new_balance; creditsValueEl.textContent = CURRENT_USER.credits;
+          CURRENT_TICKETS.push(res.ticket);
+          renderTicketsListUser(); selectTicketUser(res.ticket.id);
+          panelStatusEl.className="status-message status-ok"; panelStatusEl.textContent="Succes!";
+          setTimeout(()=>{ closeProductPanel(); showTicketsTab(); }, 1000);
+          bumpUserActive(); userTicketsPoller.bumpFast();
+      } catch(e) { panelStatusEl.className="status-message status-error"; panelStatusEl.textContent="Eroare rețea."; }
+  }
   if(panelBuyBtn) panelBuyBtn.onclick = buySelectedProduct;
 
-  /* ===== Ticket List (Anti-Flicker) ===== */
+  /* Ticket List (Anti-Flicker) */
   function renderTicketsListUser() {
-    if (!CURRENT_TICKETS || CURRENT_TICKETS.length === 0) {
-      if (!chatListEl.querySelector('.no-tickets-msg')) {
-         chatListEl.innerHTML = '<div class="no-tickets-msg" style="padding:20px; text-align:center; color:#555;">Nu ai tichete.</div>';
+      if(!CURRENT_TICKETS.length) {
+          if(!chatListEl.querySelector('.no-tickets-msg')) chatListEl.innerHTML='<div class="no-tickets-msg" style="padding:20px;text-align:center;color:#555">Nu ai tichete.</div>';
+          return;
       }
-      return;
-    }
-    const noMsg = chatListEl.querySelector('.no-tickets-msg');
-    if (noMsg) noMsg.remove();
-
-    // Sortare
-    CURRENT_TICKETS.sort((a, b) => {
-      if (a.status !== b.status) return a.status === "open" ? -1 : 1;
-      return (b.id || 0) - (a.id || 0);
-    });
-
-    const processedIds = new Set();
-
-    CURRENT_TICKETS.forEach((t) => {
-      processedIds.add(String(t.id));
-
-      let item = chatListEl.querySelector(`.chat-item[data-ticket-id="${t.id}"]`);
+      const noMsg = chatListEl.querySelector('.no-tickets-msg'); if(noMsg) noMsg.remove();
       
-      const msgs = t.messages || [];
-      const lastMsg = msgs.length ? msgs[msgs.length - 1].text : "Tichet nou";
-      const unreadCount = getUnreadCountUser(t);
-      const badgeHtml = (unreadCount > 0 && t.status === "open") 
-        ? `<span class="unread-badge">${unreadCount}</span>` 
-        : "";
+      CURRENT_TICKETS.sort((a,b) => (a.status===b.status ? (b.id-a.id) : (a.status==="open"?-1:1)));
+      const processed = new Set();
       
-      const statusClass = t.status === "open" ? "open" : "closed";
-      const statusText = t.status === "open" ? "Open" : "Closed";
-
-      const innerHTML = `
-        <div class="chat-item-header-row">
-            <div class="chat-item-title">${t.product_name || "Comandă"}</div>
-            <div style="display:flex;align-items:center;">
-                ${badgeHtml}<span class="ticket-status-pill ${statusClass}">${statusText}</span>
+      CURRENT_TICKETS.forEach(t => {
+          processed.add(String(t.id));
+          let item = chatListEl.querySelector(`.chat-item[data-ticket-id="${t.id}"]`);
+          const unread = getUnreadCountUser(t);
+          const badge = (unread>0 && t.status==="open") ? `<span class="unread-badge">${unread}</span>` : "";
+          const html = `
+            <div class="chat-item-header-row">
+                <div class="chat-item-title">${t.product_name||"Comandă"}</div>
+                <div style="display:flex;align-items:center;">${badge}<span class="ticket-status-pill ${t.status}">${t.status}</span></div>
             </div>
-        </div>
-        <div class="chat-item-line">${lastMsg}</div>
-      `;
-
-      if (!item) {
-        // Creare
-        item = document.createElement("div");
-        item.className = "chat-item";
-        item.setAttribute("data-ticket-id", t.id);
-        item.onclick = () => {
-          selectTicketUser(t.id);
-          bumpUserActive();
-          closeTicketsDrawer();
-          userTicketsPoller.bumpFast();
-        };
-        item.innerHTML = innerHTML;
-        chatListEl.appendChild(item);
-      } else {
-        // Actualizare
-        if (item.innerHTML !== innerHTML) item.innerHTML = innerHTML;
-      }
-
-      // Clasa Active
-      if (t.id === SELECTED_TICKET_ID) item.classList.add("active");
-      else item.classList.remove("active");
-
-      // Reordonare vizuală
-      chatListEl.appendChild(item);
-    });
-
-    // Ștergere elemente vechi
-    Array.from(chatListEl.children).forEach(child => {
-        const id = child.getAttribute("data-ticket-id");
-        if (id && !processedIds.has(id)) child.remove();
-    });
+            <div class="chat-item-line">${(t.messages||[]).slice(-1)[0]?.text || "Nou"}</div>
+          `;
+          
+          if(!item) {
+              item = document.createElement("div"); item.className="chat-item"; item.dataset.ticketId = t.id;
+              item.innerHTML = html;
+              item.onclick = () => { selectTicketUser(t.id); bumpUserActive(); closeTicketsDrawer(); userTicketsPoller.bumpFast(); };
+              chatListEl.appendChild(item);
+          } else if(item.innerHTML!==html) { item.innerHTML = html; }
+          
+          if(t.id===SELECTED_TICKET_ID) item.classList.add("active"); else item.classList.remove("active");
+          chatListEl.appendChild(item); // Reorder
+      });
+      
+      Array.from(chatListEl.children).forEach(c => { if(!processed.has(c.dataset.ticketId)) c.remove(); });
   }
 
-  function selectTicketUser(ticketId) {
-    SELECTED_TICKET_ID = ticketId;
-    const t = CURRENT_TICKETS.find((x) => x.id === ticketId);
-    if (t) markTicketReadUser(t);
-
-    renderTicketsListUser();
-
-    if (!t) {
-      chatMessagesEl.innerHTML = "";
-      updateUserChatState(null);
-      return;
-    }
-
-    if (ticketTitleEl) ticketTitleEl.textContent = `${t.product_name || "Tichet"} #${t.id}`;
-    
-    renderUserMessages(t);
-    updateUserChatState(t);
+  function selectTicketUser(tid) {
+      SELECTED_TICKET_ID = tid;
+      const t = CURRENT_TICKETS.find(x=>x.id===tid);
+      if(t) markTicketReadUser(t);
+      renderTicketsListUser();
+      
+      if(!t) { chatMessagesEl.innerHTML=""; updateUserChatState(null); return; }
+      if(ticketTitleEl) ticketTitleEl.textContent = `${t.product_name||"Tichet"} #${t.id}`;
+      
+      renderUserMessages(t);
+      updateUserChatState(t);
   }
 
   function renderUserMessages(ticket) {
-    renderDiscordMessages(ticket.messages || [], {
-      container: chatMessagesEl,
-      ticket,
-      canReply: ticket.status === "open",
-      onReply: (msg) => {
-        if (ticket.status === "open") setUserReplyMode(msg);
-      },
-      onJumpTo: (mid) => scrollToMessageElement(chatMessagesEl, mid),
-    });
+      renderDiscordMessages(ticket.messages||[], {
+          container: chatMessagesEl, ticket, canReply: ticket.status==="open",
+          onReply: (msg) => { if(ticket.status==="open") setUserReplyMode(msg); },
+          onJumpTo: (mid) => scrollToMessageElement(chatMessagesEl, mid)
+      });
   }
 
   async function sendChatMessage() {
-    const text = chatInputEl.value.trim();
-    if (!text || !SELECTED_TICKET_ID) return;
-
-    const t = CURRENT_TICKETS.find((x) => x.id === SELECTED_TICKET_ID);
-    if (!t || t.status === "closed") return;
-
-    const reply_to = (userMode.type === "reply" && userMode.messageId) ? userMode.messageId : null;
-    chatInputEl.value = "";
-    clearUserMode();
-
-    try {
-      const res = await apiCall("user_send_message", { ticket_id: SELECTED_TICKET_ID, text, reply_to });
-
-      if (!res.ok && res.error === "ticket_closed") {
-          const updated = CURRENT_TICKETS.find(x => x.id === SELECTED_TICKET_ID);
-          if(updated) updated.status = "closed";
-          updateUserChatState(updated);
-          return;
-      }
-
-      if(res.ticket) {
-          const idx = CURRENT_TICKETS.findIndex(x => x.id === res.ticket.id);
-          if (idx >= 0) CURRENT_TICKETS[idx] = res.ticket;
-          else CURRENT_TICKETS.push(res.ticket);
-          
-          selectTicketUser(res.ticket.id);
-      }
+      const txt = chatInputEl.value.trim();
+      if(!txt || !SELECTED_TICKET_ID) return;
       
-      bumpUserActive();
-      userTicketsPoller.bumpFast();
-    } catch (err) { console.error(err); }
+      const replyTo = userMode.type==="reply" ? userMode.messageId : null;
+      chatInputEl.value = ""; clearUserMode();
+      
+      try {
+          const res = await apiCall("user_send_message", { ticket_id: SELECTED_TICKET_ID, text: txt, reply_to: replyTo });
+          if(res.ok && res.ticket) {
+              const idx = CURRENT_TICKETS.findIndex(x=>x.id===res.ticket.id);
+              if(idx>=0) CURRENT_TICKETS[idx]=res.ticket; else CURRENT_TICKETS.push(res.ticket);
+              selectTicketUser(res.ticket.id);
+          } else if(res.error==="ticket_closed") {
+              const t = CURRENT_TICKETS.find(x=>x.id===SELECTED_TICKET_ID);
+              if(t) { t.status="closed"; updateUserChatState(t); }
+          }
+          bumpUserActive(); userTicketsPoller.bumpFast();
+      } catch(e) { console.error(e); }
   }
 
-  async function userCloseCurrentTicket() {
-    if (!SELECTED_TICKET_ID) return;
-    if (!confirm("Ești sigur că vrei să închizi acest tichet?")) return;
-
-    try {
-      const res = await apiCall("user_close_ticket", { ticket_id: SELECTED_TICKET_ID });
-      if (res.ok && res.ticket) {
-          const idx = CURRENT_TICKETS.findIndex(x => x.id === res.ticket.id);
-          if (idx >= 0) CURRENT_TICKETS[idx] = res.ticket;
-          selectTicketUser(res.ticket.id);
-      }
-      bumpUserActive();
-      userTicketsPoller.bumpFast();
-    } catch (err) { console.error(err); }
+  async function closeCurrentTicket() {
+      if(!SELECTED_TICKET_ID || !confirm("Închizi tichetul?")) return;
+      try {
+          const res = await apiCall("user_close_ticket", { ticket_id: SELECTED_TICKET_ID });
+          if(res.ok && res.ticket) {
+              const idx = CURRENT_TICKETS.findIndex(x=>x.id===res.ticket.id);
+              if(idx>=0) CURRENT_TICKETS[idx]=res.ticket;
+              selectTicketUser(res.ticket.id);
+          }
+          bumpUserActive(); userTicketsPoller.bumpFast();
+      } catch(e) { console.error(e); }
   }
 
   // Listeners
   chatSendBtn?.addEventListener("click", sendChatMessage);
-  chatInputEl?.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
-  });
+  chatInputEl?.addEventListener("keydown", e => { if(e.key==="Enter" && !e.shiftKey) { e.preventDefault(); sendChatMessage(); } });
   ticketsMenuToggle?.addEventListener("click", () => { toggleTicketsDrawer(); bumpUserActive(); });
   ticketsBackdrop?.addEventListener("click", closeTicketsDrawer);
-  if (userTicketCloseBtn) userTicketCloseBtn.addEventListener("click", userCloseCurrentTicket);
+  userTicketCloseBtn?.addEventListener("click", closeCurrentTicket);
 
-  /* ===== Polling Core ===== */
-  async function pollTicketsUserCore() {
-    if (!CURRENT_USER) return CURRENT_TICKETS;
-    try {
-      const res = await apiCall("user_get_tickets", {});
-      if (!res.ok) return CURRENT_TICKETS;
-      CURRENT_TICKETS = res.tickets || [];
-
-      // Update Last Seen dacă suntem pe un tichet deschis
-      if (SELECTED_TICKET_ID) {
-         const t = CURRENT_TICKETS.find(x => x.id === SELECTED_TICKET_ID);
-         if(t) {
-             markTicketReadUser(t);
-             // Re-render chat pentru a vedea mesajele noi (fără flicker)
-             renderUserMessages(t);
-             updateUserChatState(t);
-         }
-      }
-      renderTicketsListUser();
+  // Poller Logic
+  async function pollCore() {
+      if(!CURRENT_USER) return CURRENT_TICKETS;
+      try {
+          const res = await apiCall("user_get_tickets", {});
+          if(res.ok) {
+              CURRENT_TICKETS = res.tickets||[];
+              if(SELECTED_TICKET_ID) {
+                  const t = CURRENT_TICKETS.find(x=>x.id===SELECTED_TICKET_ID);
+                  if(t) { markTicketReadUser(t); renderUserMessages(t); updateUserChatState(t); }
+              }
+              renderTicketsListUser();
+          }
+      } catch(e){}
       return CURRENT_TICKETS;
-    } catch (err) { return CURRENT_TICKETS; }
   }
-
-  const userTicketsPoller = createSmartPoll(
-    pollTicketsUserCore,
-    () => {
-      if (!isTicketsTabActive()) return false;
+  
+  const userTicketsPoller = createSmartPoll(pollCore, () => {
+      if(!document.getElementById("ticketsTab").classList.contains("active")) return false;
       return Date.now() < userActiveUntil;
-    }
-  );
-
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") {
-      if (isTicketsTabActive()) {
-        bumpUserActive();
-        userTicketsPoller.start();
-      }
-    } else {
-      userTicketsPoller.stop();
-    }
   });
 
-  /* ===== INIT APP ===== */
+  // Init
   async function initApp() {
-    if (!tg) { userLineEl.textContent = "Deschide din Telegram."; userLineEl.style.display = "block"; return; }
-    tg.ready(); tg.expand();
-
-    const user = tg.initDataUnsafe?.user;
-    if (!user) {
-       userLineEl.textContent = "Lipsă date user."; userLineEl.style.display = "block"; return;
-    }
-    
-    CURRENT_USER = { id: user.id, username: user.username, credits: 0 };
-
-    try {
-      const res = await apiCall("init", {});
-      if (!res.ok) throw new Error("Init failed");
-
-      CURRENT_USER.credits = res.user.credits;
-      CURRENT_SHOP = res.shop;
-      CURRENT_TICKETS = res.tickets || [];
-
-      renderUserHeader();
-      renderShop(CURRENT_SHOP);
-      renderTicketsListUser();
-
-      showShopTab();
-    } catch (err) {
-      userLineEl.textContent = "Eroare Conexiune.";
-      userLineEl.style.display = "block";
-    }
+      if(!tg) { userLineEl.innerHTML="Deschide din Telegram."; userLineEl.style.display="block"; return; }
+      tg.ready(); tg.expand();
+      const u = tg.initDataUnsafe?.user;
+      if(!u) { userLineEl.innerHTML="No user data."; userLineEl.style.display="block"; return; }
+      CURRENT_USER = { id: u.id, username: u.username, credits: 0 };
+      
+      try {
+          const res = await apiCall("init", {});
+          if(res.ok) {
+              CURRENT_USER.credits = res.user.credits;
+              CURRENT_SHOP = res.shop;
+              CURRENT_TICKETS = res.tickets||[];
+              renderUserHeader(); renderShop(CURRENT_SHOP); renderTicketsListUser();
+              showShopTab();
+          }
+      } catch(e) { userLineEl.innerHTML="Connection Error."; userLineEl.style.display="block"; }
   }
+  
+  document.addEventListener("visibilitychange", () => {
+      if(document.visibilityState==="visible" && document.getElementById("ticketsTab").classList.contains("active")) {
+          bumpUserActive(); userTicketsPoller.start();
+      } else { userTicketsPoller.stop(); }
+  });
 
   initApp();
 }
