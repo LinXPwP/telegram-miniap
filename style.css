@@ -423,3 +423,55 @@ html, body {
   border: 1px solid rgba(239, 68, 68, 0.2); padding: 6px 12px; border-radius: 6px;
   font-size: 11px; cursor: pointer;
 }
+/* ============================
+   REPLY BUTTON & OPTIMIZĂRI
+   ============================ */
+
+/* Butonul de reply de lângă mesaj */
+.msg-actions {
+    position: absolute;
+    right: 10px;
+    top: -10px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    background: var(--bg-surface);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}
+
+.msg-row:hover .msg-actions {
+    opacity: 1;
+}
+
+/* Pe mobil să fie mereu vizibil sau la click */
+@media (max-width: 768px) {
+    .msg-actions {
+        opacity: 1; /* Mereu vizibil pe mobil pt accesibilitate */
+        position: static;
+        margin-top: 4px;
+        background: transparent;
+        border: none;
+        box-shadow: none;
+        justify-content: flex-end;
+        width: 100%;
+        display: flex;
+    }
+}
+
+.btn-reply-icon {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px 8px;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.btn-reply-icon:hover {
+    color: var(--accent);
+}
