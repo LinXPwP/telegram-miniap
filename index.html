@@ -2,11 +2,11 @@
 <html lang="ro">
 <head>
   <meta charset="UTF-8" />
-  <title>MiniApp Shop & Chat</title>
+  <title>Visual Shop MiniApp</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
+  
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -18,7 +18,10 @@
     
     <div id="shopHeader" class="header-bar">
       <div class="header-left">
-        <span class="brand-logo">SHOP</span>
+        <button class="btn-icon-back" id="shopBackBtn" style="display: none;">
+           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <span class="brand-logo" id="headerTitle">SHOP</span>
       </div>
       <div class="header-right">
         <div class="credits-pill">
@@ -27,7 +30,6 @@
         </div>
         <button class="btn-icon" id="goToTicketsBtn" aria-label="Tichete">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
-          <span class="nav-dot" id="ticketBadge" style="display:none"></span>
         </button>
       </div>
     </div>
@@ -36,35 +38,27 @@
 
     <main class="main-content">
       
-      <div id="shopTab" class="tab-section active scrollable-section">
+      <div id="shopTab" class="tab-section active">
         
-        <div id="categoriesView" class="view-container active-view">
+        <div id="viewCategories" class="shop-view active-view">
           <div class="hero-banner">
-            <h1>Explorează</h1>
+            <h1>Descoperă</h1>
             <p>Alege o categorie pentru a începe.</p>
           </div>
-          <div id="categoriesGrid" class="grid-2-col"></div>
-          <div class="shop-footer-note">MiniApp Shop v3.0</div>
+          <div id="categoriesGrid" class="visual-grid"></div>
+          <div class="shop-footer-note">MiniApp Visual v3.0</div>
         </div>
 
-        <div id="productsView" class="view-container" style="display: none;">
-          <div class="sub-header">
-             <button class="btn-back-icon" id="backToCatsBtn">
-               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-             </button>
-             <h2 id="currentCatTitle">Nume Categorie</h2>
-          </div>
-          <p id="currentCatDesc" class="cat-desc-text"></p>
-          <div id="productsGrid" class="grid-2-col"></div>
+        <div id="viewProducts" class="shop-view">
+           <div id="productsGrid" class="visual-grid"></div>
+           <div class="empty-products-msg" id="emptyProductsMsg" style="display:none">Nu există produse aici.</div>
         </div>
 
       </div>
 
       <div id="ticketsTab" class="tab-section chat-mode">
         <div class="chat-layout">
-          
           <div class="chat-sidebar" id="chatList"></div>
-
           <div class="chat-main">
             <div class="chat-navbar" id="chatHeader">
               <div class="nav-left">
@@ -88,11 +82,6 @@
             </div>
 
             <div class="chat-footer chat-input">
-              <div id="userModeBar" class="chat-mode-bar" style="display: none;">
-                  <span class="chat-mode-text">Replying...</span>
-                  <button id="cancelReplyBtn">✕</button>
-              </div>
-
               <div class="input-wrapper">
                 <input id="chatInput" type="text" placeholder="Scrie un mesaj..." autocomplete="off" disabled />
                 <button id="chatSendBtn" class="btn-send" disabled>
@@ -114,16 +103,15 @@
       <div class="modal-card">
         <button class="modal-close" id="panelCloseBtn">&times;</button>
         
-        <div class="modal-image-wrapper">
-           <img id="panelImage" src="" alt="Product" 
-                onerror="this.onerror=null; this.src='https://placehold.co/600x400/202226/FFF?text=Fara+Imagine'" />
+        <div class="modal-img-wrapper">
+            <img id="panelImg" src="" alt="Product" onerror="this.style.display='none'">
+            <div class="modal-img-placeholder" id="panelImgPlaceholder">🎁</div>
         </div>
 
         <div class="modal-header">
           <h2 id="panelName">Nume Produs</h2>
           <div class="modal-price" id="panelPrice">-</div>
         </div>
-        
         <div class="modal-body">
           <p class="modal-desc" id="panelDesc"></p>
           <div class="qty-control">
