@@ -43,7 +43,6 @@ html, body {
   display: flex; flex-direction: column;
 }
 
-/* Scrollbar */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
@@ -81,16 +80,13 @@ html, body {
 .user-info-bar { display: none; background: var(--bg-surface); padding: 8px 20px; font-size: 11px; color: var(--text-muted); text-align: center; flex-shrink: 0; }
 
 /* ============================
-   SHOP & GRID LAYOUT (NEW IMAGES)
+   SHOP GRID (IMAGES)
    ============================ */
 .tab-section { display: none; flex-direction: column; height: 100%; width: 100%; }
 .tab-section.active { display: flex; }
 .scrollable-section { overflow-y: auto; overflow-x: hidden; }
 
-.view-container { 
-    padding: 20px; 
-    animation: slideIn 0.3s ease-out;
-}
+.view-container { padding: 20px; animation: slideIn 0.3s ease-out; }
 @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
 .hero-banner { margin-bottom: 24px; text-align: left; }
@@ -105,66 +101,43 @@ html, body {
 .sub-header h2 { margin: 0; font-size: 22px; font-weight: 700; }
 .cat-desc-text { color: var(--text-muted); font-size: 13px; margin: 0 0 20px 0; padding-left: 36px; }
 
-.grid-2-col {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
-}
-@media (min-width: 500px) {
-    .grid-2-col { grid-template-columns: repeat(3, 1fr); }
-}
+.grid-2-col { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+@media (min-width: 500px) { .grid-2-col { grid-template-columns: repeat(3, 1fr); } }
 
 .shop-footer-note { text-align: center; color: #444; font-size: 10px; padding: 30px; }
 
-/* --- CARDS (IMAGE BASED) --- */
+/* SHOP CARDS */
 .shop-card {
-    background: var(--bg-surface);
-    border-radius: var(--radius-lg);
-    overflow: hidden;
-    position: relative;
-    cursor: pointer;
+    background: var(--bg-surface); border-radius: var(--radius-lg);
+    overflow: hidden; position: relative; cursor: pointer;
     border: 1px solid rgba(255,255,255,0.05);
-    transition: transform 0.2s, box-shadow 0.2s;
-    display: flex; flex-direction: column;
+    transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column;
 }
 .shop-card:active { transform: scale(0.97); }
 
-/* Category Specifics */
-.card-img-wrapper {
-    width: 100%;
-    aspect-ratio: 1 / 1; 
-    position: relative;
-}
+.card-img-wrapper { width: 100%; aspect-ratio: 1 / 1; position: relative; }
 .shop-card.category-card .card-img-wrapper::after {
     content: ''; position: absolute; inset: 0;
     background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
 }
-.shop-card-img {
-    width: 100%; height: 100%;
-    object-fit: cover;
-    background: #202226; 
-}
+.shop-card-img { width: 100%; height: 100%; object-fit: cover; background: #202226; }
 .card-overlay-title {
     position: absolute; bottom: 12px; left: 12px; right: 12px;
     z-index: 2; color: #fff; font-weight: 700; font-size: 14px;
     text-shadow: 0 2px 4px rgba(0,0,0,0.8);
 }
 
-/* Product Specifics */
-.shop-card.product-card { aspect-ratio: auto; }
 .shop-card.product-card .card-img-wrapper { aspect-ratio: 4 / 3; }
 .product-card-details { padding: 10px; display: flex; flex-direction: column; gap: 4px; }
 .prod-name { font-size: 13px; font-weight: 600; color: #fff; line-height: 1.3; }
 .prod-price { font-size: 12px; color: var(--accent); font-weight: 700; }
 .btn-buy-mini {
-    margin-top: 6px;
-    background: rgba(255,255,255,0.05); color: var(--text-secondary);
-    border: none; border-radius: 4px; padding: 4px; font-size: 10px;
-    width: 100%; text-align: center;
+    margin-top: 6px; background: rgba(255,255,255,0.05); color: var(--text-secondary);
+    border: none; border-radius: 4px; padding: 4px; font-size: 10px; width: 100%; text-align: center;
 }
 
 /* ============================
-   CHAT (OLD CODE RESTORED & IMPROVED)
+   CHAT (ROBUST STYLE)
    ============================ */
 .chat-mode { height: 100%; overflow: hidden; }
 .chat-layout { display: flex; width: 100%; height: 100%; position: relative; }
@@ -177,7 +150,7 @@ html, body {
 }
 .tab-section.tickets-drawer-open .chat-sidebar { transform: translateX(0); box-shadow: 10px 0 30px rgba(0,0,0,0.5); }
 
-.chat-item { padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,0.03); cursor: pointer; flex-shrink: 0; transition: background 0.2s; }
+.chat-item { padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,0.03); cursor: pointer; flex-shrink: 0; }
 .chat-item:hover { background: rgba(255,255,255,0.03); }
 .chat-item.active { background: rgba(255, 24, 67, 0.08); border-left: 3px solid var(--accent); }
 .chat-item-header-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
@@ -205,10 +178,10 @@ html, body {
 .chat-placeholder { margin: auto; text-align: center; color: var(--text-muted); opacity: 0.5; }
 .chat-placeholder .icon { font-size: 40px; margin-bottom: 10px; display: block; filter: grayscale(100%); }
 
-/* Messages */
+/* MESSAGES */
 .msg-row { 
-  display: flex; gap: 12px; margin-bottom: 16px; 
-  animation: fadeIn 0.2s ease-out; flex-shrink: 0; 
+  display: flex; gap: 12px; margin-bottom: 16px; flex-shrink: 0; 
+  animation: fadeIn 0.2s ease-out; 
 }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -241,7 +214,7 @@ html, body {
 }
 .btn-reply-mini:hover { opacity: 1; border-color: var(--accent); color: var(--accent); }
 
-/* Chat Footer & Input */
+/* CHAT FOOTER & INPUT */
 .chat-footer {
   padding: 12px; background: var(--bg-surface);
   border-top: 1px solid rgba(255,255,255,0.05);
@@ -279,15 +252,18 @@ html, body {
 .tab-section.tickets-drawer-open .tickets-backdrop { opacity: 1; pointer-events: auto; }
 
 /* ============================
-   BUTOANE NOI & FIXATE
+   BUTOANE & MODALE
    ============================ */
 .btn-sm { padding: 4px 10px; font-size: 11px; border-radius: 6px; cursor: pointer; font-weight: 600; text-transform: uppercase; }
-.btn-danger-ghost { background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); transition: 0.2s; }
+/* Stilul care lipsea pentru butonul Inchide */
+.btn-danger-ghost { 
+    background: rgba(239, 68, 68, 0.1); 
+    color: var(--danger); 
+    border: 1px solid rgba(239, 68, 68, 0.3); 
+    transition: 0.2s; 
+}
 .btn-danger-ghost:hover { background: rgba(239, 68, 68, 0.2); border-color: var(--danger); }
 
-/* ============================
-   MODAL IMAGE & LAYOUT
-   ============================ */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); display: none; align-items: center; justify-content: center; z-index: 100; animation: fadeInModal 0.2s ease-out; }
 @keyframes fadeInModal { from { opacity: 0; } to { opacity: 1; } }
 .modal-card { width: 90%; max-width: 380px; background: #1a1c20; border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-xl); padding: 0; position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.6); overflow: hidden; display: flex; flex-direction: column; max-height: 90vh; }
