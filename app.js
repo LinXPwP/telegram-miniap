@@ -457,9 +457,15 @@ function initUserApp() {
       viewCategories.classList.remove("active-view");
       viewProducts.classList.add("active-view");
       
-      // Când intrăm într-o categorie, înlocuim logo-ul cu numele categoriei
-      headerTitle.textContent = category.name;
+      // MODIFICARE: Ascundem logo-ul principal
+      headerTitle.style.display = "none";
+      
+      // MODIFICARE: Afișăm butonul de back și îi punem textul
       shopBackBtn.style.display = "flex";
+      shopBackBtn.innerHTML = `
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        <span class="back-btn-text">${category.name}</span>
+      `;
       
       renderProductsGrid(category.products || []);
   }
@@ -503,13 +509,9 @@ function initUserApp() {
       viewProducts.classList.remove("active-view");
       viewCategories.classList.add("active-view");
       
-      // REVENIM LA LOGO (FIXED: ACUM PUNE ȘI TEXTUL ÎNAPOI)
-      headerTitle.innerHTML = `
-        <img src="logo.png" class="header-logo-img" alt="R">
-        <span class="brand-text-suffix">3DG3N</span>
-      `;
-      
-      shopBackBtn.style.display = "none";
+      // REVENIM LA STAREA INITIALA:
+      shopBackBtn.style.display = "none"; // Ascundem butonul
+      headerTitle.style.display = "flex"; // Reafișăm logo-ul
   }
 
   if (shopBackBtn) shopBackBtn.onclick = goBackToCategories;
