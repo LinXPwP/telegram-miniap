@@ -76,7 +76,7 @@ html, body {
 }
 /* Imaginea logo-ului */
 .header-logo-img {
-    height: 70px; /* Înălțime fixă pentru a se încadra bine */
+    height: 60px; /* Înălțime fixă pentru a se încadra bine */
     width: auto;
     object-fit: contain;
     display: block;
