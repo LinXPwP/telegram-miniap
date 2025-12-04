@@ -457,6 +457,7 @@ function initUserApp() {
       viewCategories.classList.remove("active-view");
       viewProducts.classList.add("active-view");
       
+      // Când intrăm într-o categorie, înlocuim logo-ul cu numele categoriei
       headerTitle.textContent = category.name;
       shopBackBtn.style.display = "flex";
       
@@ -501,7 +502,11 @@ function initUserApp() {
   function goBackToCategories() {
       viewProducts.classList.remove("active-view");
       viewCategories.classList.add("active-view");
-      headerTitle.textContent = "SHOP";
+      
+      // REVENIM LA LOGO
+      // Aici înlocuim textul cu tag-ul <img>
+      headerTitle.innerHTML = '<img src="logo.png" class="header-logo-img" alt="RedGen">';
+      
       shopBackBtn.style.display = "none";
   }
 
