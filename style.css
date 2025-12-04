@@ -56,46 +56,45 @@ html, body {
 /* ============================
    HEADER
    ============================ */
-/* În style.css */
 .header-bar {
   display: flex; justify-content: space-between; align-items: center;
-  
-  /* SCHIMBĂ AICI: */
-  /* 8px sus/jos și doar 4px stânga/dreapta */
-  padding: 8px 8px; 
-
+  padding: 8px 12px; /* Padding echilibrat */
   background: rgba(14, 15, 17, 0.95);
   border-bottom: 1px solid rgba(255,255,255,0.05);
   z-index: 10; flex-shrink: 0; backdrop-filter: blur(10px);
 }
-/* În style.css */
 .header-left { 
     display: flex; 
     align-items: center; 
-    gap: 0px; /* Pune 0px aici ca să fii sigur că nu împinge logo-ul */
+    gap: 0px; 
 }
 
-/* MODIFICARE PENTRU LOGO */
-/* În style.css */
+/* CONTAINER LOGO (IMG + TEXT) */
 .brand-logo { 
     display: flex;
     align-items: center;
-    font-weight: 800; 
-    font-size: 18px; 
-    letter-spacing: -0.5px; 
-    color: var(--text-primary); 
     transition: 0.2s; 
-    
-    /* ADAUGĂ/MODIFICĂ AICI: */
-    /* Cu cât numărul e mai mare (cu minus), cu atât se duce mai în stânga */
-    margin-left: -10px; 
+    margin-left: -4px; /* Trage ușor spre stânga */
+    gap: 0px; /* Să fie lipite vizual */
 }
-/* Imaginea logo-ului */
+
+/* IMAGINEA "R" */
 .header-logo-img {
-    height: 60px; /* Înălțime fixă pentru a se încadra bine */
+    height: 42px; /* Dimensiune optimă lângă text */
     width: auto;
     object-fit: contain;
     display: block;
+}
+
+/* TEXTUL "3DG3N" */
+.brand-text-suffix {
+    font-family: 'Inter', sans-serif;
+    font-weight: 800;
+    font-size: 20px; /* Dimensiune text */
+    color: var(--text-primary);
+    letter-spacing: 0.5px;
+    margin-left: -2px; /* Tragem textul mai aproape de imagine */
+    padding-top: 2px; /* Ajustare optică pe verticală */
 }
 
 .btn-icon-back {
