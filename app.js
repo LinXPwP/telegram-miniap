@@ -1,4 +1,4 @@
-// app.js – Versiune User FINALĂ (Fixed Render Header Error + Toate funcțiile)
+// app.js – Versiune User FINALĂ (Fixed Flicker + Style + Reply)
 
 const API_URL = "https://api.redgen.vip/api"; 
 const PLACEHOLDER_IMG = "https://placehold.co/400x300/202226/FFF?text=No+Image";
@@ -7,11 +7,10 @@ const PLACEHOLDER_IMG = "https://placehold.co/400x300/202226/FFF?text=No+Image";
    1. HELPER – SMART POLLING
    ============================ */
 function createSmartPoll(fetchFn, isEnabledFn, options = {}) {
-  const minInterval = options.minInterval ?? 3000;
-  const maxInterval = options.maxInterval ?? 8000;
-  const backoffStep = options.backoffStep ?? 2000;
-  const idleThreshold = options.idleThreshold ?? 4;
-  let timeoutId = null, active = false, currentInterval = minInterval, idleCount = 0, lastSnapshot = null;
+  const minInterval = 3000;
+  const maxInterval = 8000;
+  const backoffStep = 2000;
+  let timeoutId = null, active = false, currentInterval = minInterval, idleCount = 0;
 
   async function tick() {
     if (!active) return;
@@ -20,15 +19,14 @@ function createSmartPoll(fetchFn, isEnabledFn, options = {}) {
       const data = await fetchFn();
       if (!active) return;
       if (data !== undefined) {
-        const snap = JSON.stringify(data);
-        if (lastSnapshot === null || snap !== lastSnapshot) {
-          lastSnapshot = snap; idleCount = 0; currentInterval = minInterval;
-        } else {
-          idleCount++;
-          if (idleCount >= idleThreshold) currentInterval = Math.min(maxInterval, currentInterval + backoffStep);
-        }
+         // Logic simplu: daca primim date, resetam intervalul
+         idleCount = 0;
+         currentInterval = minInterval;
       }
-    } catch (e) { console.error("[Poll Error]", e); currentInterval = Math.min(maxInterval, currentInterval + backoffStep); }
+    } catch (e) { 
+        console.error("[Poll Error]", e); 
+        currentInterval = Math.min(maxInterval, currentInterval + backoffStep); 
+    }
     schedule(currentInterval);
   }
   function schedule(delay) { if (!active) return; if (timeoutId) clearTimeout(timeoutId); timeoutId = setTimeout(tick, delay); }
@@ -88,8 +86,6 @@ function initUserApp() {
   // DOM Elements
   const creditsValueEl = document.getElementById("creditsValue");
   const userLineEl = document.getElementById("userLine");
-  
-  // Shop Views
   const categoriesView = document.getElementById("categoriesView");
   const categoriesGrid = document.getElementById("categoriesGrid");
   const productsView = document.getElementById("productsView");
@@ -97,8 +93,6 @@ function initUserApp() {
   const currentCatTitle = document.getElementById("currentCatTitle");
   const currentCatDesc = document.getElementById("currentCatDesc");
   const backToCatsBtn = document.getElementById("backToCatsBtn");
-
-  // Chat Elements
   const chatListEl = document.getElementById("chatList");
   const ticketTitleEl = document.getElementById("ticketTitle");
   const chatMessagesEl = document.getElementById("chatMessages");
@@ -112,13 +106,9 @@ function initUserApp() {
   const shopHeaderEl = document.getElementById("shopHeader");
   const goToTicketsBtn = document.getElementById("goToTicketsBtn");
   const backToShopBtn = document.getElementById("backToShopBtn");
-  
-  // Reply Elements
   const userModeBar = document.getElementById("userModeBar");
   const cancelReplyBtn = document.getElementById("cancelReplyBtn");
   let userMode = { type: null, messageId: null };
-
-  // Modals
   const productPanelEl = document.getElementById("productPanel");
   const panelImageEl = document.getElementById("panelImage");
   const panelNameEl = document.getElementById("panelName");
@@ -135,15 +125,15 @@ function initUserApp() {
 
   // Navigation
   function showShopTab() {
-    if(shopTabEl) shopTabEl.classList.add("active");
-    if(ticketsTabEl) ticketsTabEl.classList.remove("active");
-    if(shopHeaderEl) shopHeaderEl.style.display = "flex";
+    shopTabEl.classList.add("active");
+    ticketsTabEl.classList.remove("active");
+    shopHeaderEl.style.display = "flex";
     userTicketsPoller.stop();
   }
   function showTicketsTab() {
-    if(shopTabEl) shopTabEl.classList.remove("active");
-    if(ticketsTabEl) ticketsTabEl.classList.add("active");
-    if(shopHeaderEl) shopHeaderEl.style.display = "none";
+    shopTabEl.classList.remove("active");
+    ticketsTabEl.classList.add("active");
+    shopHeaderEl.style.display = "none";
     bumpUserActive(); userTicketsPoller.start();
   }
   if (goToTicketsBtn) goToTicketsBtn.addEventListener("click", showTicketsTab);
@@ -156,15 +146,11 @@ function initUserApp() {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     }).then(async (r) => {
-        if (!r.ok) { 
-            const txt = await r.text(); 
-            throw new Error(`HTTP ${r.status}: ${txt}`); 
-        }
+        if (!r.ok) { const txt = await r.text(); throw new Error(`HTTP ${r.status}: ${txt}`); }
         return r.json();
     });
   }
 
-  // --- HEADER RENDER (FUNCȚIA CARE LIPSEA) ---
   function renderUserHeader() {
     if (!CURRENT_USER) return;
     if (creditsValueEl) creditsValueEl.textContent = CURRENT_USER.credits;
@@ -172,7 +158,7 @@ function initUserApp() {
     if (userLineEl) userLineEl.innerHTML = `Utilizator: <b>${name}</b>`;
   }
 
-  // --- RENDER SHOP (Imagini & Categorii) ---
+  // --- RENDER SHOP ---
   function renderCategories(shop) {
       if(!categoriesGrid) return;
       categoriesGrid.innerHTML = "";
@@ -224,11 +210,8 @@ function initUserApp() {
     panelNameEl.textContent = prod.name;
     panelDescEl.textContent = prod.description || "Fără descriere.";
     panelPriceEl.textContent = `${prod.price} CRD`;
-    
-    // Fix imagine modal
     panelImageEl.style.display = 'block'; 
     panelImageEl.src = (prod.image && prod.image.trim() !== "") ? prod.image : PLACEHOLDER_IMG;
-    
     const min = prod.min_qty || 1; const max = prod.max_qty || 10;
     panelQtyEl.min = min; panelQtyEl.max = max; panelQtyEl.value = min;
     panelQtyRangeEl.textContent = `(max ${max})`;
@@ -261,7 +244,7 @@ function initUserApp() {
   }
   if(panelBuyBtn) panelBuyBtn.onclick = buySelectedProduct;
 
-  // --- CHAT LOGIC (RESTORED FEATURES) ---
+  // --- CHAT LOGIC (SMART UPDATE - NO FLICKER) ---
   function getUnread(t) {
       if(!t.messages) return 0;
       const lastRead = t.last_read_user || "";
@@ -278,6 +261,7 @@ function initUserApp() {
           chatListEl.innerHTML = '<div style="padding:20px; text-align:center; color:#555;">Nu ai tichete.</div>';
           return;
       }
+      // Sterge mesaj "Nu ai tichete"
       const emptyMsg = chatListEl.querySelector('div[style*="text-align:center"]');
       if (emptyMsg) emptyMsg.remove();
 
@@ -294,6 +278,7 @@ function initUserApp() {
           const stClass = t.status==='open' ? 'open' : 'closed';
           const title = t.product_name || "Comandă";
           
+          // Reconstruim HTML-ul pentru a compara
           const innerHTML = `
              <div class="chat-item-header-row">
                 <div class="chat-item-title">${title}</div>
@@ -310,12 +295,13 @@ function initUserApp() {
               item.innerHTML = innerHTML;
               chatListEl.appendChild(item);
           } else {
+              // DOM UPDATE DOAR DACA DIFERA
               if (item.innerHTML !== innerHTML) item.innerHTML = innerHTML;
           }
-          if (isSelected) item.classList.add("active");
-          else item.classList.remove("active");
+          if (isSelected) item.classList.add("active"); else item.classList.remove("active");
       });
 
+      // Cleanup
       Array.from(chatListEl.children).forEach(child => {
           const id = child.getAttribute("data-ticket-id");
           if (id && !processedIds.has(id)) child.remove();
@@ -325,6 +311,7 @@ function initUserApp() {
   function selectTicketUser(tid) {
       SELECTED_TICKET_ID = tid;
       renderTicketsListUser();
+      
       const t = CURRENT_TICKETS.find(x => x.id === tid);
       if(!t) { chatMessagesEl.innerHTML=""; return; }
       
@@ -332,6 +319,7 @@ function initUserApp() {
       if(t.messages.length) t.last_read_user = t.messages[t.messages.length-1].id;
 
       ticketTitleEl.textContent = `${t.product_name} #${t.id}`;
+      // Butonul Inchide
       if(userTicketCloseBtn) userTicketCloseBtn.style.display = t.status==='closed' ? 'none' : 'block';
       
       chatInputEl.disabled = (t.status === 'closed');
@@ -356,6 +344,7 @@ function initUserApp() {
   }
   if(cancelReplyBtn) cancelReplyBtn.onclick = clearUserReplyMode;
 
+  // --- SMART MESSAGES RENDER ---
   function renderChatMessagesSmart(t) {
       if(!t.messages || t.messages.length === 0) {
            chatMessagesEl.innerHTML = `<div class="chat-placeholder"><p>Începe conversația...</p></div>`;
@@ -364,9 +353,7 @@ function initUserApp() {
       const placeholder = chatMessagesEl.querySelector('.chat-placeholder');
       if(placeholder) placeholder.remove();
 
-      // Find msg map for replies
-      const msgMap = {};
-      t.messages.forEach(m => msgMap[m.id] = m);
+      const msgMap = {}; t.messages.forEach(m => msgMap[m.id] = m);
 
       // Seen Logic
       let lastAdminMsgId = null;
@@ -388,14 +375,12 @@ function initUserApp() {
            const clsAdmin = m.from==='admin' ? 'msg-username--admin' : '';
            const initial = senderName[0].toUpperCase();
            
-           // Reply HTML
            let replyHtml = '';
            if(m.reply_to && msgMap[m.reply_to]) {
                const orig = msgMap[m.reply_to];
                replyHtml = `<div class="msg-reply-preview"><strong>${orig.sender||"User"}</strong> ${orig.text.slice(0,40)}</div>`;
            }
 
-           // Reply Button (Only if Open)
            let replyBtn = '';
            if(t.status === 'open' && !m.deleted) {
                replyBtn = `<button class="btn-reply-mini">↩</button>`;
@@ -424,21 +409,21 @@ function initUserApp() {
                row.setAttribute("data-id", m.id);
                row.innerHTML = innerHTML;
                
-               // Attach Reply Event
+               // Reply Event
                const rBtn = row.querySelector('.btn-reply-mini');
                if(rBtn) rBtn.onclick = (e) => { e.stopPropagation(); setUserReplyMode(m); };
                
                chatMessagesEl.appendChild(row);
            } else {
+               // Update only if text changed (rare)
                if(row.innerHTML !== innerHTML) {
                    row.innerHTML = innerHTML;
-                   // Re-attach Reply Event on update
                    const rBtn = row.querySelector('.btn-reply-mini');
                    if(rBtn) rBtn.onclick = (e) => { e.stopPropagation(); setUserReplyMode(m); };
                }
            }
 
-           // Seen Label
+           // Seen Label Handling
            const existingSeen = row.querySelector('.seen-footer');
            if(existingSeen) existingSeen.remove();
            if(showSeenLabel && m.id === lastAdminMsgId) {
@@ -469,6 +454,10 @@ function initUserApp() {
       } catch(e) {}
   }
   if(chatSendBtn) chatSendBtn.onclick = sendChatMessage;
+  // Enter key support
+  if(chatInputEl) chatInputEl.onkeydown = (e) => {
+      if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
+  };
 
   // Drawer
   function closeTicketsDrawer() { if(ticketsTabEl) ticketsTabEl.classList.remove("tickets-drawer-open"); }
@@ -504,7 +493,7 @@ function initUserApp() {
             const res = await apiCall("user_get_tickets");
             if(res.ok) {
                 const newTickets = res.tickets || [];
-                // Simple Merge: if local is 'closed' and server 'open', keep 'closed' (optimistic UI)
+                // Merge logic for optimistic updates
                 newTickets.forEach(nt => {
                     const local = CURRENT_TICKETS.find(lt => lt.id === nt.id);
                     if(local && local.status === 'closed') nt.status = 'closed';
