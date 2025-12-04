@@ -1,6 +1,6 @@
-// app.js – Fixed: Insufficient Funds Handling & Clean UI + ANTI-SPAM LOGIC
+// app.js – SECURIZED: Uses Telegram initData for Auth + Anti-Spam + Smart Polling
 
-// ⚠️ ATENȚIE: Dacă testezi local, pune: "http://127.0.0.1:8140/"
+// ⚠️ URL-ul către Cloudflare Worker sau Serverul tău
 const API_URL = "https://api.redgen.vip/";
 
 // GLOBAL: Urmărim ultima interacțiune a utilizatorului pentru Anti-Spam
@@ -18,7 +18,7 @@ function createSmartPoll(fetchFn, isEnabledFn) {
   let active = false;
   let isRunning = false;
 
-  // Setări intervale (milisecunde) - Optimizat pentru limita de 100k
+  // Setări intervale (milisecunde)
   const INTERVAL_ACTIVE = 3000;      // 3 secunde (când lucrezi/scrii)
   const INTERVAL_IDLE = 10000;       // 10 secunde (când te uiți la ecran dar nu miști mouse-ul)
   const INTERVAL_BACKGROUND = 60000; // 60 secunde (când ești în alt tab/aplicație)
@@ -31,14 +31,12 @@ function createSmartPoll(fetchFn, isEnabledFn) {
     let nextDelay = INTERVAL_ACTIVE;
 
     if (document.hidden) {
-        // Dacă e în alt tab -> mod Economic Maxim
         nextDelay = INTERVAL_BACKGROUND;
     } else if (Date.now() - LAST_USER_ACTION > IDLE_THRESHOLD) {
-        // Dacă e pe pagină dar nu face nimic -> mod Idle
         nextDelay = INTERVAL_IDLE;
     }
 
-    // 2. Verificăm dacă polling-ul e permis logic (ex: suntem pe tab-ul corect)
+    // 2. Verificăm dacă polling-ul e permis logic
     if (isEnabledFn && !isEnabledFn()) {
         schedule(INTERVAL_BACKGROUND);
         return;
@@ -48,7 +46,6 @@ function createSmartPoll(fetchFn, isEnabledFn) {
         isRunning = true;
         await fetchFn();
     } catch (e) {
-        // În caz de eroare, încetinim puțin pentru a nu spama serverul
         nextDelay = Math.max(nextDelay, 10000);
     } finally {
         isRunning = false;
@@ -62,7 +59,6 @@ function createSmartPoll(fetchFn, isEnabledFn) {
     timeoutId = setTimeout(tick, delay);
   }
 
-  // Ascultăm când utilizatorul revine pe tab pentru refresh instant
   document.addEventListener("visibilitychange", () => {
       if (!document.hidden && active && !isRunning) {
           if (isEnabledFn && isEnabledFn()) {
@@ -76,7 +72,7 @@ function createSmartPoll(fetchFn, isEnabledFn) {
     start: () => { 
         if (!active) { 
             active = true; 
-            updateActivity(); // Reset timer la pornire
+            updateActivity(); 
             tick(); 
         } 
     },
@@ -86,7 +82,6 @@ function createSmartPoll(fetchFn, isEnabledFn) {
         timeoutId = null;
     },
     bumpFast: () => { 
-        // Forțează un refresh rapid (ex: după ce trimiți un mesaj)
         updateActivity();
         if (active) { 
             if (timeoutId) clearTimeout(timeoutId); 
@@ -138,7 +133,6 @@ function smartScrollToBottom(container, force = false) {
   }
 }
 
-// === IMAGE HELPER ===
 function getImageUrl(imgStr) {
     if (!imgStr || imgStr.trim() === "") return null;
     return imgStr;
@@ -287,13 +281,15 @@ function scrollToMessageElement(container, messageId) {
 
 function initUserApp() {
   const tg = window.Telegram?.WebApp;
+  
+  // 🔒 SECURITY CRITICAL: Obținem initData pentru autentificare
+  const TG_INIT_DATA = tg?.initData || "";
 
   let CURRENT_USER = null;
   let CURRENT_SHOP = null;
   let CURRENT_TICKETS = [];
   let SELECTED_TICKET_ID = null;
 
-  // Funcție wrapper pentru a marca activitatea (pentru backwards compatibility)
   function bumpUserActive() {
     updateActivity();
   }
@@ -422,25 +418,31 @@ function initUserApp() {
   function closeTicketsDrawer() { if (ticketsTabEl) ticketsTabEl.classList.remove("tickets-drawer-open"); }
   function toggleTicketsDrawer() { if (ticketsTabEl) ticketsTabEl.classList.toggle("tickets-drawer-open"); }
 
-  /* ===== API Call (MODIFICAT PENTRU FIXARE ERORI 400) ===== */
+  /* ===== API Call (SECURIZAT) ===== */
   async function apiCall(action, extraPayload = {}) {
-    const payload = { action, user: CURRENT_USER, ...extraPayload };
+    // 🔒 SECURITATE: Trimitem initData în loc de user obiect
+    const payload = { 
+        action, 
+        initData: TG_INIT_DATA, // Backend-ul va verifica asta
+        ...extraPayload 
+    };
     
-    // Nu mai folosim blocul try-catch agresiv aici.
-    // Lăsăm eroarea să fie gestionată în funcție.
     try {
         const r = await fetch(API_URL, {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
 
-        // Backend-ul Flask returnează JSON chiar și la eroare 400.
-        // Așa că citim JSON-ul indiferent de status.
+        // Backend-ul va returna 401 dacă initData e invalid sau lipsește
+        if (r.status === 401) {
+            console.error("Auth Failed");
+            return { ok: false, error: "auth_failed" };
+        }
+
         const data = await r.json();
         return data;
         
     } catch (err) {
-        // Aici ajungem doar dacă serverul e picat complet sau nu e net
         console.error("Network fatal:", err);
         throw new Error("Conexiune eșuată");
     }
@@ -494,10 +496,8 @@ function initUserApp() {
       viewCategories.classList.remove("active-view");
       viewProducts.classList.add("active-view");
       
-      // MODIFICARE: Ascundem logo-ul principal
       headerTitle.style.display = "none";
       
-      // MODIFICARE: Afișăm butonul de back și îi punem textul
       shopBackBtn.style.display = "flex";
       shopBackBtn.innerHTML = `
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
@@ -546,14 +546,13 @@ function initUserApp() {
       viewProducts.classList.remove("active-view");
       viewCategories.classList.add("active-view");
       
-      // REVENIM LA STAREA INITIALA:
-      shopBackBtn.style.display = "none"; // Ascundem butonul
-      headerTitle.style.display = "flex"; // Reafișăm logo-ul
+      shopBackBtn.style.display = "none"; 
+      headerTitle.style.display = "flex"; 
   }
 
   if (shopBackBtn) shopBackBtn.onclick = goBackToCategories;
 
-  /* ===== Modal Logic (FIXED FOR CREDITS ERROR) ===== */
+  /* ===== Modal Logic ===== */
   function openProductPanel(prod) {
     SELECTED_PRODUCT = prod;
     panelStatusEl.textContent = ""; panelStatusEl.className = "status-message";
@@ -561,7 +560,6 @@ function initUserApp() {
     panelDescEl.textContent = prod.description || "";
     panelPriceEl.textContent = `${prod.price} CRD`;
     
-    // Imagine in modal
     const imgUrl = getImageUrl(prod.image);
     if (imgUrl) {
         panelImgEl.src = imgUrl;
@@ -589,24 +587,20 @@ function initUserApp() {
     panelStatusEl.className = "status-message";
     
     try {
-      // Apelăm API-ul. Funcția apiCall acum returnează JSON-ul chiar și la eroare (ok: false)
       const res = await apiCall("buy_product", { product_id: prod.id, qty: qty });
       
-      // VERIFICĂM DACĂ SERVERUL A DAT O EROARE LOGICĂ (ex: nu sunt credite)
       if (!res.ok) {
         panelStatusEl.className = "status-message status-error";
-        
-        // Aici detectăm exact eroarea de la backend
         if (res.error === "not_enough_credits") {
             panelStatusEl.textContent = "Fonduri insuficiente!";
+        } else if (res.error === "auth_failed") {
+            panelStatusEl.textContent = "Eroare autentificare!";
         } else {
-            // Alte erori (ex: produs inexistent)
             panelStatusEl.textContent = "Eroare: " + res.error;
         }
         return;
       }
       
-      // SUCCES
       CURRENT_USER.credits = res.new_balance; 
       creditsValueEl.textContent = CURRENT_USER.credits;
       
@@ -623,7 +617,6 @@ function initUserApp() {
       userTicketsPoller.bumpFast();
       
     } catch (err) {
-      // Aici ajungem doar la erori reale de rețea (ex: picat netul)
       console.error(err); 
       panelStatusEl.className = "status-message status-error"; 
       panelStatusEl.textContent = "Eroare rețea.";
@@ -766,11 +759,15 @@ function initUserApp() {
     chatInputEl.value = ""; clearUserMode();
     try {
       const res = await apiCall("user_send_message", { ticket_id: SELECTED_TICKET_ID, text, reply_to });
-      if (!res.ok && res.error === "ticket_closed") {
-          const updated = CURRENT_TICKETS.find(x => x.id === SELECTED_TICKET_ID);
-          if(updated) updated.status = "closed";
-          updateUserChatState(updated);
-          return;
+      if (!res.ok) {
+        if(res.error === "ticket_closed") {
+            const updated = CURRENT_TICKETS.find(x => x.id === SELECTED_TICKET_ID);
+            if(updated) updated.status = "closed";
+            updateUserChatState(updated);
+        } else if (res.error === "auth_failed") {
+            alert("Sesiune expirată.");
+        }
+        return;
       }
       if(res.ticket) {
           const idx = CURRENT_TICKETS.findIndex(x => x.id === res.ticket.id);
@@ -876,8 +873,6 @@ function initUserApp() {
   }
 
   // --- POLLED CREATION ---
-  // Aici legăm logica de verificare doar de existența tab-ului
-  // Deoarece intervalul (active/idle) e gestionat intern de createSmartPoll
   const userTicketsPoller = createSmartPoll(
     pollTicketsUserCore,
     () => isTicketsTabActive()
@@ -885,31 +880,45 @@ function initUserApp() {
 
   /* ===== INIT APP ===== */
   async function initApp() {
-    if (!tg) { userLineEl.textContent = "Deschide din Telegram."; userLineEl.style.display = "block"; return; }
+    if (!tg) { 
+        userLineEl.textContent = "Deschide din Telegram."; 
+        userLineEl.style.display = "block"; 
+        return; 
+    }
     tg.ready(); tg.expand();
 
-    const user = tg.initDataUnsafe?.user;
-    if (!user) {
-       userLineEl.textContent = "Lipsă date user."; userLineEl.style.display = "block"; return;
-    }
+    // 1. Luăm datele doar pentru UI (nesigur, doar vizual)
+    const unsafeUser = tg.initDataUnsafe?.user;
     
+    // Setăm datele locale pentru a avea UI rapid
     CURRENT_USER = { 
-        id: user.id, 
-        username: user.username || null,
-        first_name: user.first_name || null,
-        last_name: user.last_name || null,
+        id: unsafeUser?.id, 
+        username: unsafeUser?.username || "user",
+        first_name: unsafeUser?.first_name,
         credits: 0 
     };
+    
+    renderUserHeader(); // Afișăm userul imediat
 
+    // 2. Apelăm API-ul (Secure Init)
     try {
+      // Backend-ul verifică initData și ne dă creditele reale
       const res = await apiCall("init", {});
-      if (!res.ok) throw new Error("Init failed");
+      
+      if (!res.ok) {
+          if (res.error === "auth_failed") {
+            userLineEl.innerHTML = "<span style='color:red'>Autentificare eșuată!</span>";
+            return;
+          }
+          throw new Error("Init failed: " + res.error);
+      }
 
+      // 3. Actualizăm cu datele reale de pe server
       CURRENT_USER.credits = res.user.credits;
       CURRENT_SHOP = res.shop;
       CURRENT_TICKETS = res.tickets || [];
 
-      renderUserHeader(); 
+      renderUserHeader(); // Actualizăm cu creditele reale
       renderCategoriesGrid(CURRENT_SHOP);
       renderTicketsListUser();
       
