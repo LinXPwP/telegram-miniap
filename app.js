@@ -1,6 +1,6 @@
 // app.js – Versiune User COMPLETĂ (Imagini Shop + Chat Vechi cu Reply & Seen Fixat)
 
-const API_URL = "https://api.redgen.vip/";
+const API_URL = "https://api.redgen.vip/api";
 const PLACEHOLDER_IMG = "https://placehold.co/400x300/202226/FFF?text=No+Image";
 
 /* ============================
