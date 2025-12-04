@@ -64,8 +64,23 @@ html, body {
 }
 .header-left { display: flex; align-items: center; gap: 10px; }
 
-.brand-logo { font-weight: 800; font-size: 18px; letter-spacing: -0.5px; color: var(--text-primary); transition: 0.2s; }
-.brand-logo::after { content: '.'; color: var(--accent); }
+/* MODIFICARE PENTRU LOGO */
+.brand-logo { 
+    display: flex;
+    align-items: center;
+    font-weight: 800; 
+    font-size: 18px; 
+    letter-spacing: -0.5px; 
+    color: var(--text-primary); 
+    transition: 0.2s; 
+}
+/* Imaginea logo-ului */
+.header-logo-img {
+    height: 32px; /* Înălțime fixă pentru a se încadra bine */
+    width: auto;
+    object-fit: contain;
+    display: block;
+}
 
 .btn-icon-back {
   background: transparent; border: none; color: var(--text-primary);
