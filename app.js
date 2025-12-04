@@ -1,5 +1,6 @@
-// app.js – Versiune Visual Shop & Images
+// app.js – Fix Network Error & Close Button
 
+// IMPORTANT: Dacă lucrezi local, schimbă în "http://127.0.0.1:8140/"
 const API_URL = "https://api.redgen.vip/";
 
 /* ============================
@@ -102,7 +103,6 @@ function smartScrollToBottom(container, force = false) {
 
 // === IMAGE HELPER ===
 function getImageUrl(imgStr) {
-    // Dacă e gol, returnează null (va fi gestionat de UI cu placeholder)
     if (!imgStr || imgStr.trim() === "") return null;
     return imgStr;
 }
@@ -198,7 +198,6 @@ function renderDiscordMessages(messages, options) {
         }
     }
 
-    // Seen Footer
     const existingSeen = row.querySelector('.seen-footer');
     if (existingSeen) existingSeen.remove();
 
@@ -306,7 +305,6 @@ function initUserApp() {
   const backToShopBtn = document.getElementById("backToShopBtn");
   const chatInputContainer = document.querySelector(".chat-input");
   
-  // -- CONFIRMATION MODAL ELEMENTS --
   const confirmModal = document.getElementById("confirmActionModal");
   const confirmOkBtn = document.getElementById("confirmOkBtn");
   const confirmCancelBtn = document.getElementById("confirmCancelBtn");
@@ -418,7 +416,6 @@ function initUserApp() {
      NEW SHOP RENDER LOGIC
      ============================ */
   
-  // 1. Render Categories (Grid with Images)
   function renderCategoriesGrid(shop) {
     categoriesGrid.innerHTML = "";
     if (!shop || !shop.categories) return;
@@ -430,7 +427,7 @@ function initUserApp() {
         const imgUrl = getImageUrl(cat.image);
         const imgHtml = imgUrl 
              ? `<img src="${imgUrl}" class="card-img" alt="${cat.name}">` 
-             : `<div class="img-placeholder">📁</div>`; // Placeholder Icon
+             : `<div class="img-placeholder">📁</div>`;
         
         catCard.innerHTML = `
            <div class="card-img-container">
@@ -447,21 +444,16 @@ function initUserApp() {
     });
   }
 
-  // 2. Open Category (Switch View)
   function openCategory(category) {
-      // Ascunde categorii, Arată produse
       viewCategories.classList.remove("active-view");
       viewProducts.classList.add("active-view");
       
-      // Update Header
       headerTitle.textContent = category.name;
       shopBackBtn.style.display = "flex";
       
-      // Render Products
       renderProductsGrid(category.products || []);
   }
 
-  // 3. Render Products (Grid with Images)
   function renderProductsGrid(products) {
       productsGrid.innerHTML = "";
       if (!products || products.length === 0) {
@@ -497,7 +489,6 @@ function initUserApp() {
       });
   }
 
-  // 4. Back to Categories
   function goBackToCategories() {
       viewProducts.classList.remove("active-view");
       viewCategories.classList.add("active-view");
@@ -555,7 +546,9 @@ function initUserApp() {
       setTimeout(() => { closeProductPanel(); showTicketsTab(); }, 1000);
       bumpUserActive(); userTicketsPoller.bumpFast();
     } catch (err) {
-      console.error(err); panelStatusEl.className = "status-message status-error"; panelStatusEl.textContent = "Eroare rețea.";
+      console.error(err); 
+      panelStatusEl.className = "status-message status-error"; 
+      panelStatusEl.textContent = "Eroare rețea. Verifică consola.";
     }
   }
   if(panelCloseBtn) panelCloseBtn.onclick = closeProductPanel;
@@ -638,7 +631,6 @@ function initUserApp() {
     SELECTED_TICKET_ID = ticketId;
     const t = CURRENT_TICKETS.find((x) => x.id === ticketId);
     
-    // Trigger Mark Seen
     if (t) {
         apiCall("mark_seen", { ticket_id: ticketId });
         if(t.messages.length) t.last_read_user = t.messages[t.messages.length - 1].id;
@@ -710,9 +702,6 @@ function initUserApp() {
     } catch (err) { console.error(err); }
   }
 
-  /* ============================
-      NEW: CUSTOM POPUP LOGIC & TICKET CLOSE
-      ============================ */
   function openConfirmModal(onConfirm) {
       if(!confirmModal) {
           console.error("Modal not found");
@@ -848,7 +837,6 @@ function initUserApp() {
       CURRENT_TICKETS = res.tickets || [];
 
       renderUserHeader(); 
-      // Render Initial Categories Grid
       renderCategoriesGrid(CURRENT_SHOP);
       renderTicketsListUser();
       
