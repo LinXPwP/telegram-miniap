@@ -74,8 +74,8 @@ html, body {
     display: flex;
     align-items: center;
     transition: 0.2s; 
-    /* MODIFICAT: Tragem tot containerul mai la stanga ca sa nu para deplasat */
-    margin-left: -8px; 
+    /* Tragem tot containerul puțin spre stânga pentru echilibru */
+    margin-left: -5px; 
     gap: 0px; 
 }
 
@@ -85,9 +85,11 @@ html, body {
     width: auto;
     object-fit: contain;
     display: block;
+    /* Opțional: Poți încerca și aici o margine negativă la dreapta */
+    /* margin-right: -10px; */ 
 }
 
-/* TEXTUL "3DG3N" */
+/* TEXTUL "3DG3N" - AICI ESTE FIX-UL PRINCIPAL */
 .brand-text-suffix {
     font-family: 'Inter', sans-serif;
     font-weight: 800;
@@ -95,9 +97,8 @@ html, body {
     color: var(--text-primary);
     letter-spacing: 0.5px;
     
-    /* MODIFICARE MAJORA AICI: Compensam spatiul gol din imagine */
-    /* Daca tot nu e lipit, mareste la -18px sau -20px */
-    margin-left: -15px; 
+    /* MODIFICAT: Margine negativă foarte mare pentru a suprapune spațiul gol din imagine */
+    margin-left: -28px; 
     
     padding-top: 2px; 
 }
