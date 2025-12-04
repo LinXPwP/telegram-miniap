@@ -243,13 +243,18 @@ function initUserApp() {
   // --- PRODUCT MODAL ---
   function openProductPanel(prod) {
     SELECTED_PRODUCT = prod;
-    panelStatusEl.textContent = ""; panelStatusEl.className = "status-message";
+    panelStatusEl.textContent = ""; 
+    panelStatusEl.className = "status-message";
     
     // Set Data
     panelNameEl.textContent = prod.name;
     panelDescEl.textContent = prod.description || "Fără descriere.";
     panelPriceEl.textContent = `${prod.price} CRD`;
-    panelImageEl.src = prod.image || PLACEHOLDER_IMG;
+    
+    // LOGICA NOUA PENTRU IMAGINE
+    // Resetam display-ul si punem imaginea sau placeholder-ul
+    panelImageEl.style.display = 'block'; 
+    panelImageEl.src = prod.image && prod.image.trim() !== "" ? prod.image : PLACEHOLDER_IMG;
     
     // Qty
     const min = prod.min_qty || 1; const max = prod.max_qty || 10;
