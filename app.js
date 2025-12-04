@@ -1,6 +1,6 @@
-// app.js – Fix Network Error & Close Button
+// app.js – Fixed: Insufficient Funds Handling & Clean UI
 
-// IMPORTANT: Dacă lucrezi local, schimbă în "http://127.0.0.1:8140/"
+// ⚠️ ATENȚIE: Dacă testezi local, pune: "http://127.0.0.1:8140/"
 const API_URL = "https://api.redgen.vip/";
 
 /* ============================
@@ -40,7 +40,7 @@ function createSmartPoll(fetchFn, isEnabledFn, options = {}) {
         }
       }
     } catch (e) {
-      console.error("[smartPoll] error:", e);
+      // Silently fail logging in polling to avoid console spam
       currentInterval = Math.min(maxInterval, currentInterval + backoffStep);
     }
     schedule(currentInterval);
@@ -385,19 +385,28 @@ function initUserApp() {
   function closeTicketsDrawer() { if (ticketsTabEl) ticketsTabEl.classList.remove("tickets-drawer-open"); }
   function toggleTicketsDrawer() { if (ticketsTabEl) ticketsTabEl.classList.toggle("tickets-drawer-open"); }
 
-  /* ===== API Call ===== */
-  function apiCall(action, extraPayload = {}) {
+  /* ===== API Call (MODIFICAT PENTRU FIXARE ERORI 400) ===== */
+  async function apiCall(action, extraPayload = {}) {
     const payload = { action, user: CURRENT_USER, ...extraPayload };
-    return fetch(API_URL, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    }).then(async (r) => {
-        if (!r.ok) {
-            const txt = await r.text();
-            throw new Error(`Server Error: ${r.status} - ${txt}`);
-        }
-        return r.json();
-    });
+    
+    // Nu mai folosim blocul try-catch agresiv aici.
+    // Lăsăm eroarea să fie gestionată în funcție.
+    try {
+        const r = await fetch(API_URL, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        // Backend-ul Flask returnează JSON chiar și la eroare 400.
+        // Așa că citim JSON-ul indiferent de status.
+        const data = await r.json();
+        return data;
+        
+    } catch (err) {
+        // Aici ajungem doar dacă serverul e picat complet sau nu e net
+        console.error("Network fatal:", err);
+        throw new Error("Conexiune eșuată");
+    }
   }
 
   function isTicketsTabActive() {
@@ -413,8 +422,8 @@ function initUserApp() {
   }
 
   /* ============================
-     NEW SHOP RENDER LOGIC
-     ============================ */
+      NEW SHOP RENDER LOGIC
+      ============================ */
   
   function renderCategoriesGrid(shop) {
     categoriesGrid.innerHTML = "";
@@ -498,7 +507,7 @@ function initUserApp() {
 
   if (shopBackBtn) shopBackBtn.onclick = goBackToCategories;
 
-  /* ===== Modal Logic (Updated for Images) ===== */
+  /* ===== Modal Logic (FIXED FOR CREDITS ERROR) ===== */
   function openProductPanel(prod) {
     SELECTED_PRODUCT = prod;
     panelStatusEl.textContent = ""; panelStatusEl.className = "status-message";
@@ -529,28 +538,52 @@ function initUserApp() {
     if (!SELECTED_PRODUCT || !CURRENT_USER) return;
     const qty = Number(panelQtyEl.value || 0);
     const prod = SELECTED_PRODUCT;
-    panelStatusEl.textContent = "Se procesează..."; panelStatusEl.className = "status-message";
+    
+    panelStatusEl.textContent = "Se procesează..."; 
+    panelStatusEl.className = "status-message";
+    
     try {
+      // Apelăm API-ul. Funcția apiCall acum returnează JSON-ul chiar și la eroare (ok: false)
       const res = await apiCall("buy_product", { product_id: prod.id, qty: qty });
+      
+      // VERIFICĂM DACĂ SERVERUL A DAT O EROARE LOGICĂ (ex: nu sunt credite)
       if (!res.ok) {
         panelStatusEl.className = "status-message status-error";
-        if (res.error === "not_enough_credits") panelStatusEl.textContent = `Fonduri insuficiente.`;
-        else panelStatusEl.textContent = "Eroare: " + (res.error || "necunoscută");
+        
+        // Aici detectăm exact eroarea de la backend
+        if (res.error === "not_enough_credits") {
+            panelStatusEl.textContent = "Fonduri insuficiente!";
+        } else {
+            // Alte erori (ex: produs inexistent)
+            panelStatusEl.textContent = "Eroare: " + res.error;
+        }
         return;
       }
-      CURRENT_USER.credits = res.new_balance; creditsValueEl.textContent = CURRENT_USER.credits;
+      
+      // SUCCES
+      CURRENT_USER.credits = res.new_balance; 
+      creditsValueEl.textContent = CURRENT_USER.credits;
+      
       const newTicket = res.ticket;
       CURRENT_TICKETS.push(newTicket);
-      renderTicketsListUser(); selectTicketUser(newTicket.id);
-      panelStatusEl.className = "status-message status-ok"; panelStatusEl.textContent = `Succes! Tichet #${newTicket.id} creat.`;
+      renderTicketsListUser(); 
+      selectTicketUser(newTicket.id);
+      
+      panelStatusEl.className = "status-message status-ok"; 
+      panelStatusEl.textContent = `Succes! Tichet #${newTicket.id} creat.`;
+      
       setTimeout(() => { closeProductPanel(); showTicketsTab(); }, 1000);
-      bumpUserActive(); userTicketsPoller.bumpFast();
+      bumpUserActive(); 
+      userTicketsPoller.bumpFast();
+      
     } catch (err) {
+      // Aici ajungem doar la erori reale de rețea (ex: picat netul)
       console.error(err); 
       panelStatusEl.className = "status-message status-error"; 
-      panelStatusEl.textContent = "Eroare rețea. Verifică consola.";
+      panelStatusEl.textContent = "Eroare rețea.";
     }
   }
+  
   if(panelCloseBtn) panelCloseBtn.onclick = closeProductPanel;
   if(panelBuyBtn) panelBuyBtn.onclick = buySelectedProduct;
 
