@@ -62,6 +62,7 @@ html, body {
 
 .error-content {
     max-width: 320px;
+    width: 100%;
 }
 
 .error-icon {
@@ -94,23 +95,53 @@ html, body {
     margin: 0 0 30px;
 }
 
-.btn-telegram-open {
-    display: inline-flex;
+/* --- BUTOANE PLATFORME --- */
+.error-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+}
+
+.btn-platform {
+    display: flex;
     align-items: center;
     justify-content: center;
+    gap: 10px;
     text-decoration: none;
-    background: #0088cc; /* Telegram Blue */
     color: #fff;
     font-weight: 600;
     font-size: 14px;
-    padding: 12px 24px;
+    padding: 14px;
     border-radius: 99px;
-    transition: transform 0.2s;
-    box-shadow: 0 4px 15px rgba(0, 136, 204, 0.4);
+    transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
+    width: 100%;
 }
-.btn-telegram-open:hover {
+
+.btn-platform svg {
+    flex-shrink: 0;
+}
+
+/* Telegram Button Style */
+.btn-telegram {
+    background: #24A1DE; /* Telegram Blue */
+    box-shadow: 0 4px 15px rgba(36, 161, 222, 0.3);
+}
+.btn-telegram:hover {
+    background: #1f8cb3;
     transform: translateY(-2px);
-    background: #0099e6;
+    box-shadow: 0 6px 20px rgba(36, 161, 222, 0.5);
+}
+
+/* Discord Button Style */
+.btn-discord {
+    background: #5865F2; /* Discord Blurple */
+    box-shadow: 0 4px 15px rgba(88, 101, 242, 0.3);
+}
+.btn-discord:hover {
+    background: #4752c4;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(88, 101, 242, 0.5);
 }
 
 /* ----------------------------------- */
