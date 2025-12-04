@@ -1,6 +1,6 @@
-// app.js – Versiune User Stabilă (Anti-Flicker + Imagini + Stiluri Fixate)
+// app.js – Versiune User COMPLETĂ (Imagini Shop + Chat Vechi cu Reply & Seen Fixat)
 
-const API_URL = "https://api.redgen.vip/api";
+const API_URL = "https://api.redgen.vip/";
 const PLACEHOLDER_IMG = "https://placehold.co/400x300/202226/FFF?text=No+Image";
 
 /* ============================
@@ -112,6 +112,11 @@ function initUserApp() {
   const shopHeaderEl = document.getElementById("shopHeader");
   const goToTicketsBtn = document.getElementById("goToTicketsBtn");
   const backToShopBtn = document.getElementById("backToShopBtn");
+  
+  // Reply Elements
+  const userModeBar = document.getElementById("userModeBar");
+  const cancelReplyBtn = document.getElementById("cancelReplyBtn");
+  let userMode = { type: null, messageId: null };
 
   // Modals
   const productPanelEl = document.getElementById("productPanel");
@@ -240,14 +245,12 @@ function initUserApp() {
   }
   panelBuyBtn.onclick = buySelectedProduct;
 
-  // --- TICKET & CHAT LOGIC (ANTI-FLICKER) ---
+  // --- TICKET & CHAT LOGIC (RESTORED OLD FEATURES) ---
   
-  // Helper to count unread
   function getUnread(t) {
       if(!t.messages) return 0;
       const lastRead = t.last_read_user || "";
-      let count = 0; let start=false;
-      if (lastRead === "") start = true;
+      let count = 0; let start = (lastRead === "");
       for (let m of t.messages) {
           if (m.id === lastRead) { start = true; continue; }
           if (start && m.from === 'admin') count++;
@@ -255,19 +258,15 @@ function initUserApp() {
       return count;
   }
 
-  // Smart Render for Ticket List
   function renderTicketsListUser() {
       if (!CURRENT_TICKETS || CURRENT_TICKETS.length === 0) {
           chatListEl.innerHTML = '<div style="padding:20px; text-align:center; color:#555;">Nu ai tichete.</div>';
           return;
       }
-      // Remove empty message if exists
       const emptyMsg = chatListEl.querySelector('div[style*="text-align:center"]');
       if (emptyMsg) emptyMsg.remove();
 
-      // Sort
       CURRENT_TICKETS.sort((a,b) => (a.status==='open'?-1:1) || (b.id - a.id));
-
       const processedIds = new Set();
       
       CURRENT_TICKETS.forEach(t => {
@@ -280,7 +279,6 @@ function initUserApp() {
           const stClass = t.status==='open' ? 'open' : 'closed';
           const title = t.product_name || "Comandă";
           
-          // HTML structure
           const innerHTML = `
              <div class="chat-item-header-row">
                 <div class="chat-item-title">${title}</div>
@@ -290,7 +288,6 @@ function initUserApp() {
           `;
 
           if (!item) {
-              // Create new
               item = document.createElement("div");
               item.className = "chat-item";
               item.setAttribute("data-ticket-id", t.id);
@@ -298,16 +295,12 @@ function initUserApp() {
               item.innerHTML = innerHTML;
               chatListEl.appendChild(item);
           } else {
-              // Update existing if changed (simple check)
               if (item.innerHTML !== innerHTML) item.innerHTML = innerHTML;
           }
-
-          // Active class
           if (isSelected) item.classList.add("active");
           else item.classList.remove("active");
       });
 
-      // Cleanup removed tickets
       Array.from(chatListEl.children).forEach(child => {
           const id = child.getAttribute("data-ticket-id");
           if (id && !processedIds.has(id)) child.remove();
@@ -317,7 +310,6 @@ function initUserApp() {
   function selectTicketUser(tid) {
       SELECTED_TICKET_ID = tid;
       renderTicketsListUser();
-      
       const t = CURRENT_TICKETS.find(x => x.id === tid);
       if(!t) { chatMessagesEl.innerHTML=""; return; }
       
@@ -325,27 +317,40 @@ function initUserApp() {
       if(t.messages.length) t.last_read_user = t.messages[t.messages.length-1].id;
 
       ticketTitleEl.textContent = `${t.product_name} #${t.id}`;
-      // Fix: Show style correctly
       userTicketCloseBtn.style.display = t.status==='closed' ? 'none' : 'block';
-      
       chatInputEl.disabled = (t.status === 'closed');
       chatSendBtn.disabled = (t.status === 'closed');
+      if(t.status === 'closed') clearUserReplyMode();
       
       renderChatMessagesSmart(t);
   }
 
-  // Smart Render for Messages (Anti-Flicker)
+  // --- REPLY LOGIC ---
+  function setUserReplyMode(msg) {
+      userMode = { type: "reply", messageId: msg.id };
+      userModeBar.querySelector(".chat-mode-text").textContent = `Răspunzi lui ${msg.sender}: "${(msg.text||"").slice(0,30)}..."`;
+      userModeBar.style.display = "flex";
+      chatInputEl.focus();
+  }
+  function clearUserReplyMode() {
+      userMode = { type: null, messageId: null };
+      userModeBar.style.display = "none";
+  }
+  if(cancelReplyBtn) cancelReplyBtn.onclick = clearUserReplyMode;
+
   function renderChatMessagesSmart(t) {
       if(!t.messages || t.messages.length === 0) {
            chatMessagesEl.innerHTML = `<div class="chat-placeholder"><p>Începe conversația...</p></div>`;
            return;
       }
-      
-      // Remove placeholder
       const placeholder = chatMessagesEl.querySelector('.chat-placeholder');
       if(placeholder) placeholder.remove();
 
-      // Find last read admin msg for "Seen" logic
+      // Find msg map for replies
+      const msgMap = {};
+      t.messages.forEach(m => msgMap[m.id] = m);
+
+      // Seen Logic
       let lastAdminMsgId = null;
       for (let i = t.messages.length - 1; i >= 0; i--) { 
           if (t.messages[i].from === 'admin' && !t.messages[i].deleted) { 
@@ -365,14 +370,33 @@ function initUserApp() {
            const clsAdmin = m.from==='admin' ? 'msg-username--admin' : '';
            const initial = senderName[0].toUpperCase();
            
+           // Reply HTML
+           let replyHtml = '';
+           if(m.reply_to && msgMap[m.reply_to]) {
+               const orig = msgMap[m.reply_to];
+               replyHtml = `<div class="msg-reply-preview"><strong>${orig.sender||"User"}</strong> ${orig.text.slice(0,40)}</div>`;
+           }
+
+           // Reply Button (Only if Open)
+           let replyBtn = '';
+           if(t.status === 'open' && !m.deleted) {
+               replyBtn = `<button class="btn-reply-mini">↩</button>`;
+           }
+
            const innerHTML = `
              <div class="msg-avatar">${initial}</div>
              <div class="msg-content">
                 <div class="msg-header-line">
-                   <span class="msg-username ${clsAdmin}">${senderName}</span>
-                   <span class="msg-timestamp">${formatTimestamp(m.ts)}</span>
+                   <div class="msg-meta-group">
+                       <span class="msg-username ${clsAdmin}">${senderName}</span>
+                       <span class="msg-timestamp">${formatTimestamp(m.ts)}</span>
+                   </div>
+                   ${replyBtn}
                 </div>
-                <div class="msg-text">${m.text}</div>
+                <div class="msg-bubble">
+                    ${replyHtml}
+                    <div class="msg-text ${m.deleted?'msg-text--deleted':''}">${m.deleted?'Șters':m.text}</div>
+                </div>
              </div>
            `;
 
@@ -381,16 +405,24 @@ function initUserApp() {
                row.className = "msg-row";
                row.setAttribute("data-id", m.id);
                row.innerHTML = innerHTML;
+               
+               // Attach Reply Event
+               const rBtn = row.querySelector('.btn-reply-mini');
+               if(rBtn) rBtn.onclick = (e) => { e.stopPropagation(); setUserReplyMode(m); };
+               
                chatMessagesEl.appendChild(row);
            } else {
-               // Update content only if needed (rare for chat history)
-               if(row.innerHTML !== innerHTML) row.innerHTML = innerHTML;
+               if(row.innerHTML !== innerHTML) {
+                   row.innerHTML = innerHTML;
+                   // Re-attach Reply Event on update
+                   const rBtn = row.querySelector('.btn-reply-mini');
+                   if(rBtn) rBtn.onclick = (e) => { e.stopPropagation(); setUserReplyMode(m); };
+               }
            }
 
-           // Handle Seen Label logic dynamically
+           // Seen Label
            const existingSeen = row.querySelector('.seen-footer');
            if(existingSeen) existingSeen.remove();
-           
            if(showSeenLabel && m.id === lastAdminMsgId) {
                 const seenDiv = document.createElement("div");
                 seenDiv.className = "seen-footer";
@@ -398,16 +430,19 @@ function initUserApp() {
                 row.querySelector(".msg-content").appendChild(seenDiv);
            }
       });
-      
       smartScrollToBottom(chatMessagesEl, true);
   }
 
   async function sendChatMessage() {
       const txt = chatInputEl.value.trim();
       if(!txt || !SELECTED_TICKET_ID) return;
-      chatInputEl.value="";
+      
+      const replyTo = userMode.type === 'reply' ? userMode.messageId : null;
+      chatInputEl.value=""; 
+      clearUserReplyMode();
+
       try {
-          const res = await apiCall("user_send_message", { ticket_id: SELECTED_TICKET_ID, text: txt });
+          const res = await apiCall("user_send_message", { ticket_id: SELECTED_TICKET_ID, text: txt, reply_to: replyTo });
           if(res.ok && res.ticket) {
               const idx = CURRENT_TICKETS.findIndex(x=>x.id===res.ticket.id);
               if(idx!==-1) CURRENT_TICKETS[idx] = res.ticket;
@@ -442,23 +477,24 @@ function initUserApp() {
   }
   userTicketCloseBtn.onclick = userCloseCurrentTicket;
 
-  // Polling logic
+  // Polling
   const userTicketsPoller = createSmartPoll(
       async () => {
          if(!CURRENT_USER) return;
          try {
             const res = await apiCall("user_get_tickets");
             if(res.ok) {
-                // Update local tickets, keeping closed status if locally closed recently
                 const newTickets = res.tickets || [];
-                // Merge logic (optional/advanced, but simple replacement is usually fine if we update UI smart)
+                // Simple Merge: if local is 'closed' and server 'open', keep 'closed' (optimistic UI)
+                newTickets.forEach(nt => {
+                    const local = CURRENT_TICKETS.find(lt => lt.id === nt.id);
+                    if(local && local.status === 'closed') nt.status = 'closed';
+                });
                 CURRENT_TICKETS = newTickets;
 
                 if(SELECTED_TICKET_ID) {
                     const t = CURRENT_TICKETS.find(x=>x.id===SELECTED_TICKET_ID);
-                    if(t) {
-                        selectTicketUser(SELECTED_TICKET_ID); 
-                    }
+                    if(t) selectTicketUser(SELECTED_TICKET_ID); 
                 }
                 renderTicketsListUser();
             }
