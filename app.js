@@ -1,9 +1,6 @@
-// app.js – Versiune User FINALĂ (Fixed Init Error + Visual Shop + Chat Features)
+// app.js – Versiune User FINALĂ (Fixed Render Header Error + Toate funcțiile)
 
-// ⚠️ ATENȚIE: Dacă testezi local, folosește "http://127.0.0.1:8140/api"
-// Dacă ești pe Telegram, pune link-ul HTTPS de la Ngrok aici.
 const API_URL = "https://api.redgen.vip/api"; 
-
 const PLACEHOLDER_IMG = "https://placehold.co/400x300/202226/FFF?text=No+Image";
 
 /* ============================
@@ -155,11 +152,6 @@ function initUserApp() {
   // API Call
   function apiCall(action, extraPayload = {}) {
     const payload = { action, user: CURRENT_USER, ...extraPayload };
-    // Verificăm URL-ul pentru siguranță
-    if (!API_URL || API_URL.includes("redgen.vip") && window.location.hostname === "127.0.0.1") {
-       console.warn("Avertisment: Rulezi local dar API_URL este setat pe un domeniu extern. Posibilă eroare CORS.");
-    }
-
     return fetch(API_URL, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -170,6 +162,14 @@ function initUserApp() {
         }
         return r.json();
     });
+  }
+
+  // --- HEADER RENDER (FUNCȚIA CARE LIPSEA) ---
+  function renderUserHeader() {
+    if (!CURRENT_USER) return;
+    if (creditsValueEl) creditsValueEl.textContent = CURRENT_USER.credits;
+    const name = CURRENT_USER.username ? "@" + CURRENT_USER.username : `ID ${CURRENT_USER.id}`;
+    if (userLineEl) userLineEl.innerHTML = `Utilizator: <b>${name}</b>`;
   }
 
   // --- RENDER SHOP (Imagini & Categorii) ---
@@ -332,7 +332,6 @@ function initUserApp() {
       if(t.messages.length) t.last_read_user = t.messages[t.messages.length-1].id;
 
       ticketTitleEl.textContent = `${t.product_name} #${t.id}`;
-      // Afișează butonul Închide doar dacă tichetul e open
       if(userTicketCloseBtn) userTicketCloseBtn.style.display = t.status==='closed' ? 'none' : 'block';
       
       chatInputEl.disabled = (t.status === 'closed');
@@ -528,7 +527,6 @@ function initUserApp() {
     if (!tg) { userLineEl.textContent = "Deschide din Telegram."; userLineEl.style.display="block"; return; }
     tg.ready(); tg.expand();
     
-    // Fallback daca initDataUnsafe nu e gata imediat
     const user = tg.initDataUnsafe?.user || { id: "test", username: "TestUser", first_name: "Test" };
     
     CURRENT_USER = { id: user.id, username: user.username, credits: 0 };
@@ -545,7 +543,6 @@ function initUserApp() {
       showShopTab();
     } catch (err) {
       console.error(err);
-      // Afișează eroarea exactă pe ecran pentru debug
       userLineEl.innerHTML = `<span style="color: #ff4b4b">Err: ${err.message}</span>`;
       userLineEl.style.display="block"; 
     }
