@@ -1,6 +1,6 @@
 // app.js – Versiune User Stabilă (Anti-Flicker + Imagini + Stiluri Fixate)
 
-const API_URL = "https://api.redgen.vip/";
+const API_URL = "https://api.redgen.vip/api";
 const PLACEHOLDER_IMG = "https://placehold.co/400x300/202226/FFF?text=No+Image";
 
 /* ============================
