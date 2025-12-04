@@ -503,9 +503,11 @@ function initUserApp() {
       viewProducts.classList.remove("active-view");
       viewCategories.classList.add("active-view");
       
-      // REVENIM LA LOGO
-      // Aici înlocuim textul cu tag-ul <img>
-      headerTitle.innerHTML = '<img src="logo.png" class="header-logo-img" alt="RedGen">';
+      // REVENIM LA LOGO (FIXED: ACUM PUNE ȘI TEXTUL ÎNAPOI)
+      headerTitle.innerHTML = `
+        <img src="logo.png" class="header-logo-img" alt="R">
+        <span class="brand-text-suffix">3DG3N</span>
+      `;
       
       shopBackBtn.style.display = "none";
   }
