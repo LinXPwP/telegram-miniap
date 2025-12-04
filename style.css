@@ -65,14 +65,16 @@ html, body {
 .header-left { display: flex; align-items: center; gap: 10px; }
 
 /* MODIFICARE PENTRU LOGO */
-.brand-logo { 
-    display: flex;
-    align-items: center;
-    font-weight: 800; 
-    font-size: 18px; 
-    letter-spacing: -0.5px; 
-    color: var(--text-primary); 
-    transition: 0.2s; 
+.brand-logo {
+  display: flex;
+  align-items: center;
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: -0.5px;
+  color: var(--text-primary);
+  transition: 0.2s;
+  /* ADĂUGĂM ACEASTĂ LINIE: */
+  margin-left: -8px; /* Ajustează acest număr (-5px, -10px) până îți place poziția */
 }
 /* Imaginea logo-ului */
 .header-logo-img {
