@@ -1,4 +1,4 @@
-// app.js – SECURIZED: Uses Telegram initData for Auth + Anti-Spam + Smart Polling
+// app.js – SECURIZED: Uses Telegram initData for Auth + Anti-Spam + Smart Polling + Optimized Network Calls
 
 // ⚠️ URL-ul către Cloudflare Worker sau Serverul tău
 const API_URL = "https://api.redgen.vip/";
@@ -289,6 +289,7 @@ function initUserApp() {
   let CURRENT_SHOP = null;
   let CURRENT_TICKETS = [];
   let SELECTED_TICKET_ID = null;
+  let isSending = false; // PREVINE DUBLUL CLICK
 
   function bumpUserActive() {
     updateActivity();
@@ -652,7 +653,7 @@ function initUserApp() {
       const isSelected = (t.id === SELECTED_TICKET_ID);
       
       let unreadCount = calculateUserUnread(t);
-      if (isSelected) unreadCount = 0;
+      if (isSelected) unreadCount = 0; // Vizual e citit dacă e selectat
 
       const badgeHtml = (unreadCount > 0 && t.status === "open") ? `<span class="unread-badge">${unreadCount}</span>` : "";
       const statusClass = t.status === "open" ? "open" : "closed";
@@ -704,8 +705,13 @@ function initUserApp() {
     const t = CURRENT_TICKETS.find((x) => x.id === ticketId);
     
     if (t) {
-        apiCall("mark_seen", { ticket_id: ticketId });
-        if(t.messages.length) t.last_read_user = t.messages[t.messages.length - 1].id;
+        // OPTIMIZARE: Trimitem mark_seen DOAR dacă sunt mesaje necitite
+        const unreadCount = calculateUserUnread(t);
+        if (unreadCount > 0) {
+            apiCall("mark_seen", { ticket_id: ticketId });
+            // Update local imediat
+            if(t.messages.length) t.last_read_user = t.messages[t.messages.length - 1].id;
+        }
     }
 
     renderTicketsListUser();
@@ -750,15 +756,33 @@ function initUserApp() {
     });
   }
 
+  // --- SEND MESSAGE OPTIMIZED (1 Request Only) ---
   async function sendChatMessage() {
     const text = chatInputEl.value.trim();
     if (!text || !SELECTED_TICKET_ID) return;
+    
+    // 1. LOCK (Prevenire spam)
+    if (isSending) return;
+    isSending = true;
+
+    // UI Feedback
+    chatSendBtn.disabled = true;
+    chatSendBtn.style.opacity = "0.5";
+
     const t = CURRENT_TICKETS.find((x) => x.id === SELECTED_TICKET_ID);
-    if (!t || t.status === "closed") return;
+    if (!t || t.status === "closed") {
+        isSending = false;
+        return;
+    }
     const reply_to = (userMode.type === "reply" && userMode.messageId) ? userMode.messageId : null;
-    chatInputEl.value = ""; clearUserMode();
+    
+    // Clear Input
+    chatInputEl.value = ""; 
+    clearUserMode();
+
     try {
       const res = await apiCall("user_send_message", { ticket_id: SELECTED_TICKET_ID, text, reply_to });
+      
       if (!res.ok) {
         if(res.error === "ticket_closed") {
             const updated = CURRENT_TICKETS.find(x => x.id === SELECTED_TICKET_ID);
@@ -767,15 +791,33 @@ function initUserApp() {
         } else if (res.error === "auth_failed") {
             alert("Sesiune expirată.");
         }
+        chatInputEl.value = text; // Restore text
         return;
       }
+
       if(res.ticket) {
+          // 2. LOCAL UPDATE (fără re-fetch)
           const idx = CURRENT_TICKETS.findIndex(x => x.id === res.ticket.id);
           if (idx >= 0) CURRENT_TICKETS[idx] = res.ticket; else CURRENT_TICKETS.push(res.ticket);
-          selectTicketUser(res.ticket.id);
+          
+          // Render direct (fără selectTicketUser pentru a evita mark_seen)
+          renderTicketsListUser();
+          renderUserMessages(res.ticket);
+          smartScrollToBottom(chatMessagesEl, true);
       }
-      bumpUserActive(); userTicketsPoller.bumpFast();
-    } catch (err) { console.error(err); }
+      
+      bumpUserActive(); 
+      // NOTĂ: Nu mai apelăm bumpFast() pentru a evita request-ul suplimentar de get_tickets
+
+    } catch (err) { 
+        console.error(err);
+        chatInputEl.value = text;
+    } finally {
+        isSending = false;
+        chatSendBtn.disabled = false;
+        chatSendBtn.style.opacity = "1";
+        setTimeout(() => chatInputEl.focus(), 50);
+    }
   }
 
   function openConfirmModal(onConfirm) {
