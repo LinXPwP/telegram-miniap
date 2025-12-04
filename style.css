@@ -69,22 +69,27 @@ html, body {
     gap: 0px; 
 }
 
-/* --- BUTON BACK REDESENAT (MODERN) --- */
+/* --- BUTON BACK TIP "PASTILĂ" (ICON + TEXT) --- */
 .btn-icon-back {
-  /* Același stil cu butoanele din dreapta */
   background: var(--bg-surface); 
   border: 1px solid rgba(255,255,255,0.05);
   color: var(--text-secondary);
-  width: 34px; 
-  height: 34px; 
-  border-radius: 50%; /* Complet rotund */
+  
+  /* Lățime automată pentru a include textul */
+  width: auto; 
+  height: 36px; /* Puțin mai înalt pentru a arăta bine cu text */
+  padding: 0 14px 0 8px; /* Padding stânga/dreapta */
+  
+  border-radius: 99px; /* Pastilă */
+  
   display: flex; 
   align-items: center; 
   justify-content: center;
+  gap: 6px; /* Spațiu între săgeată și text */
+  
   cursor: pointer; 
   transition: all 0.2s;
-  margin-right: 8px; /* Spațiu între buton și titlu/logo */
-  padding: 0;
+  margin-right: 0; 
 }
 
 .btn-icon-back:hover {
@@ -92,6 +97,17 @@ html, body {
     color: var(--accent);
     border-color: rgba(255, 24, 67, 0.3);
 }
+
+/* Stil pentru textul din butonul de back */
+.back-btn-text {
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff; /* Alb, ca să iasă în evidență */
+}
+.btn-icon-back:hover .back-btn-text {
+    color: var(--accent);
+}
+
 
 /* CONTAINER LOGO (IMG + TEXT) */
 .brand-logo { 
@@ -117,7 +133,7 @@ html, body {
     font-size: 20px;
     color: var(--text-primary);
     letter-spacing: 0.5px;
-    margin-left: -22px; 
+    margin-left: -28px; /* Fix-ul agresiv pentru spațiere */
     padding-top: 2px; 
 }
 
