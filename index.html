@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  
+   
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -151,25 +151,26 @@
   </div>
 
   <div id="onlyTelegramError" class="access-error-screen" style="display: none;">
-    <div class="error-content">
-        <div class="error-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+    <div class="error-card">
+        <div class="lock-icon-wrapper">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            <div class="lock-glow"></div>
         </div>
+
         <h2>Acces Restricționat</h2>
-        <p>Această aplicație este disponibilă exclusiv în cadrul platformei Telegram.</p>
+        <p>Această aplicație rulează exclusiv în ecosistemul Telegram.</p>
         
-        <div class="error-actions">
-            <a href="https://t.me/r3dtest_bot" class="btn-platform btn-telegram">
+        <div class="error-actions-modern">
+            <a href="https://t.me/r3dtest_bot" class="btn-modern btn-tg-gradient">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.198 2.433a2.242 2.242 0 0 0-1.022.215l-8.609 3.33c-2.068.8-4.133 1.598-5.724 2.21a405.15 405.15 0 0 1-2.863 1.13c-1.192.501-1.797 1.15-1.797 1.963 0 .821.616 1.5 1.786 2.032.956.434 1.948.878 2.973 1.32.183.078.368.157.555.235l.006.002.003.002c.706.307 1.564.675 2.235.966.307.132.658.284.978.423.16.069.314.136.46.198l.003.001c.203.087.404.173.601.258.423.181.86.368 1.311.561.028.012.056.024.085.035.148.062.296.124.444.187.307.129.615.258.922.387.962.404 1.923.808 2.883 1.212.72.302 1.517.637 2.238.94l.034.015c1.026.43 1.637.69 2.09.84.428.143.916.239 1.406.166a2.15 2.15 0 0 0 1.705-1.39c.604-2.45 2.158-9.916 2.658-12.836a2.31 2.31 0 0 0-1.427-2.735z"></path></svg>
                 <span>Deschide Bot</span>
             </a>
 
-            <a href="https://discord.gg/CwqeCWF2Qe" target="_blank" class="btn-platform btn-discord">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.8943 4.34399C17.5183 3.71467 16.057 3.256 14.5317 3C14.3396 3.33067 14.127 3.77867 13.9829 4.11467C12.353 3.88133 10.7329 3.88133 9.13096 4.11467C8.98696 3.77867 8.76696 3.33067 8.58296 3C7.05096 3.256 5.58963 3.71467 4.21363 4.34399C1.43963 8.44533 0.690294 12.448 1.0543 16.3973C2.90696 17.752 4.6983 18.5733 6.4583 19.1147C6.8903 18.5307 7.28296 17.912 7.62696 17.2613C6.98696 17.0213 6.37896 16.7333 5.80296 16.4027C5.95496 16.2907 6.10696 16.1707 6.25096 16.0507C9.57896 17.5867 13.563 17.5867 16.859 16.0507C17.003 16.1787 17.155 16.2907 17.307 16.4027C16.731 16.7333 16.123 17.0213 15.483 17.2613C15.835 17.912 16.227 18.5307 16.659 19.1147C18.419 18.5733 20.2103 17.752 22.063 16.3973C22.463 12.16 21.463 8.21867 18.8943 4.34399ZM8.05896 13.5013C7.06696 13.5013 6.25096 12.5893 6.25096 11.4773C6.25096 10.3653 7.03496 9.45333 8.05896 9.45333C9.09096 9.45333 9.90696 10.3653 9.89096 11.4773C9.89096 12.5893 9.08296 13.5013 8.05896 13.5013ZM15.059 13.5013C14.067 13.5013 13.251 12.5893 13.251 11.4773C13.251 10.3653 14.035 9.45333 15.059 9.45333C16.091 9.45333 16.907 10.3653 16.891 11.4773C16.891 12.5893 16.091 13.5013 15.059 13.5013Z"></path></svg>
-                <span>Discord Server</span>
+            <a href="https://discord.gg/CwqeCWF2Qe" target="_blank" class="btn-modern btn-discord-glass">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.8943 4.34399C17.5183 3.71467 16.057 3.256 14.5317 3C14.3396 3.33067 14.127 3.77867 13.9829 4.11467C12.353 3.88133 10.7329 3.88133 9.13096 4.11467C8.98696 3.77867 8.76696 3.33067 8.58296 3C7.05096 3.256 5.58963 3.71467 4.21363 4.34399C1.43963 8.44533 0.690294 12.448 1.0543 16.3973C2.90696 17.752 4.6983 18.5733 6.4583 19.1147C6.8903 18.5307 7.28296 17.912 7.62696 17.2613C6.98696 17.0213 6.37896 16.7333 5.80296 16.4027C5.95496 16.2907 6.10696 16.1707 6.25096 16.0507C9.57896 17.5867 13.563 17.5867 16.859 16.0507C17.003 16.1787 17.155 16.2907 17.307 16.4027C16.731 16.7333 16.123 17.0213 15.483 17.2613C15.835 17.912 16.227 18.5307 16.659 19.1147C18.419 18.5733 20.2103 17.752 22.063 16.3973C22.463 12.16 21.463 8.21867 18.8943 4.34399ZM8.05896 13.5013C7.06696 13.5013 6.25096 12.5893 6.25096 11.4773C6.25096 10.3653 7.03496 9.45333 8.05896 9.45333C9.09096 9.45333 9.90696 10.3653 9.89096 11.4773C9.89096 12.5893 9.08296 13.5013 8.05896 13.5013ZM15.059 13.5013C14.067 13.5013 13.251 12.5893 13.251 11.4773C13.251 10.3653 14.035 9.45333 15.059 9.45333C16.091 9.45333 16.907 10.3653 16.891 11.4773C16.891 12.5893 16.091 13.5013 15.059 13.5013Z"></path></svg>
+                <span>Discord</span>
             </a>
         </div>
-
     </div>
   </div>
 
