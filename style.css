@@ -90,10 +90,14 @@ html, body {
 .brand-text-suffix {
     font-family: 'Inter', sans-serif;
     font-weight: 800;
-    font-size: 20px; /* Dimensiune text */
+    font-size: 20px;
     color: var(--text-primary);
     letter-spacing: 0.5px;
-    margin-left: -2px; /* Tragem textul mai aproape de imagine */
+    
+    /* MODIFICARE AICI: Am mărit marginea negativă */
+    /* Ajustează acest număr (-6px, -7px, -8px) dacă vrei să fie și mai lipite */
+    margin-left: -6px; 
+    
     padding-top: 2px; /* Ajustare optică pe verticală */
 }
 
