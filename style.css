@@ -69,12 +69,35 @@ html, body {
     gap: 0px; 
 }
 
+/* --- BUTON BACK REDESENAT (MODERN) --- */
+.btn-icon-back {
+  /* Același stil cu butoanele din dreapta */
+  background: var(--bg-surface); 
+  border: 1px solid rgba(255,255,255,0.05);
+  color: var(--text-secondary);
+  width: 34px; 
+  height: 34px; 
+  border-radius: 50%; /* Complet rotund */
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+  cursor: pointer; 
+  transition: all 0.2s;
+  margin-right: 8px; /* Spațiu între buton și titlu/logo */
+  padding: 0;
+}
+
+.btn-icon-back:hover {
+    background: var(--bg-surface-hover);
+    color: var(--accent);
+    border-color: rgba(255, 24, 67, 0.3);
+}
+
 /* CONTAINER LOGO (IMG + TEXT) */
 .brand-logo { 
     display: flex;
     align-items: center;
     transition: 0.2s; 
-    /* Tragem tot containerul puțin spre stânga pentru echilibru */
     margin-left: -5px; 
     gap: 0px; 
 }
@@ -85,27 +108,17 @@ html, body {
     width: auto;
     object-fit: contain;
     display: block;
-    /* Opțional: Poți încerca și aici o margine negativă la dreapta */
-    /* margin-right: -10px; */ 
 }
 
-/* TEXTUL "3DG3N" - AICI ESTE FIX-UL PRINCIPAL */
+/* TEXTUL "3DG3N" */
 .brand-text-suffix {
     font-family: 'Inter', sans-serif;
     font-weight: 800;
     font-size: 20px;
     color: var(--text-primary);
     letter-spacing: 0.5px;
-    
-    /* MODIFICAT: Margine negativă foarte mare pentru a suprapune spațiul gol din imagine */
     margin-left: -22px; 
-    
     padding-top: 2px; 
-}
-
-.btn-icon-back {
-  background: transparent; border: none; color: var(--text-primary);
-  padding: 0; cursor: pointer; display: flex; align-items: center;
 }
 
 .header-right { display: flex; align-items: center; gap: 12px; }
