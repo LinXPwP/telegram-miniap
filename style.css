@@ -44,6 +44,77 @@ html, body {
   box-shadow: 0 0 50px rgba(0,0,0,0.5);
 }
 
+/* --- ACCESS DENIED OVERLAY STYLE --- */
+.access-error-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 9999; /* Peste orice */
+    background: var(--bg-app);
+    background-image: radial-gradient(circle at 50% 30%, #2a1216 0%, var(--bg-app) 70%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    text-align: center;
+    animation: fadeIn 0.4s ease-out;
+}
+
+.error-content {
+    max-width: 320px;
+}
+
+.error-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 20px;
+    background: rgba(255, 24, 67, 0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent);
+}
+.error-icon svg {
+    width: 40px;
+    height: 40px;
+}
+
+.access-error-screen h2 {
+    font-size: 24px;
+    font-weight: 800;
+    margin: 0 0 12px;
+    color: #fff;
+}
+
+.access-error-screen p {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    margin: 0 0 30px;
+}
+
+.btn-telegram-open {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    background: #0088cc; /* Telegram Blue */
+    color: #fff;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 12px 24px;
+    border-radius: 99px;
+    transition: transform 0.2s;
+    box-shadow: 0 4px 15px rgba(0, 136, 204, 0.4);
+}
+.btn-telegram-open:hover {
+    transform: translateY(-2px);
+    background: #0099e6;
+}
+
+/* ----------------------------------- */
+
 .main-content {
   flex: 1; overflow: hidden; position: relative;
   display: flex; flex-direction: column;
