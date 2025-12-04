@@ -96,7 +96,7 @@ html, body {
     
     /* MODIFICARE AICI: Am mărit marginea negativă */
     /* Ajustează acest număr (-6px, -7px, -8px) dacă vrei să fie și mai lipite */
-    margin-left: -9px; 
+    margin-left: -12px; 
     
     padding-top: 2px; /* Ajustare optică pe verticală */
 }
