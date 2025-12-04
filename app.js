@@ -1,49 +1,59 @@
-// app.js – Fixed: Insufficient Funds Handling & Clean UI
+// app.js – Fixed: Insufficient Funds Handling & Clean UI + ANTI-SPAM LOGIC
 
 // ⚠️ ATENȚIE: Dacă testezi local, pune: "http://127.0.0.1:8140/"
 const API_URL = "https://api.redgen.vip/";
 
-/* ============================
-   1. HELPER – SMART POLLING
-   ============================ */
-function createSmartPoll(fetchFn, isEnabledFn, options = {}) {
-  const minInterval = options.minInterval ?? 3000;
-  const maxInterval = options.maxInterval ?? 8000;
-  const backoffStep = options.backoffStep ?? 2000;
-  const idleThreshold = options.idleThreshold ?? 4;
+// GLOBAL: Urmărim ultima interacțiune a utilizatorului pentru Anti-Spam
+let LAST_USER_ACTION = Date.now();
+const updateActivity = () => { LAST_USER_ACTION = Date.now(); };
+['mousemove', 'keydown', 'touchstart', 'scroll', 'click'].forEach(evt => 
+    document.addEventListener(evt, updateActivity, { passive: true })
+);
 
+/* ============================
+   1. HELPER – SUPER SMART POLLING (ECONOMY MODE)
+   ============================ */
+function createSmartPoll(fetchFn, isEnabledFn) {
   let timeoutId = null;
   let active = false;
-  let currentInterval = minInterval;
-  let idleCount = 0;
-  let lastSnapshot = null;
+  let isRunning = false;
+
+  // Setări intervale (milisecunde) - Optimizat pentru limita de 100k
+  const INTERVAL_ACTIVE = 3000;      // 3 secunde (când lucrezi/scrii)
+  const INTERVAL_IDLE = 10000;       // 10 secunde (când te uiți la ecran dar nu miști mouse-ul)
+  const INTERVAL_BACKGROUND = 60000; // 60 secunde (când ești în alt tab/aplicație)
+  const IDLE_THRESHOLD = 45000;      // 45 secunde până intră în modul Idle
 
   async function tick() {
     if (!active) return;
-    if (!isEnabledFn || !isEnabledFn()) { schedule(maxInterval); return; }
+    
+    // 1. Calculăm delay-ul bazat pe starea utilizatorului
+    let nextDelay = INTERVAL_ACTIVE;
+
+    if (document.hidden) {
+        // Dacă e în alt tab -> mod Economic Maxim
+        nextDelay = INTERVAL_BACKGROUND;
+    } else if (Date.now() - LAST_USER_ACTION > IDLE_THRESHOLD) {
+        // Dacă e pe pagină dar nu face nimic -> mod Idle
+        nextDelay = INTERVAL_IDLE;
+    }
+
+    // 2. Verificăm dacă polling-ul e permis logic (ex: suntem pe tab-ul corect)
+    if (isEnabledFn && !isEnabledFn()) {
+        schedule(INTERVAL_BACKGROUND);
+        return;
+    }
 
     try {
-      const data = await fetchFn();
-      if (!active) return;
-
-      if (data !== undefined) {
-        const snap = JSON.stringify(data);
-        if (lastSnapshot === null || snap !== lastSnapshot) {
-          lastSnapshot = snap;
-          idleCount = 0;
-          currentInterval = minInterval;
-        } else {
-          idleCount += 1;
-          if (idleCount >= idleThreshold) {
-            currentInterval = Math.min(maxInterval, currentInterval + backoffStep);
-          }
-        }
-      }
+        isRunning = true;
+        await fetchFn();
     } catch (e) {
-      // Silently fail logging in polling to avoid console spam
-      currentInterval = Math.min(maxInterval, currentInterval + backoffStep);
+        // În caz de eroare, încetinim puțin pentru a nu spama serverul
+        nextDelay = Math.max(nextDelay, 10000);
+    } finally {
+        isRunning = false;
+        schedule(nextDelay);
     }
-    schedule(currentInterval);
   }
 
   function schedule(delay) {
@@ -52,10 +62,37 @@ function createSmartPoll(fetchFn, isEnabledFn, options = {}) {
     timeoutId = setTimeout(tick, delay);
   }
 
+  // Ascultăm când utilizatorul revine pe tab pentru refresh instant
+  document.addEventListener("visibilitychange", () => {
+      if (!document.hidden && active && !isRunning) {
+          if (isEnabledFn && isEnabledFn()) {
+             if (timeoutId) clearTimeout(timeoutId);
+             tick();
+          }
+      }
+  });
+
   return {
-    start() { if (active) return; active = true; idleCount = 0; currentInterval = minInterval; tick(); },
-    stop() { active = false; if (timeoutId) clearTimeout(timeoutId); timeoutId = null; },
-    bumpFast() { if (!active) return; idleCount = 0; currentInterval = minInterval; schedule(currentInterval); },
+    start: () => { 
+        if (!active) { 
+            active = true; 
+            updateActivity(); // Reset timer la pornire
+            tick(); 
+        } 
+    },
+    stop: () => { 
+        active = false; 
+        if (timeoutId) clearTimeout(timeoutId); 
+        timeoutId = null;
+    },
+    bumpFast: () => { 
+        // Forțează un refresh rapid (ex: după ce trimiți un mesaj)
+        updateActivity();
+        if (active) { 
+            if (timeoutId) clearTimeout(timeoutId); 
+            schedule(100); 
+        } 
+    }
   };
 }
 
@@ -256,9 +293,9 @@ function initUserApp() {
   let CURRENT_TICKETS = [];
   let SELECTED_TICKET_ID = null;
 
-  let userActiveUntil = 0;
-  function bumpUserActive(extraMs = 25000) {
-    userActiveUntil = Math.max(userActiveUntil, Date.now() + extraMs);
+  // Funcție wrapper pentru a marca activitatea (pentru backwards compatibility)
+  function bumpUserActive() {
+    updateActivity();
   }
 
   // DOM Elements
@@ -838,19 +875,13 @@ function initUserApp() {
     } catch (err) { return CURRENT_TICKETS; }
   }
 
+  // --- POLLED CREATION ---
+  // Aici legăm logica de verificare doar de existența tab-ului
+  // Deoarece intervalul (active/idle) e gestionat intern de createSmartPoll
   const userTicketsPoller = createSmartPoll(
     pollTicketsUserCore,
-    () => {
-      if (!isTicketsTabActive()) return false;
-      return Date.now() < userActiveUntil;
-    }
+    () => isTicketsTabActive()
   );
-
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") {
-      if (isTicketsTabActive()) { bumpUserActive(); userTicketsPoller.start(); }
-    } else { userTicketsPoller.stop(); }
-  });
 
   /* ===== INIT APP ===== */
   async function initApp() {
