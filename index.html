@@ -44,7 +44,7 @@
             <p>Alege o categorie pentru a începe.</p>
           </div>
           <div id="categoriesGrid" class="grid-2-col"></div>
-          <div class="shop-footer-note">MiniApp Shop v3.0 (Visual Update)</div>
+          <div class="shop-footer-note">MiniApp Shop v3.0</div>
         </div>
 
         <div id="productsView" class="view-container" style="display: none;">
@@ -88,6 +88,11 @@
             </div>
 
             <div class="chat-footer chat-input">
+              <div id="userModeBar" class="chat-mode-bar" style="display: none;">
+                  <span class="chat-mode-text">Replying...</span>
+                  <button id="cancelReplyBtn">Anulează</button>
+              </div>
+
               <div class="input-wrapper">
                 <input id="chatInput" type="text" placeholder="Scrie un mesaj..." autocomplete="off" disabled />
                 <button id="chatSendBtn" class="btn-send" disabled>
@@ -113,6 +118,7 @@
            <img id="panelImage" src="" alt="Product" 
                 onerror="this.onerror=null; this.src='https://placehold.co/600x400/202226/FFF?text=Fara+Imagine'" />
         </div>
+
         <div class="modal-header">
           <h2 id="panelName">Nume Produs</h2>
           <div class="modal-price" id="panelPrice">-</div>
