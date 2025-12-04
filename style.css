@@ -44,104 +44,146 @@ html, body {
   box-shadow: 0 0 50px rgba(0,0,0,0.5);
 }
 
-/* --- ACCESS DENIED OVERLAY STYLE --- */
+/* ============================
+   REDESIGN ACCES RESTRICTED
+   ============================ */
 .access-error-screen {
     position: fixed;
     inset: 0;
-    z-index: 9999; /* Peste orice */
-    background: var(--bg-app);
-    background-image: radial-gradient(circle at 50% 30%, #2a1216 0%, var(--bg-app) 70%);
+    z-index: 9999;
+    background: #050505;
+    background-image: 
+        radial-gradient(circle at 50% 40%, rgba(255, 24, 67, 0.15) 0%, transparent 60%),
+        linear-gradient(to bottom, #0e0f11 0%, #000 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    animation: fadeIn 0.5s ease-out;
+}
+
+/* Card stil sticlă (Glassmorphism) */
+.error-card {
+    background: rgba(22, 23, 26, 0.6);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 40px 30px;
+    border-radius: 32px;
+    width: 100%;
+    max-width: 360px;
+    text-align: center;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.1);
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    padding: 20px;
-    text-align: center;
-    animation: fadeIn 0.4s ease-out;
+    transform: translateY(0);
+    animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.error-content {
-    max-width: 320px;
-    width: 100%;
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(30px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-.error-icon {
+/* Iconita Lacăt Animată */
+.lock-icon-wrapper {
     width: 80px;
     height: 80px;
-    margin: 0 auto 20px;
-    background: rgba(255, 24, 67, 0.1);
-    border-radius: 50%;
+    margin-bottom: 24px;
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--accent);
 }
-.error-icon svg {
-    width: 40px;
-    height: 40px;
+
+.lock-icon-wrapper svg {
+    width: 42px;
+    height: 42px;
+    z-index: 2;
+    filter: drop-shadow(0 0 10px rgba(255, 24, 67, 0.5));
 }
 
-.access-error-screen h2 {
-    font-size: 24px;
+.lock-glow {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle, rgba(255, 24, 67, 0.2) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: pulseRed 3s infinite;
+}
+
+@keyframes pulseRed {
+    0% { transform: scale(0.8); opacity: 0.5; }
+    50% { transform: scale(1.2); opacity: 0.8; }
+    100% { transform: scale(0.8); opacity: 0.5; }
+}
+
+/* Tipografie */
+.error-card h2 {
+    font-size: 22px;
     font-weight: 800;
-    margin: 0 0 12px;
+    margin: 0 0 10px;
     color: #fff;
+    letter-spacing: -0.5px;
 }
 
-.access-error-screen p {
+.error-card p {
     font-size: 14px;
     line-height: 1.6;
     color: var(--text-secondary);
-    margin: 0 0 30px;
+    margin: 0 0 32px;
+    padding: 0 10px;
 }
 
-/* --- BUTOANE PLATFORME --- */
-.error-actions {
+/* Butoane Noi */
+.error-actions-modern {
     display: flex;
     flex-direction: column;
     gap: 12px;
     width: 100%;
 }
 
-.btn-platform {
+.btn-modern {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 10px;
     text-decoration: none;
-    color: #fff;
     font-weight: 600;
     font-size: 14px;
     padding: 14px;
-    border-radius: 99px;
-    transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
-    width: 100%;
+    border-radius: 16px; /* Mai puțin rotund, mai modern */
+    transition: all 0.2s cubic-bezier(0.2, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
 }
 
-.btn-platform svg {
-    flex-shrink: 0;
+/* Buton Telegram - Gradient Premium */
+.btn-tg-gradient {
+    color: #fff;
+    background: linear-gradient(135deg, #2AABEE 0%, #229ED9 100%);
+    box-shadow: 0 4px 15px rgba(42, 171, 238, 0.3), inset 0 1px 0 rgba(255,255,255,0.2);
+    border: 1px solid rgba(255,255,255,0.1);
 }
 
-/* Telegram Button Style */
-.btn-telegram {
-    background: #24A1DE; /* Telegram Blue */
-    box-shadow: 0 4px 15px rgba(36, 161, 222, 0.3);
-}
-.btn-telegram:hover {
-    background: #1f8cb3;
+.btn-tg-gradient:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(36, 161, 222, 0.5);
+    box-shadow: 0 8px 25px rgba(42, 171, 238, 0.4), inset 0 1px 0 rgba(255,255,255,0.2);
 }
 
-/* Discord Button Style */
-.btn-discord {
-    background: #5865F2; /* Discord Blurple */
-    box-shadow: 0 4px 15px rgba(88, 101, 242, 0.3);
+/* Buton Discord - Glass / Ghost Style */
+.btn-discord-glass {
+    background: rgba(88, 101, 242, 0.1);
+    color: #7289da; /* Culoare Discord deschisă */
+    border: 1px solid rgba(88, 101, 242, 0.2);
 }
-.btn-discord:hover {
-    background: #4752c4;
+
+.btn-discord-glass:hover {
+    background: rgba(88, 101, 242, 0.2);
+    border-color: rgba(88, 101, 242, 0.5);
+    color: #fff;
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(88, 101, 242, 0.5);
 }
 
 /* ----------------------------------- */
@@ -176,19 +218,19 @@ html, body {
   background: var(--bg-surface); 
   border: 1px solid rgba(255,255,255,0.05);
   color: var(--text-secondary);
-  
+   
   /* Lățime automată pentru a include textul */
   width: auto; 
   height: 36px; /* Puțin mai înalt pentru a arăta bine cu text */
   padding: 0 14px 0 8px; /* Padding stânga/dreapta */
-  
+   
   border-radius: 99px; /* Pastilă */
-  
+   
   display: flex; 
   align-items: center; 
   justify-content: center;
   gap: 6px; /* Spațiu între săgeată și text */
-  
+   
   cursor: pointer; 
   transition: all 0.2s;
   margin-right: 0; 
