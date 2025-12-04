@@ -19,10 +19,10 @@ function createSmartPoll(fetchFn, isEnabledFn) {
   let isRunning = false;
 
   // Setări intervale (milisecunde)
-  const INTERVAL_ACTIVE = 3000;      // 3 secunde (când lucrezi/scrii)
-  const INTERVAL_IDLE = 10000;       // 10 secunde (când te uiți la ecran dar nu miști mouse-ul)
+  const INTERVAL_ACTIVE = 3000;       // 3 secunde (când lucrezi/scrii)
+  const INTERVAL_IDLE = 10000;        // 10 secunde (când te uiți la ecran dar nu miști mouse-ul)
   const INTERVAL_BACKGROUND = 60000; // 60 secunde (când ești în alt tab/aplicație)
-  const IDLE_THRESHOLD = 45000;      // 45 secunde până intră în modul Idle
+  const IDLE_THRESHOLD = 45000;       // 45 secunde până intră în modul Idle
 
   async function tick() {
     if (!active) return;
@@ -328,8 +328,9 @@ function initUserApp() {
   const panelNameEl = document.getElementById("panelName");
   const panelDescEl = document.getElementById("panelDesc");
   const panelPriceEl = document.getElementById("panelPrice");
-  const panelQtyEl = document.getElementById("panelQty");
-  const panelQtyRangeEl = document.getElementById("panelQtyRange");
+  // REMOVE QTY ELEMENTS
+  // const panelQtyEl = document.getElementById("panelQty");
+  // const panelQtyRangeEl = document.getElementById("panelQtyRange");
   const panelBuyBtn = document.getElementById("panelBuyBtn");
   const panelCloseBtn = document.getElementById("panelCloseBtn");
   const panelStatusEl = document.getElementById("panelStatus");
@@ -477,8 +478,8 @@ function initUserApp() {
   }
 
   /* ============================
-      NEW SHOP RENDER LOGIC
-      ============================ */
+       NEW SHOP RENDER LOGIC
+       ============================ */
   
   function renderCategoriesGrid(shop) {
     categoriesGrid.innerHTML = "";
@@ -586,9 +587,11 @@ function initUserApp() {
         panelImgPlaceholderEl.style.display = "block";
     }
 
-    const min = prod.min_qty || 1; const max = prod.max_qty || min;
-    panelQtyEl.min = min; panelQtyEl.max = max; panelQtyEl.value = min;
-    panelQtyRangeEl.textContent = `(min ${min}, max ${max})`;
+    // REMOVED QTY LOGIC
+    // const min = prod.min_qty || 1; const max = prod.max_qty || min;
+    // panelQtyEl.min = min; panelQtyEl.max = max; panelQtyEl.value = min;
+    // panelQtyRangeEl.textContent = `(min ${min}, max ${max})`;
+    
     productPanelEl.style.display = "flex";
   }
   function closeProductPanel() { SELECTED_PRODUCT = null; productPanelEl.style.display = "none"; }
@@ -596,7 +599,9 @@ function initUserApp() {
 
   async function buySelectedProduct() {
     if (!SELECTED_PRODUCT || !CURRENT_USER) return;
-    const qty = Number(panelQtyEl.value || 0);
+    
+    // HARDCODED QUANTITY = 1
+    const qty = 1;
     const prod = SELECTED_PRODUCT;
     
     panelStatusEl.textContent = "Se procesează..."; 
