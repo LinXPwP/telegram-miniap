@@ -282,8 +282,23 @@ function scrollToMessageElement(container, messageId) {
 function initUserApp() {
   const tg = window.Telegram?.WebApp;
   
-  // 🔒 SECURITY CRITICAL: Obținem initData pentru autentificare
-  const TG_INIT_DATA = tg?.initData || "";
+  // ============================================
+  // 🔒 SECURITY CHECK: FORCE TELEGRAM ENV
+  // ============================================
+  // Verificăm dacă initData există. În browser extern, de obicei este string gol.
+  if (!tg || !tg.initData) {
+      const appWrapper = document.getElementById("mainAppWrapper");
+      const errorScreen = document.getElementById("onlyTelegramError");
+      
+      if(appWrapper) appWrapper.style.display = "none";
+      if(errorScreen) errorScreen.style.display = "flex";
+      
+      console.warn("Access Denied: Not in Telegram WebApp environment.");
+      return; // OPRIM SCRIPUL AICI
+  }
+
+  // 🔒 InitData Valid
+  const TG_INIT_DATA = tg.initData;
 
   let CURRENT_USER = null;
   let CURRENT_SHOP = null;
@@ -479,13 +494,13 @@ function initUserApp() {
              : `<div class="img-placeholder">📁</div>`;
         
         catCard.innerHTML = `
-           <div class="card-img-container">
-               ${imgHtml}
-               <div class="card-overlay">
-                   <div class="cat-name">${cat.name}</div>
-                   <div class="cat-count">${(cat.products || []).length} produse</div>
-               </div>
-           </div>
+            <div class="card-img-container">
+                ${imgHtml}
+                <div class="card-overlay">
+                    <div class="cat-name">${cat.name}</div>
+                    <div class="cat-count">${(cat.products || []).length} produse</div>
+                </div>
+            </div>
         `;
 
         catCard.onclick = () => openCategory(cat);
@@ -922,11 +937,6 @@ function initUserApp() {
 
   /* ===== INIT APP ===== */
   async function initApp() {
-    if (!tg) { 
-        userLineEl.textContent = "Deschide din Telegram."; 
-        userLineEl.style.display = "block"; 
-        return; 
-    }
     tg.ready(); tg.expand();
 
     // 1. Luăm datele doar pentru UI (nesigur, doar vizual)
