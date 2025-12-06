@@ -315,7 +315,7 @@ function initUserApp() {
 
   // DOM Elements
   const creditsValueEl = document.getElementById("creditsValue");
-  const creditsPillBtn = document.getElementById("creditsPillBtn"); // BUTON NOU PENTRU CREDITE
+  const creditsBtn = document.getElementById("creditsBtn"); // NEW: Butonul de credite
   const userLineEl = document.getElementById("userLine");
   
   // -- NEW SHOP ELEMENTS --
@@ -342,9 +342,9 @@ function initUserApp() {
   const panelImgEl = document.getElementById("panelImg");
   const panelImgPlaceholderEl = document.getElementById("panelImgPlaceholder");
 
-  // -- CREDITS INFO MODAL --
-  const creditsInfoModal = document.getElementById("creditsInfoModal");
-  const creditsInfoCloseBtn = document.getElementById("creditsInfoCloseBtn");
+  // -- CREDITS MODAL ELEMENTS -- (NEW)
+  const creditsModal = document.getElementById("creditsModal");
+  const closeCreditsModalBtn = document.getElementById("closeCreditsModalBtn");
 
   let SELECTED_PRODUCT = null;
   let SELECTED_VARIANT = null; // Stocăm varianta selectată (dacă există)
@@ -373,36 +373,6 @@ function initUserApp() {
   let userModeBar = null;
   let userMode = { type: null, messageId: null, previewText: "", sender: "" };
 
-  /* ===== Funcții Modal Credite ===== */
-  function openCreditsInfo() {
-      if (creditsInfoModal) {
-          creditsInfoModal.style.display = "flex";
-      }
-      // Daca avem modalul de produs deschis, il inchidem ca sa nu se suprapuna urat
-      if (productPanelEl && productPanelEl.style.display === "flex") {
-          closeProductPanel();
-      }
-  }
-
-  function closeCreditsInfo() {
-      if (creditsInfoModal) {
-          creditsInfoModal.style.display = "none";
-      }
-  }
-
-  // Legăm evenimentele pentru credite
-  if (creditsPillBtn) {
-      creditsPillBtn.onclick = openCreditsInfo;
-  }
-  if (creditsInfoCloseBtn) {
-      creditsInfoCloseBtn.onclick = closeCreditsInfo;
-  }
-  if (creditsInfoModal) {
-      creditsInfoModal.onclick = (e) => {
-          if (e.target === creditsInfoModal) closeCreditsInfo();
-      };
-  }
-
   /* ===== Navigare ===== */
   function showShopTab() {
     if (shopTabEl) shopTabEl.classList.add("active");
@@ -421,6 +391,21 @@ function initUserApp() {
 
   if (goToTicketsBtn) goToTicketsBtn.addEventListener("click", showTicketsTab);
   if (backToShopBtn) backToShopBtn.addEventListener("click", showShopTab);
+
+  /* ===== CREDITS MODAL LOGIC (NEW) ===== */
+  function openCreditsInfo() {
+      if(creditsModal) creditsModal.style.display = "flex";
+  }
+  function closeCreditsInfo() {
+      if(creditsModal) creditsModal.style.display = "none";
+  }
+  
+  if (creditsBtn) creditsBtn.addEventListener("click", openCreditsInfo);
+  if (closeCreditsModalBtn) closeCreditsModalBtn.addEventListener("click", closeCreditsInfo);
+  if (creditsModal) creditsModal.addEventListener("click", (e) => {
+      if (e.target === creditsModal) closeCreditsInfo();
+  });
+
 
   if (chatInputContainer && !chatInputContainer.querySelector(".chat-mode-bar")) {
     userModeBar = document.createElement("div");
@@ -644,8 +629,6 @@ function initUserApp() {
         panelBuyBtn.disabled = false;
         panelBuyBtn.style.opacity = "1";
         panelBuyBtn.textContent = "Cumpără acum";
-        // Resetăm onclick-ul la funcția de cumpărare (în caz că a fost suprascris de not_enough_credits)
-        panelBuyBtn.onclick = buySelectedProduct; 
     }
     
     const imgUrl = getImageUrl(prod.image);
@@ -767,24 +750,25 @@ function initUserApp() {
         if(panelBuyBtn) {
             panelBuyBtn.disabled = false;
             panelBuyBtn.style.opacity = "1";
-            
-            // --- LOGICA SPECIFICĂ PENTRU FONDURI INSUFICIENTE ---
-            if (res.error === "not_enough_credits") {
-                panelStatusEl.className = "status-message status-error";
-                panelStatusEl.textContent = "Fonduri insuficiente!";
-                
-                // Schimbăm butonul să ducă la info
-                panelBuyBtn.textContent = "Obține Credite";
-                panelBuyBtn.onclick = openCreditsInfo;
-                return;
-            }
-
-            // Alte erori
             panelBuyBtn.textContent = "Încearcă din nou";
         }
 
         panelStatusEl.className = "status-message status-error";
-        if (res.error === "auth_failed") {
+        
+        // --- MODIFICARE: LINK CĂTRE POPUP CREDITE LA EROARE ---
+        if (res.error === "not_enough_credits") {
+            panelStatusEl.innerHTML = ""; // Curățăm textul
+            const txt = document.createTextNode("Fonduri insuficiente! ");
+            const action = document.createElement("span");
+            action.textContent = "Încarcă acum";
+            action.style.cssText = "cursor:pointer; text-decoration:underline; font-weight:bold; margin-left:5px; color:#fff;";
+            action.onclick = (e) => {
+                e.stopPropagation(); // Oprește alte clickuri
+                openCreditsInfo();
+            };
+            panelStatusEl.appendChild(txt);
+            panelStatusEl.appendChild(action);
+        } else if (res.error === "auth_failed") {
             panelStatusEl.textContent = "Eroare autentificare!";
         } else {
             panelStatusEl.textContent = "Eroare: " + res.error;
@@ -830,6 +814,7 @@ function initUserApp() {
       panelStatusEl.className = "status-message status-error"; 
       panelStatusEl.textContent = "Eroare rețea.";
     }
+    // NOTĂ: Am scos 'finally' pentru că debloca butonul prea repede în caz de succes.
   }
   
   if(panelCloseBtn) panelCloseBtn.onclick = closeProductPanel;
