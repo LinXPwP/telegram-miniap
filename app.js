@@ -1,4 +1,4 @@
-// app.js - FIXED SEEN & UNREAD (NUMERIC COMPARISON)
+// app.js - FIXED SEEN & UNREAD & OPTIMIZED
 
 const API_URL = "https://api.redgen.vip/";
 const $ = (id) => document.getElementById(id);
@@ -48,26 +48,32 @@ const smartScrollToBottom = (el, force) => {
 };
 const getImageUrl = (s) => s?.trim() ? s : null;
 
-// --- FIX: CALCULATE UNREAD (Numeric Comparison) ---
-function calculateUserUnread(ticket) {
-    if (!ticket.messages) return 0;
-    const lastRead = Number(ticket.last_read_user || 0);
-    // Numărăm mesajele de la admin care au ID-ul mai mare decât ultimul citit
-    return ticket.messages.filter(m => m.from === 'admin' && Number(m.id) > lastRead).length;
-}
-
-// --- FIX: GET SEEN CONFIG (Numeric Comparison) ---
+// --- NEW HELPER: Get Seen Config ---
 function getSeenConfig(t) {
     if (!t || !t.messages) return null;
     const userMsgs = t.messages.filter(m => m.from === 'user' && !m.deleted);
     if (userMsgs.length === 0) return null;
     
     const lastUserM = userMsgs[userMsgs.length - 1];
-    // Comparăm numeric ID-urile
+    // Convert to Number ensuring safe comparison
     if (t.last_read_admin && Number(t.last_read_admin) >= Number(lastUserM.id)) {
         return { targetId: lastUserM.id, text: `Văzut ${timeAgo(t.last_read_admin_at)}` };
     }
     return null;
+}
+
+// --- NEW HELPER: Calculate Unread (Robust) ---
+function calculateUserUnread(ticket) {
+    if (!ticket || !ticket.messages) return 0;
+    // Ensure we are comparing numbers
+    const lastReadId = Number(ticket.last_read_user || 0);
+    
+    // Count messages from admin that have an ID greater than the last read ID
+    const count = ticket.messages.filter(m => 
+        m.from === 'admin' && Number(m.id) > lastReadId
+    ).length;
+
+    return count;
 }
 
 // 3. UI RENDER
@@ -94,10 +100,9 @@ function renderDiscordMessages(msgs, { container, canReply, onReply, onJumpTo, s
     const sender = m.sender || (m.from === "system" ? "System" : "User");
     const content = m.deleted ? "Mesaj șters" : m.text;
     const btns = (canReply && !m.deleted) ? `<button class="btn-reply-mini" title="Răspunde">↩ Reply</button>` : '';
-    const initial = (sender||"?").slice(0,1).toUpperCase();
 
     const html = `
-        <div class="msg-avatar">${initial}</div>
+        <div class="msg-avatar">${(sender||"?")[0].toUpperCase()}</div>
         <div class="msg-content">
             <div class="msg-header-line">
                 <div class="msg-meta-group"><span class="msg-username ${m.from==="admin"?"msg-username--admin":""}">${sender}</span><span class="msg-timestamp">${formatTimestamp(m.ts)}</span></div>
@@ -113,6 +118,7 @@ function renderDiscordMessages(msgs, { container, canReply, onReply, onJumpTo, s
         row.querySelector('.btn-reply-mini')?.addEventListener('click', (e) => { e.stopPropagation(); onReply?.(m); });
         row.querySelector('.msg-reply-preview')?.addEventListener('click', (e) => { e.stopPropagation(); onJumpTo?.(e.currentTarget.dataset.jumpId); });
     } else {
+         // Update content if changed (e.g. edited or deleted)
          const textEl = row.querySelector('.msg-text');
          if (textEl && textEl.textContent !== content) {
              textEl.textContent = content;
@@ -255,7 +261,6 @@ function initUserApp() {
     SELECTED_PRODUCT = p; SELECTED_VARIANT = null;
     els.mStatus.textContent = ""; els.mStatus.className = "status-message";
     els.mName.textContent = p.name; els.mBuy.disabled = false; els.mBuy.style.opacity = "1"; els.mBuy.textContent = "Cumpără acum";
-    els.mBuy.onclick = buySelectedProduct;
     
     const img = getImageUrl(p.image);
     img ? (els.mImg.src = img, show(els.mImg), hide(els.mPlace)) : (hide(els.mImg), show(els.mPlace));
@@ -282,7 +287,7 @@ function initUserApp() {
   const closeModal = () => { hide(els.modal); STATE.buying = false; };
   els.mClose.onclick = closeModal; els.modal.onclick = (e) => e.target===els.modal && closeModal();
 
-  async function buySelectedProduct() {
+  els.mBuy.onclick = async () => {
     if (!SELECTED_PRODUCT || !STATE.user || STATE.buying) return;
     if (SELECTED_PRODUCT.types?.length && !SELECTED_VARIANT) return (els.mStatus.textContent = "Selectează o variantă!", els.mStatus.className = "status-message status-error");
 
@@ -306,7 +311,7 @@ function initUserApp() {
             updateActivity(); userTicketsPoller.bumpFast();
         }
     } catch { STATE.buying = false; els.mBuy.disabled = false; els.mStatus.textContent = "Eroare rețea."; }
-  }
+  };
 
   // Tickets
   const renderTickets = () => {
@@ -317,12 +322,14 @@ function initUserApp() {
         const item = document.createElement("div"); item.className = "chat-item " + (t.id === STATE.selTicketId ? "active":"");
         item.dataset.ticketId = t.id;
         
-        // FIX UNREAD CALCULATION
-        const unread = calculateUserUnread(t);
-        const displayUnread = (t.id === STATE.selTicketId) ? 0 : unread;
+        // --- FIX: Strict numeric comparison for unread ---
+        let unread = 0;
+        if (t.id !== STATE.selTicketId) {
+             unread = calculateUserUnread(t);
+        }
 
         const lastMsg = t.messages?.length ? t.messages[t.messages.length-1].text : "Tichet nou";
-        item.innerHTML = `<div class="chat-item-header-row"><div class="chat-item-title">${t.product_name||"Comandă"}</div><div>${displayUnread>0?`<span class="unread-badge">${displayUnread}</span>`:""}<span class="ticket-status-pill ${t.status}">${t.status}</span></div></div><div class="chat-item-line">${lastMsg}</div>`;
+        item.innerHTML = `<div class="chat-item-header-row"><div class="chat-item-title">${t.product_name||"Comandă"}</div><div>${unread>0?`<span class="unread-badge">${unread}</span>`:""}<span class="ticket-status-pill ${t.status}">${t.status}</span></div></div><div class="chat-item-line">${lastMsg}</div>`;
         item.onclick = () => { selTicket(t.id); updateActivity(); els.ticketsTab.classList.remove("tickets-drawer-open"); };
         els.chatList.appendChild(item);
     });
@@ -333,10 +340,7 @@ function initUserApp() {
     const t = STATE.tickets.find(x => x.id === id);
     if(t) {
        const unread = calculateUserUnread(t);
-       if(unread > 0) { 
-           apiCall("mark_seen", {ticket_id: id}); 
-           if(t.messages.length) t.last_read_user = t.messages[t.messages.length-1].id; 
-       }
+       if(unread > 0) { apiCall("mark_seen", {ticket_id: id}); if(t.messages.length) t.last_read_user = t.messages[t.messages.length-1].id; }
     }
     renderTickets();
     if(!t) { els.msgs.innerHTML = ""; updateChatUI(null); return; }
