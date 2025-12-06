@@ -26,7 +26,7 @@ function createSmartPoll(fetchFn, isEnabledFn) {
 
   async function tick() {
     if (!active) return;
-     
+      
     // 1. Calculăm delay-ul bazat pe starea utilizatorului
     let nextDelay = INTERVAL_ACTIVE;
 
