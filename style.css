@@ -186,6 +186,19 @@ html, body {
     transform: translateY(-2px);
 }
 
+.btn-discord-solid {
+    background: #5865F2; /* Discord Blurple */
+    color: #fff;
+    border: none;
+    margin-top: 15px;
+    box-shadow: 0 4px 15px rgba(88, 101, 242, 0.3);
+}
+.btn-discord-solid:hover {
+    background: #4752c4;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(88, 101, 242, 0.5);
+}
+
 /* ----------------------------------- */
 
 .main-content {
@@ -218,19 +231,19 @@ html, body {
   background: var(--bg-surface); 
   border: 1px solid rgba(255,255,255,0.05);
   color: var(--text-secondary);
-   
+    
   /* Lățime automată pentru a include textul */
   width: auto; 
   height: 36px; /* Puțin mai înalt pentru a arăta bine cu text */
   padding: 0 14px 0 8px; /* Padding stânga/dreapta */
-   
+    
   border-radius: 99px; /* Pastilă */
-   
+    
   display: flex; 
   align-items: center; 
   justify-content: center;
   gap: 6px; /* Spațiu între săgeată și text */
-   
+    
   cursor: pointer; 
   transition: all 0.2s;
   margin-right: 0; 
@@ -283,13 +296,32 @@ html, body {
 
 .header-right { display: flex; align-items: center; gap: 12px; }
 
-.credits-pill {
-  background: rgba(255, 24, 67, 0.1); border: 1px solid rgba(255, 24, 67, 0.2);
+/* MODIFICAT: Stil pentru butonul de credite */
+.credits-pill-btn {
+  background: rgba(255, 24, 67, 0.1); 
+  border: 1px solid rgba(255, 24, 67, 0.2);
   padding: 5px 12px; border-radius: 99px; font-size: 12px;
   display: flex; gap: 6px; align-items: center;
+  cursor: pointer; /* Clickable */
+  transition: all 0.2s;
+  color: var(--text-primary);
+  font-family: inherit;
 }
-.credits-pill .label { color: var(--accent); font-weight: 600; opacity: 0.9; }
-.credits-pill .value { color: var(--text-primary); font-weight: 700; }
+
+.credits-pill-btn:hover {
+    background: rgba(255, 24, 67, 0.2);
+    border-color: rgba(255, 24, 67, 0.5);
+    transform: scale(1.02);
+}
+
+.credits-pill-btn .label { color: var(--accent); font-weight: 600; opacity: 0.9; }
+.credits-pill-btn .value { color: var(--text-primary); font-weight: 700; }
+.credits-pill-btn .add-icon { 
+    color: #fff; background: var(--accent); 
+    border-radius: 50%; width: 14px; height: 14px; 
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: bold; margin-left: 2px;
+}
 
 .btn-icon {
   background: var(--bg-surface); border: none; color: var(--text-secondary);
@@ -642,3 +674,37 @@ html, body {
 
 .type-name { font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 2px; }
 .type-price { font-size: 11px; color: var(--accent); font-weight: 700; }
+
+/* --- NEW: CREDITS INSTRUCTIONS STEPS --- */
+.instructions-list {
+    text-align: left;
+    margin: 20px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.instruction-step {
+    background: rgba(255,255,255,0.03);
+    padding: 10px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+
+.step-num {
+    background: var(--accent);
+    color: #fff;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 12px;
+    flex-shrink: 0;
+}
