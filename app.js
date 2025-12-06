@@ -307,7 +307,7 @@ function initUserApp() {
   
   // --- STATE VARIABLES ---
   let isSending = false; // PREVINE DUBLUL CLICK CHAT
-  let isBuying = false;  // PREVINE DUBLUL CLICK SHOP (NOU)
+  let isBuying = false;  // PREVINE DUBLUL CLICK SHOP
 
   function bumpUserActive() {
     updateActivity();
@@ -604,6 +604,13 @@ function initUserApp() {
     panelStatusEl.textContent = ""; panelStatusEl.className = "status-message";
     panelNameEl.textContent = prod.name;
     
+    // --- RESET BUTTON STATE ON OPEN ---
+    if(panelBuyBtn) {
+        panelBuyBtn.disabled = false;
+        panelBuyBtn.style.opacity = "1";
+        panelBuyBtn.textContent = "Cumpără acum";
+    }
+    
     const imgUrl = getImageUrl(prod.image);
     if (imgUrl) {
         panelImgEl.src = imgUrl;
@@ -668,7 +675,12 @@ function initUserApp() {
       panelDescEl.textContent = finalDesc;
   }
 
-  function closeProductPanel() { SELECTED_PRODUCT = null; SELECTED_VARIANT = null; productPanelEl.style.display = "none"; }
+  function closeProductPanel() { 
+      SELECTED_PRODUCT = null; 
+      SELECTED_VARIANT = null; 
+      productPanelEl.style.display = "none"; 
+      isBuying = false; // Asigurăm că se resetează starea de cumpărare
+  }
   if (productPanelEl) productPanelEl.addEventListener("click", (e) => { if (e.target === productPanelEl) closeProductPanel(); });
 
   async function buySelectedProduct() {
@@ -713,6 +725,14 @@ function initUserApp() {
       const res = await apiCall("buy_product", payload);
       
       if (!res.ok) {
+        // --- EROARE: Deblocăm butonul ---
+        isBuying = false; 
+        if(panelBuyBtn) {
+            panelBuyBtn.disabled = false;
+            panelBuyBtn.style.opacity = "1";
+            panelBuyBtn.textContent = "Încearcă din nou";
+        }
+
         panelStatusEl.className = "status-message status-error";
         if (res.error === "not_enough_credits") {
             panelStatusEl.textContent = "Fonduri insuficiente!";
@@ -723,6 +743,10 @@ function initUserApp() {
         }
         return;
       }
+      
+      // --- SUCCES: NU DEBLOCĂM BUTONUL ---
+      // Rămâne blocat (isBuying = true) pe durata delay-ului de 1 secundă
+      // pentru a preveni double-purchase.
       
       CURRENT_USER.credits = res.new_balance; 
       creditsValueEl.textContent = CURRENT_USER.credits;
@@ -735,23 +759,30 @@ function initUserApp() {
       panelStatusEl.className = "status-message status-ok"; 
       panelStatusEl.textContent = `Succes! Tichet #${newTicket.id} creat.`;
       
-      setTimeout(() => { closeProductPanel(); showTicketsTab(); }, 1000);
+      setTimeout(() => { 
+          closeProductPanel(); 
+          showTicketsTab(); 
+          // isBuying se face false în closeProductPanel, dar pentru siguranță:
+          isBuying = false;
+      }, 1000);
+      
       bumpUserActive(); 
       userTicketsPoller.bumpFast();
       
     } catch (err) {
+      // --- EROARE REȚEA: Deblocăm butonul ---
+      isBuying = false; 
+      if(panelBuyBtn) {
+          panelBuyBtn.disabled = false;
+          panelBuyBtn.style.opacity = "1";
+          panelBuyBtn.textContent = "Încearcă din nou";
+      }
+
       console.error(err); 
       panelStatusEl.className = "status-message status-error"; 
       panelStatusEl.textContent = "Eroare rețea.";
-    } finally {
-        // --- UNLOCK PROCESS ---
-        isBuying = false;
-        if (panelBuyBtn) {
-            panelBuyBtn.disabled = false;
-            panelBuyBtn.style.opacity = "1";
-            panelBuyBtn.textContent = "Cumpără acum";
-        }
     }
+    // NOTĂ: Am scos 'finally' pentru că debloca butonul prea repede în caz de succes.
   }
   
   if(panelCloseBtn) panelCloseBtn.onclick = closeProductPanel;
