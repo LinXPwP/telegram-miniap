@@ -1,4 +1,4 @@
-// app.js - FIXED SEEN & UNREAD & OPTIMIZED
+// app.js - FIXED SEEN & UNREAD WITH NUMERIC IDs
 
 const API_URL = "https://api.redgen.vip/";
 const $ = (id) => document.getElementById(id);
@@ -48,27 +48,32 @@ const smartScrollToBottom = (el, force) => {
 };
 const getImageUrl = (s) => s?.trim() ? s : null;
 
-// --- NEW HELPER: Get Seen Config ---
+// --- FIXED HELPER: Get Seen Config ---
 function getSeenConfig(t) {
     if (!t || !t.messages) return null;
     const userMsgs = t.messages.filter(m => m.from === 'user' && !m.deleted);
     if (userMsgs.length === 0) return null;
     
     const lastUserM = userMsgs[userMsgs.length - 1];
-    // Convert to Number ensuring safe comparison
-    if (t.last_read_admin && Number(t.last_read_admin) >= Number(lastUserM.id)) {
-        return { targetId: lastUserM.id, text: `Văzut ${timeAgo(t.last_read_admin_at)}` };
+    
+    // Convert to number for strict comparison (Fixes the NaN issue)
+    const lastReadAdmin = Number(t.last_read_admin || 0);
+    const lastUserMsgId = Number(lastUserM.id);
+
+    // Daca adminul a citit un mesaj cu ID >= ID-ul ultimului mesaj trimis de user
+    if (lastReadAdmin >= lastUserMsgId) {
+        return { targetId: lastUserM.id, text: `Văzut ${t.last_read_admin_at ? timeAgo(t.last_read_admin_at) : ''}` };
     }
     return null;
 }
 
-// --- NEW HELPER: Calculate Unread (Robust) ---
+// --- FIXED HELPER: Calculate Unread ---
 function calculateUserUnread(ticket) {
     if (!ticket || !ticket.messages) return 0;
-    // Ensure we are comparing numbers
+    
     const lastReadId = Number(ticket.last_read_user || 0);
     
-    // Count messages from admin that have an ID greater than the last read ID
+    // Count messages from admin that have an ID strictly greater than lastReadId
     const count = ticket.messages.filter(m => 
         m.from === 'admin' && Number(m.id) > lastReadId
     ).length;
@@ -118,7 +123,6 @@ function renderDiscordMessages(msgs, { container, canReply, onReply, onJumpTo, s
         row.querySelector('.btn-reply-mini')?.addEventListener('click', (e) => { e.stopPropagation(); onReply?.(m); });
         row.querySelector('.msg-reply-preview')?.addEventListener('click', (e) => { e.stopPropagation(); onJumpTo?.(e.currentTarget.dataset.jumpId); });
     } else {
-         // Update content if changed (e.g. edited or deleted)
          const textEl = row.querySelector('.msg-text');
          if (textEl && textEl.textContent !== content) {
              textEl.textContent = content;
@@ -129,7 +133,7 @@ function renderDiscordMessages(msgs, { container, canReply, onReply, onJumpTo, s
     // HANDLE SEEN FOOTER
     const seenEl = row.querySelector('.seen-footer');
     if (seenEl) {
-        if (seenConfig && m.id === seenConfig.targetId) {
+        if (seenConfig && String(m.id) === String(seenConfig.targetId)) {
             seenEl.textContent = seenConfig.text;
             seenEl.style.display = 'block';
         } else {
@@ -322,7 +326,6 @@ function initUserApp() {
         const item = document.createElement("div"); item.className = "chat-item " + (t.id === STATE.selTicketId ? "active":"");
         item.dataset.ticketId = t.id;
         
-        // --- FIX: Strict numeric comparison for unread ---
         let unread = 0;
         if (t.id !== STATE.selTicketId) {
              unread = calculateUserUnread(t);
@@ -340,13 +343,16 @@ function initUserApp() {
     const t = STATE.tickets.find(x => x.id === id);
     if(t) {
        const unread = calculateUserUnread(t);
-       if(unread > 0) { apiCall("mark_seen", {ticket_id: id}); if(t.messages.length) t.last_read_user = t.messages[t.messages.length-1].id; }
+       if(unread > 0) { 
+           apiCall("mark_seen", {ticket_id: id}); 
+           // Local update for instant feel
+           if(t.messages.length) t.last_read_user = t.messages[t.messages.length-1].id; 
+       }
     }
     renderTickets();
     if(!t) { els.msgs.innerHTML = ""; updateChatUI(null); return; }
     els.tTitle.textContent = `${t.product_name} #${t.id}`;
     
-    // Seen logic (FIXED)
     const seen = getSeenConfig(t);
 
     renderDiscordMessages(t.messages, { container: els.msgs, ticket: t, canReply: t.status==="open", onReply: setReply, onJumpTo: (mid) => {
@@ -367,7 +373,6 @@ function initUserApp() {
             const idx = STATE.tickets.findIndex(x=>x.id===res.ticket.id);
             if(idx>=0) STATE.tickets[idx] = res.ticket; else STATE.tickets.push(res.ticket);
             renderTickets(); 
-            // Render with new messages
             const t = res.ticket;
             const seen = getSeenConfig(t);
             renderDiscordMessages(t.messages, {container: els.msgs, ticket:t, seenConfig: seen}); 
@@ -422,9 +427,11 @@ function initUserApp() {
              const t = STATE.tickets.find(x=>x.id===STATE.selTicketId);
              if(t) {
                 const unread = calculateUserUnread(t);
-                if(unread>0) { apiCall("mark_seen", {ticket_id:t.id}); if(t.messages.length) t.last_read_user=t.messages[t.messages.length-1].id; }
+                if(unread>0) { 
+                    apiCall("mark_seen", {ticket_id:t.id}); 
+                    if(t.messages.length) t.last_read_user=t.messages[t.messages.length-1].id; 
+                }
                 
-                // FIXED: Recalculate seen status on polling update
                 const seen = getSeenConfig(t);
                 renderDiscordMessages(t.messages, {container: els.msgs, ticket:t, canReply:t.status==="open", onReply:setReply, seenConfig: seen });
                 updateChatUI(t);
