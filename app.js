@@ -304,7 +304,10 @@ function initUserApp() {
   let CURRENT_SHOP = null;
   let CURRENT_TICKETS = [];
   let SELECTED_TICKET_ID = null;
-  let isSending = false; // PREVINE DUBLUL CLICK
+  
+  // --- STATE VARIABLES ---
+  let isSending = false; // PREVINE DUBLUL CLICK CHAT
+  let isBuying = false;  // PREVINE DUBLUL CLICK SHOP (NOU)
 
   function bumpUserActive() {
     updateActivity();
@@ -671,6 +674,9 @@ function initUserApp() {
   async function buySelectedProduct() {
     if (!SELECTED_PRODUCT || !CURRENT_USER) return;
     
+    // --- FIX: PREVENT MULTIPLE CLICKS ---
+    if (isBuying) return; 
+
     // Validare selecție variantă
     if (SELECTED_PRODUCT.types && SELECTED_PRODUCT.types.length > 0 && !SELECTED_VARIANT) {
         panelStatusEl.className = "status-message status-error";
@@ -681,7 +687,15 @@ function initUserApp() {
     const qty = 1; // Hardcoded
     const prod = SELECTED_PRODUCT;
     
-    panelStatusEl.textContent = "Se procesează..."; 
+    // Lock process & UI Feedback
+    isBuying = true;
+    if (panelBuyBtn) {
+        panelBuyBtn.disabled = true;
+        panelBuyBtn.style.opacity = "0.6";
+        panelBuyBtn.textContent = "Se procesează...";
+    }
+
+    panelStatusEl.textContent = "Se inițializează..."; 
     panelStatusEl.className = "status-message";
     
     // Pregătim payload-ul
@@ -729,6 +743,14 @@ function initUserApp() {
       console.error(err); 
       panelStatusEl.className = "status-message status-error"; 
       panelStatusEl.textContent = "Eroare rețea.";
+    } finally {
+        // --- UNLOCK PROCESS ---
+        isBuying = false;
+        if (panelBuyBtn) {
+            panelBuyBtn.disabled = false;
+            panelBuyBtn.style.opacity = "1";
+            panelBuyBtn.textContent = "Cumpără acum";
+        }
     }
   }
   
