@@ -26,7 +26,7 @@ function createSmartPoll(fetchFn, isEnabledFn) {
 
   async function tick() {
     if (!active) return;
-    
+     
     // 1. Calculăm delay-ul bazat pe starea utilizatorului
     let nextDelay = INTERVAL_ACTIVE;
 
@@ -345,11 +345,8 @@ function initUserApp() {
   const chatMessagesEl = document.getElementById("chatMessages");
   const chatInputEl = document.getElementById("chatInput");
   const chatSendBtn = document.getElementById("chatSendBtn");
-  
-  // BUTTONS
   const userTicketCloseBtn = document.getElementById("userTicketCloseBtn");
-  const userTicketReopenBtn = document.getElementById("userTicketReopenBtn");
-  
+  const userTicketReopenBtn = document.getElementById("userTicketReopenBtn"); // NEW BUTTON
   const ticketsMenuToggle = document.getElementById("ticketsMenuToggle");
   const ticketsBackdrop = document.getElementById("ticketsBackdrop");
   const shopTabEl = document.getElementById("shopTab");
@@ -417,32 +414,27 @@ function initUserApp() {
     chatInputEl.focus();
   }
 
+  // --- UPDATED LOGIC FOR REOPEN ---
   function updateUserChatState(ticket) {
     if (!chatInputEl || !chatSendBtn) return;
-    
-    // 1. Niciun tichet selectat
     if (!ticket) {
       chatInputEl.disabled = true; chatSendBtn.disabled = true;
       chatInputEl.placeholder = "Alege un tichet din meniu...";
       clearUserMode();
-      
-      // Ascunde ambele butoane
       if (userTicketCloseBtn) userTicketCloseBtn.style.display = "none";
       if (userTicketReopenBtn) userTicketReopenBtn.style.display = "none";
-      
       if (ticketTitleEl) ticketTitleEl.textContent = "Niciun tichet selectat";
       return;
     }
 
-    // 2. Tichet Selectat
     const isClosed = ticket.status === "closed";
     
-    // Logică Input: Dacă e închis, nu poți scrie până nu redeschizi
+    // UI changes based on status
     chatInputEl.disabled = isClosed; 
     chatSendBtn.disabled = isClosed;
-    chatInputEl.placeholder = isClosed ? "Tichet închis. Redeschide pentru a scrie." : "Scrie un mesaj...";
-
-    // Logică Butoane Header (Toggle între Close și Reopen)
+    chatInputEl.placeholder = isClosed ? "Tichet închis." : "Scrie un mesaj...";
+    
+    // Toggle Buttons
     if (isClosed) {
         if (userTicketCloseBtn) userTicketCloseBtn.style.display = "none";
         if (userTicketReopenBtn) userTicketReopenBtn.style.display = "block";
@@ -913,49 +905,50 @@ function initUserApp() {
     });
   }
 
-  // --- NEW FUNCTION: REDESCHIDE TICKET ---
+  // --- LOGICA REDESCHIDERE TICHET ---
   async function userReopenCurrentTicket() {
-      if (!SELECTED_TICKET_ID) return;
-      
-      const btn = document.getElementById("userTicketReopenBtn");
-      if(btn) { btn.disabled = true; btn.textContent = "..."; }
+    if (!SELECTED_TICKET_ID) return;
+    
+    // Butonul e deja acolo, nu mai e nevoie de modal de confirmare, dar poți adăuga dacă vrei.
+    // Facem request direct.
+    
+    userTicketReopenBtn.textContent = "Se redeschide...";
+    userTicketReopenBtn.disabled = true;
 
-      try {
-          const res = await apiCall("user_reopen_ticket", { ticket_id: SELECTED_TICKET_ID });
-          
-          if (res.ok && res.ticket) {
-              // Update local array
-              const idx = CURRENT_TICKETS.findIndex(x => x.id === SELECTED_TICKET_ID);
-              if (idx >= 0) {
-                  CURRENT_TICKETS[idx] = res.ticket;
-              }
-              
-              renderTicketsListUser();
-              renderUserMessages(res.ticket);
-              updateUserChatState(res.ticket);
-              smartScrollToBottom(chatMessagesEl, true);
-          } else {
-              alert("Nu s-a putut redeschide tichetul.");
-          }
-          
-          bumpUserActive();
-          userTicketsPoller.bumpFast();
+    try {
+        const res = await apiCall("user_reopen_ticket", { ticket_id: SELECTED_TICKET_ID });
 
-      } catch (err) {
-          console.error(err);
-          alert("Eroare de rețea.");
-      } finally {
-          if(btn) { btn.disabled = false; btn.textContent = "Redeschide"; }
-      }
+        if (res.ok && res.ticket) {
+            const idx = CURRENT_TICKETS.findIndex(x => x.id === SELECTED_TICKET_ID);
+            if (idx >= 0) {
+                CURRENT_TICKETS[idx] = res.ticket;
+            } else {
+                CURRENT_TICKETS.push(res.ticket);
+            }
+            
+            renderTicketsListUser();
+            selectTicketUser(res.ticket.id); // Update GUI
+            smartScrollToBottom(chatMessagesEl, true);
+        } else {
+            alert("Eroare la redeschidere: " + (res.error || "Necunoscută"));
+        }
+    } catch (err) {
+        console.error(err);
+        alert("Eroare rețea.");
+    } finally {
+        userTicketReopenBtn.textContent = "Redeschide";
+        userTicketReopenBtn.disabled = false;
+        bumpUserActive();
+        userTicketsPoller.bumpFast();
+    }
   }
 
   chatSendBtn?.addEventListener("click", sendChatMessage);
   chatInputEl?.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChatMessage(); } });
   ticketsMenuToggle?.addEventListener("click", () => { toggleTicketsDrawer(); bumpUserActive(); });
   ticketsBackdrop?.addEventListener("click", closeTicketsDrawer);
-  
   if (userTicketCloseBtn) userTicketCloseBtn.addEventListener("click", userCloseCurrentTicket);
-  if (userTicketReopenBtn) userTicketReopenBtn.addEventListener("click", userReopenCurrentTicket); // BIND BUTTON
+  if (userTicketReopenBtn) userTicketReopenBtn.addEventListener("click", userReopenCurrentTicket); // Event Listener Nou
 
   async function pollTicketsUserCore() {
     if (!CURRENT_USER) return CURRENT_TICKETS;
@@ -969,10 +962,9 @@ function initUserApp() {
           const localT = CURRENT_TICKETS.find(x => x.id === SELECTED_TICKET_ID);
           const serverT = newTickets.find(x => x.id === SELECTED_TICKET_ID);
           
-          // Detect status change externally (admin closed/opened)
-          if (localT && serverT && localT.status !== serverT.status) {
-              localT.status = serverT.status;
-              updateUserChatState(localT); // Refresh buttons immediately
+          if (localT && localT.status === 'closed' && serverT && serverT.status === 'open') {
+              // Dacă serverul zice că e deschis, dar noi îl avem închis, actualizăm
+              serverT.status = 'open';
           }
       }
 
