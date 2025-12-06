@@ -1,1203 +1,321 @@
-// app.js – SECURIZED: Uses Telegram initData for Auth + Anti-Spam + Smart Polling + Optimized Network Calls
-
-// ⚠️ URL-ul către Cloudflare Worker sau Serverul tău
+// --- CONFIG & UTILS ---
 const API_URL = "https://api.redgen.vip/";
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+const on = (el, evt, fn) => el && el.addEventListener(evt, fn);
+const show = (el, d='flex') => el && (el.classList.remove('hidden'), el.style.display = d);
+const hide = el => el && (el.classList.add('hidden'), el.style.display = 'none');
+const mk = (tag, cls, html) => { const e = document.createElement(tag); if(cls) e.className=cls; if(html) e.innerHTML=html; return e; };
+const imgUrl = url => (url && url.trim()) ? url : null;
+const fmtDate = ts => { const d=new Date(ts); return isNaN(d) ? '' : `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}, ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
 
-// GLOBAL: Urmărim ultima interacțiune a utilizatorului pentru Anti-Spam
-let LAST_USER_ACTION = Date.now();
-const updateActivity = () => { LAST_USER_ACTION = Date.now(); };
-['mousemove', 'keydown', 'touchstart', 'scroll', 'click'].forEach(evt => 
-    document.addEventListener(evt, updateActivity, { passive: true })
-);
+// --- STATE ---
+const State = {
+    user: null, shop: null, tickets: [],
+    selTicketId: null, selProd: null, selVariant: null,
+    sending: false, buying: false, lastAct: Date.now(),
+    reply: { id: null, txt: '', sender: '' }
+};
 
-/* ============================
-   1. HELPER – SUPER SMART POLLING (ECONOMY MODE)
-   ============================ */
-function createSmartPoll(fetchFn, isEnabledFn) {
-  let timeoutId = null;
-  let active = false;
-  let isRunning = false;
-
-  // Setări intervale (milisecunde)
-  const INTERVAL_ACTIVE = 3000;       // 3 secunde (când lucrezi/scrii)
-  const INTERVAL_IDLE = 10000;        // 10 secunde (când te uiți la ecran dar nu miști mouse-ul)
-  const INTERVAL_BACKGROUND = 60000; // 60 secunde (când ești în alt tab/aplicație)
-  const IDLE_THRESHOLD = 45000;       // 45 secunde până intră în modul Idle
-
-  async function tick() {
-    if (!active) return;
-      
-    // 1. Calculăm delay-ul bazat pe starea utilizatorului
-    let nextDelay = INTERVAL_ACTIVE;
-
-    if (document.hidden) {
-        nextDelay = INTERVAL_BACKGROUND;
-    } else if (Date.now() - LAST_USER_ACTION > IDLE_THRESHOLD) {
-        nextDelay = INTERVAL_IDLE;
-    }
-
-    // 2. Verificăm dacă polling-ul e permis logic
-    if (isEnabledFn && !isEnabledFn()) {
-        schedule(INTERVAL_BACKGROUND);
-        return;
-    }
-
+// --- API ---
+async function api(act, pl = {}) {
+    if (!window.Telegram?.WebApp?.initData) return { ok: false, error: 'auth_failed' };
+    pl.action = act; pl.initData = window.Telegram.WebApp.initData;
     try {
-        isRunning = true;
-        await fetchFn();
-    } catch (e) {
-        nextDelay = Math.max(nextDelay, 10000);
-    } finally {
-        isRunning = false;
-        schedule(nextDelay);
+        const r = await fetch(API_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(pl) });
+        return r.status === 401 ? { ok: false, error: 'auth_failed' } : await r.json();
+    } catch (e) { console.error(e); return { ok: false, error: 'network' }; }
+}
+
+// --- POLLING ---
+function createPoll(fn, check) {
+    let tId, active = false, running = false;
+    const tick = async () => {
+        if (!active) return;
+        let delay = document.hidden ? 60000 : (Date.now() - State.lastAct > 45000 ? 10000 : 3000);
+        if (check && !check()) delay = 60000;
+        if (!running && (!check || check())) {
+            running = true; try { await fn(); } catch(e){} running = false;
+        }
+        tId = setTimeout(tick, delay);
+    };
+    return {
+        start: () => { if(!active){ active=true; State.lastAct=Date.now(); tick(); } },
+        stop: () => { active=false; clearTimeout(tId); },
+        bump: () => { State.lastAct=Date.now(); clearTimeout(tId); if(active) tId=setTimeout(tick, 100); }
+    };
+}
+
+// --- UI RENDERING ---
+function renderHeader() {
+    if(!State.user) return;
+    $('#creditsValue').textContent = State.user.credits;
+    $('#userLine').innerHTML = `Utilizator: <b>${State.user.username ? '@'+State.user.username : 'ID '+State.user.id}</b>`;
+}
+
+function renderGrid(list, type) {
+    const grid = $(type === 'cat' ? '#categoriesGrid' : '#productsGrid');
+    grid.innerHTML = '';
+    if (!list || !list.length) return type === 'prod' && show($('#emptyProductsMsg'), 'block');
+    type === 'prod' && hide($('#emptyProductsMsg'));
+
+    list.forEach(item => {
+        const img = imgUrl(item.image);
+        const card = mk('div', 'card-visual', `
+            <div class="card-img-container" style="${type==='prod'?'height:140px;aspect-ratio:unset':''}">
+                ${img ? `<img src="${img}" class="card-img">` : `<div class="img-placeholder">${type==='cat'?'📁':'🎁'}</div>`}
+                ${type==='cat' ? `<div class="card-overlay"><div class="cat-name">${item.name}</div><div class="cat-count">${(item.products||[]).length} produse</div></div>` : ''}
+            </div>
+            ${type==='prod' ? `<div class="prod-info"><div class="prod-title">${item.name}</div><div class="prod-meta"><div class="prod-price">${item.types?.length ? `De la ${Math.min(...item.types.map(t=>Number(t.price)))}` : item.price} CRD</div><div class="prod-btn-mini">&rarr;</div></div></div>` : ''}
+        `);
+        // Event delegation logic handled by data attr would be cleaner but keeping simple click
+        card.onclick = () => type === 'cat' ? openCategory(item) : openProd(item);
+        grid.appendChild(card);
+    });
+}
+
+function openCategory(cat) {
+    $('#viewCategories').classList.remove('active-view');
+    $('#viewProducts').classList.add('active-view');
+    hide($('#headerTitle'));
+    const btn = $('#shopBackBtn'); show(btn);
+    btn.querySelector('span').textContent = cat.name;
+    btn.onclick = () => {
+        $('#viewProducts').classList.remove('active-view'); $('#viewCategories').classList.add('active-view');
+        hide(btn); show($('#headerTitle'));
+    };
+    renderGrid(cat.products || [], 'prod');
+}
+
+// --- PRODUCT LOGIC ---
+function openProd(p) {
+    State.selProd = p; State.selVariant = null;
+    $('#panelName').textContent = p.name;
+    $('#panelStatus').textContent = ''; $('#panelStatus').className = 'status-message';
+    const btn = $('#panelBuyBtn'); btn.disabled = false; btn.textContent = 'Cumpără acum'; btn.style.opacity = '1';
+    
+    const img = imgUrl(p.image);
+    const iEl = $('#panelImg'); const ph = $('#panelImgPlaceholder');
+    if(img) { iEl.src = img; show(iEl); hide(ph); } else { hide(iEl); show(ph); }
+
+    const tCont = $('#panelTypesContainer'); const tGrid = $('#panelTypesGrid');
+    if (p.types?.length) {
+        show(tCont, 'block'); tGrid.innerHTML = '';
+        p.types.sort((a,b)=>a.price-b.price).forEach((t, i) => {
+            const el = mk('div', 'type-card', `<div class="type-name">${t.name}</div><div class="type-price">${t.price} CRD</div>`);
+            el.onclick = () => selVar(t, el);
+            tGrid.appendChild(el);
+            if(i===0) selVar(t, el);
+        });
+    } else {
+        hide(tCont);
+        $('#panelPrice').textContent = `${p.price} CRD`;
+        $('#panelDesc').textContent = p.description || 'Fără descriere.';
     }
-  }
+    show($('#productPanel'));
+}
 
-  function schedule(delay) {
-    if (!active) return;
-    if (timeoutId) clearTimeout(timeoutId);
-    timeoutId = setTimeout(tick, delay);
-  }
+function selVar(t, el) {
+    State.selVariant = t;
+    Array.from($('#panelTypesGrid').children).forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    $('#panelPrice').textContent = `${t.price} CRD`;
+    $('#panelDesc').textContent = `${State.selProd.description || ''}\n\n🔹 ${t.name}\n${t.warranty ? '🛡️ '+t.warranty : ''}\n${t.description ? '📝 '+t.description : ''}`;
+}
 
-  document.addEventListener("visibilitychange", () => {
-      if (!document.hidden && active && !isRunning) {
-          if (isEnabledFn && isEnabledFn()) {
-             if (timeoutId) clearTimeout(timeoutId);
-             tick();
-          }
-      }
-  });
+async function buy() {
+    if (!State.selProd || State.buying) return;
+    if (State.selProd.types?.length && !State.selVariant) return $('#panelStatus').innerHTML='<span class="status-error">Alege varianta!</span>';
+    
+    State.buying = true;
+    const btn = $('#panelBuyBtn'); btn.textContent = 'Procesare...'; btn.style.opacity = '0.6';
+    const pl = { product_id: State.selProd.id, qty: 1 };
+    if (State.selVariant) pl.type_id = State.selVariant.id;
 
-  return {
-    start: () => { 
-        if (!active) { 
-            active = true; 
-            updateActivity(); 
-            tick(); 
-        } 
-    },
-    stop: () => { 
-        active = false; 
-        if (timeoutId) clearTimeout(timeoutId); 
-        timeoutId = null;
-    },
-    bumpFast: () => { 
-        updateActivity();
-        if (active) { 
-            if (timeoutId) clearTimeout(timeoutId); 
-            schedule(100); 
-        } 
+    const res = await api('buy_product', pl);
+    State.buying = false;
+    
+    if (!res.ok) {
+        btn.textContent = 'Încearcă din nou'; btn.style.opacity = '1';
+        const msg = res.error === 'not_enough_credits' ? `Fonduri insuficiente! <span onclick="show($('#creditsModal'))" style="text-decoration:underline;cursor:pointer;font-weight:bold">Încarcă</span>` : res.error;
+        $('#panelStatus').innerHTML = `<span class="status-error">${msg}</span>`;
+    } else {
+        State.user.credits = res.new_balance; renderHeader();
+        State.tickets.push(res.ticket);
+        $('#panelStatus').innerHTML = '<span class="status-ok">Succes!</span>';
+        setTimeout(() => { hide($('#productPanel')); showTab('tickets'); poll.bump(); }, 1000);
     }
-  };
 }
 
-/* ============================
-   2. UTILITARE
-   ============================ */
-function formatTimestamp(ts) {
-  if (!ts) return "";
-  const d = new Date(ts);
-  if (isNaN(d.getTime())) return "";
-  const day = String(d.getDate()).padStart(2, "0");
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const hours = String(d.getHours()).padStart(2, "0");
-  const mins = String(d.getMinutes()).padStart(2, "0");
-  return `${day}/${month}, ${hours}:${mins}`;
+// --- TICKETS LOGIC ---
+const poll = createPoll(async () => {
+    const res = await api('user_get_tickets');
+    if (res.ok && res.tickets) {
+        // Sync open status
+        if (State.selTicketId) {
+            const loc = State.tickets.find(x=>x.id==State.selTicketId);
+            const srv = res.tickets.find(x=>x.id==State.selTicketId);
+            if(loc?.status==='closed' && srv?.status==='open') srv.status='open';
+        }
+        State.tickets = res.tickets;
+        // Auto-refresh chat if open
+        if (State.selTicketId) {
+             const t = State.tickets.find(x=>x.id==State.selTicketId);
+             if(t) { renderMsgs(t); if(calcUnread(t)>0) api('mark_seen', {ticket_id:t.id}); }
+        }
+        renderTicketList();
+    }
+}, () => $('#ticketsTab').classList.contains('active'));
+
+function calcUnread(t) {
+    if(!t.messages) return 0;
+    const last = t.last_read_user;
+    let c = 0, count = !last;
+    for(let m of t.messages) { if(m.id===last) count=true; else if(count && m.from==='admin') c++; }
+    return c;
 }
 
-function timeAgo(ts) {
-    if (!ts) return "";
-    const now = new Date();
-    const then = new Date(ts);
-    const diff = Math.floor((now - then) / 1000); 
+function renderTicketList() {
+    const list = $('#chatList');
+    if (!State.tickets.length) { list.innerHTML=''; return show($('#noTicketsMsg')); }
+    hide($('#noTicketsMsg'));
+    
+    State.tickets.sort((a,b) => (a.status==='open'?-1:1) - (b.status==='open'?-1:1) || b.id-a.id);
+    
+    // Simple Diffing to prevent full redraw flickering
+    const ids = new Set(State.tickets.map(t=>String(t.id)));
+    Array.from(list.children).forEach(c => !ids.has(c.dataset.tid) && c.id !== 'noTicketsMsg' && c.remove());
 
-    if (diff < 60) return "acum";
-    const min = Math.floor(diff / 60);
-    if (min < 60) return `${min}m`;
-    const h = Math.floor(min / 60);
-    if (h < 24) return `${h}h`;
-    const d = Math.floor(h / 24);
-    return `${d}z`;
+    State.tickets.forEach(t => {
+        let el = list.querySelector(`.chat-item[data-tid="${t.id}"]`);
+        const unread = (State.selTicketId !== t.id && t.status==='open') ? calcUnread(t) : 0;
+        const html = `
+            <div class="chat-item-header-row"><div class="chat-item-title">${t.product_name||'Comandă'}</div><div>${unread?`<span class="unread-badge">${unread}</span>`:''}<span class="ticket-status-pill ${t.status}">${t.status}</span></div></div>
+            <div class="chat-item-line">${(t.messages?.length?t.messages.at(-1).text:'Tichet nou').slice(0,30)}</div>
+        `;
+        if(!el) {
+            el = mk('div', 'chat-item'); el.dataset.tid = t.id;
+            el.onclick = () => { State.selTicketId=t.id; renderTicketList(); hide($('#ticketsTab'),'flex'); $('#ticketsTab').classList.remove('tickets-drawer-open'); renderMsgs(t); poll.bump(); };
+            list.appendChild(el);
+        }
+        if(el.innerHTML !== html) el.innerHTML = html;
+        t.id === State.selTicketId ? el.classList.add('active') : el.classList.remove('active');
+    });
 }
 
-function isNearBottom(container, thresholdPx = 150) {
-  if (!container) return true;
-  const { scrollTop, scrollHeight, clientHeight } = container;
-  return scrollHeight - (scrollTop + clientHeight) < thresholdPx;
-}
+function renderMsgs(t) {
+    const c = $('#chatMessages');
+    $('#ticketTitle').textContent = `Tichet #${t.id}`;
+    
+    // Controls
+    const closed = t.status === 'closed';
+    $('#chatInput').disabled = $('#chatSendBtn').disabled = closed;
+    $('#chatInput').placeholder = closed ? 'Tichet închis.' : 'Scrie un mesaj...';
+    closed ? (hide($('#userTicketCloseBtn')), show($('#userTicketReopenBtn'))) : (show($('#userTicketCloseBtn')), hide($('#userTicketReopenBtn')));
+    if(closed) resetReply();
 
-function smartScrollToBottom(container, force = false) {
-  if (!container) return;
-  if (force || isNearBottom(container)) {
-    requestAnimationFrame(() => { container.scrollTop = container.scrollHeight; });
-  }
-}
-
-function getImageUrl(imgStr) {
-    if (!imgStr || imgStr.trim() === "") return null;
-    return imgStr;
-}
-
-/* ============================
-   3. RENDER MESAJE
-   ============================ */
-function renderDiscordMessages(messages, options) {
-  const { container, ticket, canReply, onReply, onJumpTo, seenConfig } = options;
-
-  if (!container) return;
-  const wasNearBottom = isNearBottom(container);
-
-  if (!messages || messages.length === 0) {
-      if (!container.querySelector('.chat-placeholder')) {
-         container.innerHTML = `
-            <div class="chat-placeholder">
-                <div class="icon">💬</div>
-                <p>Începe conversația...</p>
+    // Messages
+    if(!t.messages?.length) return c.innerHTML = '<div class="chat-placeholder"><div class="icon">💬</div><p>Începe conversația...</p></div>';
+    
+    // Message Rendering Optimized
+    const frag = document.createDocumentFragment();
+    const map = {}; t.messages.forEach(m=>map[m.id]=m);
+    
+    t.messages.forEach(m => {
+        const div = mk('div', 'msg-row'); div.dataset.mid = m.id;
+        const rep = m.reply_to && map[m.reply_to] ? `<div class="msg-reply-preview" onclick="this.closest('.chat-viewport').querySelector('[data-mid=\\'${m.reply_to}\\']')?.scrollIntoView({behavior:'smooth',block:'center'})"><strong>${map[m.reply_to].sender}</strong>: ${(map[m.reply_to].text||'').slice(0,20)}...</div>` : '';
+        div.innerHTML = `
+            <div class="msg-avatar">${(m.sender||'U')[0].toUpperCase()}</div>
+            <div class="msg-content">
+                <div class="msg-header-line"><span class="msg-username ${m.from==='admin'?'msg-username--admin':''}">${m.sender||'User'}</span><span class="msg-timestamp">${fmtDate(m.ts)}</span>${!closed && !m.deleted?`<button class="btn-reply-mini" onclick="setReply(${m.id}, '${m.sender}', '${(m.text||'').replace(/'/g,"\\'")}')">↩</button>`:''}</div>
+                <div class="msg-bubble">${rep}<div class="msg-text ${m.deleted?'msg-text--deleted':''}">${m.deleted?'Șters':m.text}</div></div>
             </div>`;
-      }
-      return;
-  }
-  
-  const placeholder = container.querySelector('.chat-placeholder');
-  if (placeholder) placeholder.remove();
-
-  const msgById = {};
-  messages.forEach((m) => { if (m && m.id) msgById[m.id] = m; });
-  const processedIds = new Set();
-
-  messages.forEach((m) => {
-    if (!m) return;
-    processedIds.add(String(m.id));
-
-    let row = container.querySelector(`.msg-row[data-message-id="${m.id}"]`);
-
-    let replyHtml = '';
-    if (m.reply_to && msgById[m.reply_to]) {
-        const origin = msgById[m.reply_to];
-        replyHtml = `
-            <div class="msg-reply-preview" data-jump-id="${origin.id}">
-                <strong style="margin-right:5px;">${origin.sender || "User"}</strong>
-                <span>${(origin.text || "").slice(0, 50)}...</span>
-            </div>
-        `;
-    }
-
-    const senderName = m.sender || (m.from === "system" ? "System" : "User");
-    const initial = (senderName || "?").slice(0, 1).toUpperCase();
-    const adminClass = m.from === "admin" ? "msg-username--admin" : "";
-    
-    let textClass = "msg-text";
-    let textContent = m.text;
-    if (m.deleted) {
-        textClass += " msg-text--deleted";
-        textContent = "Mesaj șters";
-    }
-
-    let actionButtons = "";
-    if (canReply && !m.deleted) {
-        actionButtons = `<button class="btn-reply-mini" title="Răspunde">↩ Reply</button>`;
-    }
-
-    const innerHTML = `
-        <div class="msg-avatar">${initial}</div>
-        <div class="msg-content">
-            <div class="msg-header-line">
-                <div class="msg-meta-group">
-                    <span class="msg-username ${adminClass}">${senderName}</span>
-                    <span class="msg-timestamp">${formatTimestamp(m.ts)}</span>
-                </div>
-                ${actionButtons}
-            </div>
-            <div class="msg-bubble">
-                ${replyHtml}
-                <div class="${textClass}">${textContent}</div>
-            </div>
-        </div>
-    `;
-
-    if (!row) {
-        row = document.createElement("div");
-        row.className = "msg-row";
-        row.dataset.messageId = m.id;
-        row.innerHTML = innerHTML;
-        attachMessageEvents(row, m, onReply, onJumpTo);
-        container.appendChild(row);
-    } else {
-        if (!row.innerHTML.includes(textContent)) { 
-            row.innerHTML = innerHTML; 
-            attachMessageEvents(row, m, onReply, onJumpTo);
-        }
-    }
-
-    const existingSeen = row.querySelector('.seen-footer');
-    if (existingSeen) existingSeen.remove();
-
-    if (seenConfig && m.id === seenConfig.targetId) {
-        const seenDiv = document.createElement("div");
-        seenDiv.className = "seen-footer";
-        seenDiv.textContent = seenConfig.text;
-        row.querySelector(".msg-content").appendChild(seenDiv);
-    }
-  });
-
-  Array.from(container.children).forEach(child => {
-      const id = child.dataset.messageId;
-      if (id && !processedIds.has(id)) child.remove();
-  });
-
-  smartScrollToBottom(container, wasNearBottom);
+        frag.appendChild(div);
+    });
+    c.innerHTML = ''; c.appendChild(frag);
+    c.scrollTop = c.scrollHeight;
 }
 
-function attachMessageEvents(rowElement, messageData, onReply, onJumpTo) {
-    const replyBtn = rowElement.querySelector('.btn-reply-mini');
-    if (replyBtn) {
-        replyBtn.onclick = (e) => {
-            e.stopPropagation();
-            if (typeof onReply === 'function') onReply(messageData);
-        };
+// --- CHAT ACTIONS ---
+window.setReply = (id, sender, txt) => {
+    State.reply = { id, sender, txt };
+    let bar = $('.chat-mode-bar');
+    if(!bar) {
+        bar = mk('div', 'chat-mode-bar'); 
+        $('.chat-input').prepend(bar);
     }
-    const preview = rowElement.querySelector('.msg-reply-preview');
-    if (preview) {
-        preview.onclick = (e) => {
-            e.stopPropagation();
-            const targetId = preview.dataset.jumpId;
-            if (targetId && typeof onJumpTo === 'function') onJumpTo(targetId);
-        };
-    }
+    bar.innerHTML = `<span>Replying to ${sender}</span><button onclick="resetReply()">✕</button>`;
+    show(bar); $('#chatInput').focus();
+};
+window.resetReply = () => { State.reply={id:null,txt:'',sender:''}; const b=$('.chat-mode-bar'); if(b) b.remove(); };
+
+async function sendMsg() {
+    const txt = $('#chatInput').value.trim();
+    if(!txt || !State.selTicketId || State.sending) return;
+    State.sending = true; $('#chatSendBtn').style.opacity = '0.5';
+    $('#chatInput').value = ''; resetReply();
+
+    const res = await api('user_send_message', { ticket_id: State.selTicketId, text: txt, reply_to: State.reply.id });
+    State.sending = false; $('#chatSendBtn').style.opacity = '1'; $('#chatInput').focus();
+
+    if(res.ticket) {
+        const idx = State.tickets.findIndex(x=>x.id==res.ticket.id);
+        if(idx>-1) State.tickets[idx] = res.ticket;
+        renderMsgs(res.ticket);
+    } else if(res.error) alert(res.error);
 }
 
-function scrollToMessageElement(container, messageId) {
-  if (!container) return;
-  const row = container.querySelector(`.msg-row[data-message-id="${messageId}"]`);
-  if (!row) return;
-  row.classList.add("msg-row--highlight");
-  row.scrollIntoView({ behavior: "smooth", block: "center" });
-  setTimeout(() => { row.classList.remove("msg-row--highlight"); }, 1200);
+function showTab(t) {
+    if(t==='shop') { show($('#shopTab')); $('#ticketsTab').classList.remove('active'); show($('#shopHeader')); poll.stop(); }
+    else { hide($('#shopTab')); $('#ticketsTab').classList.add('active'); hide($('#shopHeader')); poll.start(); }
 }
 
-/* ============================
-   4. LOGICA PRINCIPALĂ (INIT USER APP)
-   ============================ */
-
-function initUserApp() {
-  const tg = window.Telegram?.WebApp;
-  
-  // ============================================
-  // 🔒 SECURITY CHECK: FORCE TELEGRAM ENV
-  // ============================================
-  // Verificăm dacă initData există. În browser extern, de obicei este string gol.
-  if (!tg || !tg.initData) {
-      const appWrapper = document.getElementById("mainAppWrapper");
-      const errorScreen = document.getElementById("onlyTelegramError");
-      
-      if(appWrapper) appWrapper.style.display = "none";
-      if(errorScreen) errorScreen.style.display = "flex";
-      
-      console.warn("Access Denied: Not in Telegram WebApp environment.");
-      return; // OPRIM SCRIPUL AICI
-  }
-
-  // 🔒 InitData Valid
-  const TG_INIT_DATA = tg.initData;
-
-  let CURRENT_USER = null;
-  let CURRENT_SHOP = null;
-  let CURRENT_TICKETS = [];
-  let SELECTED_TICKET_ID = null;
-  
-  // --- STATE VARIABLES ---
-  let isSending = false; // PREVINE DUBLUL CLICK CHAT
-  let isBuying = false;  // PREVINE DUBLUL CLICK SHOP
-
-  function bumpUserActive() {
-    updateActivity();
-  }
-
-  // DOM Elements
-  const creditsValueEl = document.getElementById("creditsValue");
-  const creditsBtn = document.getElementById("creditsBtn"); // NEW: Butonul de credite
-  const userLineEl = document.getElementById("userLine");
-  
-  // -- NEW SHOP ELEMENTS --
-  const categoriesGrid = document.getElementById("categoriesGrid");
-  const productsGrid = document.getElementById("productsGrid");
-  const viewCategories = document.getElementById("viewCategories");
-  const viewProducts = document.getElementById("viewProducts");
-  const shopBackBtn = document.getElementById("shopBackBtn");
-  const headerTitle = document.getElementById("headerTitle");
-  const emptyProductsMsg = document.getElementById("emptyProductsMsg");
-
-  // -- MODAL ELEMENTS --
-  const productPanelEl = document.getElementById("productPanel");
-  const panelNameEl = document.getElementById("panelName");
-  const panelDescEl = document.getElementById("panelDesc");
-  const panelPriceEl = document.getElementById("panelPrice");
-  // NEW TYPES ELEMENTS
-  const panelTypesContainer = document.getElementById("panelTypesContainer");
-  const panelTypesGrid = document.getElementById("panelTypesGrid");
-
-  const panelBuyBtn = document.getElementById("panelBuyBtn");
-  const panelCloseBtn = document.getElementById("panelCloseBtn");
-  const panelStatusEl = document.getElementById("panelStatus");
-  const panelImgEl = document.getElementById("panelImg");
-  const panelImgPlaceholderEl = document.getElementById("panelImgPlaceholder");
-
-  // -- CREDITS MODAL ELEMENTS -- (NEW)
-  const creditsModal = document.getElementById("creditsModal");
-  const closeCreditsModalBtn = document.getElementById("closeCreditsModalBtn");
-
-  let SELECTED_PRODUCT = null;
-  let SELECTED_VARIANT = null; // Stocăm varianta selectată (dacă există)
-
-  // -- CHAT ELEMENTS --
-  const chatListEl = document.getElementById("chatList");
-  const ticketTitleEl = document.getElementById("ticketTitle");
-  const chatMessagesEl = document.getElementById("chatMessages");
-  const chatInputEl = document.getElementById("chatInput");
-  const chatSendBtn = document.getElementById("chatSendBtn");
-  const userTicketCloseBtn = document.getElementById("userTicketCloseBtn");
-  const userTicketReopenBtn = document.getElementById("userTicketReopenBtn");
-  const ticketsMenuToggle = document.getElementById("ticketsMenuToggle");
-  const ticketsBackdrop = document.getElementById("ticketsBackdrop");
-  const shopTabEl = document.getElementById("shopTab");
-  const ticketsTabEl = document.getElementById("ticketsTab");
-  const shopHeaderEl = document.getElementById("shopHeader");
-  const goToTicketsBtn = document.getElementById("goToTicketsBtn");
-  const backToShopBtn = document.getElementById("backToShopBtn");
-  const chatInputContainer = document.querySelector(".chat-input");
-  
-  const confirmModal = document.getElementById("confirmActionModal");
-  const confirmOkBtn = document.getElementById("confirmOkBtn");
-  const confirmCancelBtn = document.getElementById("confirmCancelBtn");
-  
-  let userModeBar = null;
-  let userMode = { type: null, messageId: null, previewText: "", sender: "" };
-
-  /* ===== Navigare ===== */
-  function showShopTab() {
-    if (shopTabEl) shopTabEl.classList.add("active");
-    if (ticketsTabEl) ticketsTabEl.classList.remove("active");
-    if (shopHeaderEl) shopHeaderEl.style.display = "flex";
-    userTicketsPoller.stop();
-  }
-
-  function showTicketsTab() {
-    if (shopTabEl) shopTabEl.classList.remove("active");
-    if (ticketsTabEl) ticketsTabEl.classList.add("active");
-    if (shopHeaderEl) shopHeaderEl.style.display = "none";
-    bumpUserActive();
-    userTicketsPoller.start();
-  }
-
-  if (goToTicketsBtn) goToTicketsBtn.addEventListener("click", showTicketsTab);
-  if (backToShopBtn) backToShopBtn.addEventListener("click", showShopTab);
-
-  /* ===== CREDITS MODAL LOGIC (NEW) ===== */
-  function openCreditsInfo() {
-      if(creditsModal) creditsModal.style.display = "flex";
-  }
-  function closeCreditsInfo() {
-      if(creditsModal) creditsModal.style.display = "none";
-  }
-  
-  if (creditsBtn) creditsBtn.addEventListener("click", openCreditsInfo);
-  if (closeCreditsModalBtn) closeCreditsModalBtn.addEventListener("click", closeCreditsInfo);
-  if (creditsModal) creditsModal.addEventListener("click", (e) => {
-      if (e.target === creditsModal) closeCreditsInfo();
-  });
-
-
-  if (chatInputContainer && !chatInputContainer.querySelector(".chat-mode-bar")) {
-    userModeBar = document.createElement("div");
-    userModeBar.className = "chat-mode-bar";
-    userModeBar.style.display = "none";
-    const span = document.createElement("span");
-    span.className = "chat-mode-text";
-    const btn = document.createElement("button");
-    btn.textContent = "Anulează";
-    btn.addEventListener("click", clearUserMode);
-    userModeBar.appendChild(span);
-    userModeBar.appendChild(btn);
-    chatInputContainer.prepend(userModeBar);
-  }
-
-  function clearUserMode() {
-    if (!userModeBar) return;
-    userMode = { type: null, messageId: null, previewText: "", sender: "" };
-    userModeBar.style.display = "none";
-  }
-
-  function setUserReplyMode(msg) {
-    if (!userModeBar) return;
-    userMode.type = "reply";
-    userMode.messageId = msg.id;
-    userMode.previewText = (msg.text || "").slice(0, 50);
-    userMode.sender = msg.sender || "User";
-    const textEl = userModeBar.querySelector(".chat-mode-text");
-    textEl.textContent = `Răspunzi lui ${userMode.sender}: "${userMode.previewText}..."`;
-    userModeBar.style.display = "flex";
-    chatInputEl.focus();
-  }
-
-  function updateUserChatState(ticket) {
-    if (!chatInputEl || !chatSendBtn) return;
-    if (!ticket) {
-      chatInputEl.disabled = true; chatSendBtn.disabled = true;
-      chatInputEl.placeholder = "Alege un tichet din meniu...";
-      clearUserMode();
-      if (userTicketCloseBtn) userTicketCloseBtn.style.display = "none";
-      if (userTicketReopenBtn) userTicketReopenBtn.style.display = "none";
-      if (ticketTitleEl) ticketTitleEl.textContent = "Niciun tichet selectat";
-      return;
-    }
-
-    const isClosed = ticket.status === "closed";
-    
-    // UI changes based on status
-    chatInputEl.disabled = isClosed; 
-    chatSendBtn.disabled = isClosed;
-    chatInputEl.placeholder = isClosed ? "Tichet închis." : "Scrie un mesaj...";
-    
-    // Toggle Buttons
-    if (isClosed) {
-        if (userTicketCloseBtn) userTicketCloseBtn.style.display = "none";
-        if (userTicketReopenBtn) userTicketReopenBtn.style.display = "block";
-        clearUserMode();
-    } else {
-        if (userTicketCloseBtn) userTicketCloseBtn.style.display = "block";
-        if (userTicketReopenBtn) userTicketReopenBtn.style.display = "none";
-    }
-  }
-  updateUserChatState(null);
-
-  function openTicketsDrawer() { if (ticketsTabEl) ticketsTabEl.classList.add("tickets-drawer-open"); }
-  function closeTicketsDrawer() { if (ticketsTabEl) ticketsTabEl.classList.remove("tickets-drawer-open"); }
-  function toggleTicketsDrawer() { if (ticketsTabEl) ticketsTabEl.classList.toggle("tickets-drawer-open"); }
-
-  /* ===== API Call (SECURIZAT) ===== */
-  async function apiCall(action, extraPayload = {}) {
-    // 🔒 SECURITATE: Trimitem initData în loc de user obiect
-    const payload = { 
-        action, 
-        initData: TG_INIT_DATA, // Backend-ul va verifica asta
-        ...extraPayload 
-    };
-    
-    try {
-        const r = await fetch(API_URL, {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-
-        // Backend-ul va returna 401 dacă initData e invalid sau lipsește
-        if (r.status === 401) {
-            console.error("Auth Failed");
-            return { ok: false, error: "auth_failed" };
-        }
-
-        const data = await r.json();
-        return data;
-        
-    } catch (err) {
-        console.error("Network fatal:", err);
-        throw new Error("Conexiune eșuată");
-    }
-  }
-
-  function isTicketsTabActive() {
-    const tab = document.getElementById("ticketsTab");
-    return tab && tab.classList.contains("active");
-  }
-
-  function renderUserHeader() {
-    if (!CURRENT_USER) return;
-    creditsValueEl.textContent = CURRENT_USER.credits;
-    const name = CURRENT_USER.username ? "@" + CURRENT_USER.username : `ID ${CURRENT_USER.id}`;
-    userLineEl.innerHTML = `Utilizator: <b>${name}</b>`;
-  }
-
-  /* ============================
-        NEW SHOP RENDER LOGIC
-        ============================ */
-  
-  function renderCategoriesGrid(shop) {
-    categoriesGrid.innerHTML = "";
-    if (!shop || !shop.categories) return;
-
-    shop.categories.forEach((cat) => {
-        const catCard = document.createElement("div");
-        catCard.className = "card-visual";
-        
-        const imgUrl = getImageUrl(cat.image);
-        const imgHtml = imgUrl 
-             ? `<img src="${imgUrl}" class="card-img" alt="${cat.name}">` 
-             : `<div class="img-placeholder">📁</div>`;
-        
-        catCard.innerHTML = `
-            <div class="card-img-container">
-                ${imgHtml}
-                <div class="card-overlay">
-                    <div class="cat-name">${cat.name}</div>
-                    <div class="cat-count">${(cat.products || []).length} produse</div>
-                </div>
-            </div>
-        `;
-
-        catCard.onclick = () => openCategory(cat);
-        categoriesGrid.appendChild(catCard);
-    });
-  }
-
-  function openCategory(category) {
-      viewCategories.classList.remove("active-view");
-      viewProducts.classList.add("active-view");
-      
-      headerTitle.style.display = "none";
-      
-      shopBackBtn.style.display = "flex";
-      shopBackBtn.innerHTML = `
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-        <span class="back-btn-text">${category.name}</span>
-      `;
-      
-      renderProductsGrid(category.products || []);
-  }
-
-  function renderProductsGrid(products) {
-      productsGrid.innerHTML = "";
-      if (!products || products.length === 0) {
-          emptyProductsMsg.style.display = "block";
-          return;
-      }
-      emptyProductsMsg.style.display = "none";
-
-      products.forEach((prod) => {
-          const prodCard = document.createElement("div");
-          prodCard.className = "card-visual";
-          
-          const imgUrl = getImageUrl(prod.image);
-          const imgHtml = imgUrl 
-               ? `<img src="${imgUrl}" class="card-img" alt="${prod.name}">` 
-               : `<div class="img-placeholder">🎁</div>`;
-          
-          // Dacă are tipuri, afișăm "De la X" sau prețul simplu
-          let priceDisplay = `${prod.price} CRD`;
-          if (prod.types && prod.types.length > 0) {
-              // Găsim cel mai mic preț
-              const minPrice = Math.min(...prod.types.map(t => Number(t.price || 0)));
-              priceDisplay = `De la ${minPrice} CRD`;
-          }
-
-          prodCard.innerHTML = `
-             <div class="card-img-container" style="height: 140px; aspect-ratio: unset;">
-                ${imgHtml}
-             </div>
-             <div class="prod-info">
-                 <div class="prod-title">${prod.name}</div>
-                 <div class="prod-meta">
-                     <div class="prod-price">${priceDisplay}</div>
-                     <div class="prod-btn-mini">&rarr;</div>
-                 </div>
-             </div>
-          `;
-
-          prodCard.onclick = () => openProductPanel(prod);
-          productsGrid.appendChild(prodCard);
-      });
-  }
-
-  function goBackToCategories() {
-      viewProducts.classList.remove("active-view");
-      viewCategories.classList.add("active-view");
-      
-      shopBackBtn.style.display = "none"; 
-      headerTitle.style.display = "flex"; 
-  }
-
-  if (shopBackBtn) shopBackBtn.onclick = goBackToCategories;
-
-  /* ===== Modal Logic (Updated for Types) ===== */
-  function openProductPanel(prod) {
-    SELECTED_PRODUCT = prod;
-    SELECTED_VARIANT = null; // Reset selection
-
-    panelStatusEl.textContent = ""; panelStatusEl.className = "status-message";
-    panelNameEl.textContent = prod.name;
-    
-    // --- RESET BUTTON STATE ON OPEN ---
-    if(panelBuyBtn) {
-        panelBuyBtn.disabled = false;
-        panelBuyBtn.style.opacity = "1";
-        panelBuyBtn.textContent = "Cumpără acum";
-    }
-    
-    const imgUrl = getImageUrl(prod.image);
-    if (imgUrl) {
-        panelImgEl.src = imgUrl;
-        panelImgEl.style.display = "block";
-        panelImgPlaceholderEl.style.display = "none";
-    } else {
-        panelImgEl.style.display = "none";
-        panelImgPlaceholderEl.style.display = "block";
-    }
-
-    // --- LOGICA PENTRU TIPURI / VARIANTE ---
-    if (prod.types && prod.types.length > 0) {
-        // Mod Multi-Variant
-        panelTypesContainer.style.display = "block";
-        panelTypesGrid.innerHTML = "";
-
-        // Sortăm variantele după preț (opțional)
-        prod.types.sort((a,b) => a.price - b.price);
-
-        prod.types.forEach((type, idx) => {
-            const btn = document.createElement("div");
-            btn.className = "type-card";
-            btn.innerHTML = `
-                <div class="type-name">${type.name}</div>
-                <div class="type-price">${type.price} CRD</div>
-            `;
-            btn.onclick = () => selectVariant(type, btn);
-            panelTypesGrid.appendChild(btn);
-            
-            // Selectăm automat prima opțiune
-            if (idx === 0) selectVariant(type, btn);
-        });
-
-    } else {
-        // Mod Simplu (Legacy)
-        panelTypesContainer.style.display = "none";
-        panelPriceEl.textContent = `${prod.price} CRD`;
-        panelDescEl.textContent = prod.description || "Fără descriere.";
-    }
-    
-    productPanelEl.style.display = "flex";
-  }
-
-  function selectVariant(type, btnElement) {
-      SELECTED_VARIANT = type;
-      
-      // Update UI Selection
-      Array.from(panelTypesGrid.children).forEach(child => child.classList.remove('active'));
-      if(btnElement) btnElement.classList.add('active');
-
-      // Update Modal Info based on Variant
-      panelPriceEl.textContent = `${type.price} CRD`;
-      
-      // Construim descrierea (Globală + Specifică Varianta)
-      let finalDesc = "";
-      if (SELECTED_PRODUCT.description) finalDesc += SELECTED_PRODUCT.description + "\n\n";
-      
-      finalDesc += `🔹 Varianta: ${type.name}\n`;
-      if (type.warranty) finalDesc += `🛡️ Garanție: ${type.warranty}\n`;
-      if (type.description) finalDesc += `📝 Note: ${type.description}`;
-      
-      panelDescEl.textContent = finalDesc;
-  }
-
-  function closeProductPanel() { 
-      SELECTED_PRODUCT = null; 
-      SELECTED_VARIANT = null; 
-      productPanelEl.style.display = "none"; 
-      isBuying = false; // Asigurăm că se resetează starea de cumpărare
-  }
-  if (productPanelEl) productPanelEl.addEventListener("click", (e) => { if (e.target === productPanelEl) closeProductPanel(); });
-
-  async function buySelectedProduct() {
-    if (!SELECTED_PRODUCT || !CURRENT_USER) return;
-    
-    // --- FIX: PREVENT MULTIPLE CLICKS ---
-    if (isBuying) return; 
-
-    // Validare selecție variantă
-    if (SELECTED_PRODUCT.types && SELECTED_PRODUCT.types.length > 0 && !SELECTED_VARIANT) {
-        panelStatusEl.className = "status-message status-error";
-        panelStatusEl.textContent = "Selectează o variantă!";
-        return;
-    }
-
-    const qty = 1; // Hardcoded
-    const prod = SELECTED_PRODUCT;
-    
-    // Lock process & UI Feedback
-    isBuying = true;
-    if (panelBuyBtn) {
-        panelBuyBtn.disabled = true;
-        panelBuyBtn.style.opacity = "0.6";
-        panelBuyBtn.textContent = "Se procesează...";
-    }
-
-    panelStatusEl.textContent = "Se inițializează..."; 
-    panelStatusEl.className = "status-message";
-    
-    // Pregătim payload-ul
-    const payload = { 
-        product_id: prod.id, 
-        qty: qty 
-    };
-
-    // Dacă avem variantă selectată, trimitem și ID-ul ei
-    if (SELECTED_VARIANT) {
-        payload.type_id = SELECTED_VARIANT.id;
-    }
-    
-    try {
-      const res = await apiCall("buy_product", payload);
-      
-      if (!res.ok) {
-        // --- EROARE: Deblocăm butonul ---
-        isBuying = false; 
-        if(panelBuyBtn) {
-            panelBuyBtn.disabled = false;
-            panelBuyBtn.style.opacity = "1";
-            panelBuyBtn.textContent = "Încearcă din nou";
-        }
-
-        panelStatusEl.className = "status-message status-error";
-        
-        // --- MODIFICARE: LINK CĂTRE POPUP CREDITE LA EROARE ---
-        if (res.error === "not_enough_credits") {
-            panelStatusEl.innerHTML = ""; // Curățăm textul
-            const txt = document.createTextNode("Fonduri insuficiente! ");
-            const action = document.createElement("span");
-            action.textContent = "Încarcă acum";
-            action.style.cssText = "cursor:pointer; text-decoration:underline; font-weight:bold; margin-left:5px; color:#fff;";
-            action.onclick = (e) => {
-                e.stopPropagation(); // Oprește alte clickuri
-                openCreditsInfo();
-            };
-            panelStatusEl.appendChild(txt);
-            panelStatusEl.appendChild(action);
-        } else if (res.error === "auth_failed") {
-            panelStatusEl.textContent = "Eroare autentificare!";
-        } else {
-            panelStatusEl.textContent = "Eroare: " + res.error;
-        }
-        return;
-      }
-      
-      // --- SUCCES: NU DEBLOCĂM BUTONUL ---
-      // Rămâne blocat (isBuying = true) pe durata delay-ului de 1 secundă
-      // pentru a preveni double-purchase.
-      
-      CURRENT_USER.credits = res.new_balance; 
-      creditsValueEl.textContent = CURRENT_USER.credits;
-      
-      const newTicket = res.ticket;
-      CURRENT_TICKETS.push(newTicket);
-      renderTicketsListUser(); 
-      selectTicketUser(newTicket.id);
-      
-      panelStatusEl.className = "status-message status-ok"; 
-      panelStatusEl.textContent = `Succes! Tichet #${newTicket.id} creat.`;
-      
-      setTimeout(() => { 
-          closeProductPanel(); 
-          showTicketsTab(); 
-          // isBuying se face false în closeProductPanel, dar pentru siguranță:
-          isBuying = false;
-      }, 1000);
-      
-      bumpUserActive(); 
-      userTicketsPoller.bumpFast();
-      
-    } catch (err) {
-      // --- EROARE REȚEA: Deblocăm butonul ---
-      isBuying = false; 
-      if(panelBuyBtn) {
-          panelBuyBtn.disabled = false;
-          panelBuyBtn.style.opacity = "1";
-          panelBuyBtn.textContent = "Încearcă din nou";
-      }
-
-      console.error(err); 
-      panelStatusEl.className = "status-message status-error"; 
-      panelStatusEl.textContent = "Eroare rețea.";
-    }
-    // NOTĂ: Am scos 'finally' pentru că debloca butonul prea repede în caz de succes.
-  }
-  
-  if(panelCloseBtn) panelCloseBtn.onclick = closeProductPanel;
-  if(panelBuyBtn) panelBuyBtn.onclick = buySelectedProduct;
-
-  /* ===== Ticket List ===== */
-  function renderTicketsListUser() {
-    if (!CURRENT_TICKETS || CURRENT_TICKETS.length === 0) {
-      if (!chatListEl.querySelector('.no-tickets-msg')) {
-         chatListEl.innerHTML = '<div class="no-tickets-msg" style="padding:20px; text-align:center; color:#555;">Nu ai tichete.</div>';
-      }
-      return;
-    }
-    const noMsg = chatListEl.querySelector('.no-tickets-msg');
-    if (noMsg) noMsg.remove();
-
-    CURRENT_TICKETS.sort((a, b) => {
-      if (a.status !== b.status) return a.status === "open" ? -1 : 1;
-      return (b.id || 0) - (a.id || 0);
-    });
-
-    const processedIds = new Set();
-    CURRENT_TICKETS.forEach((t) => {
-      processedIds.add(String(t.id));
-      let item = chatListEl.querySelector(`.chat-item[data-ticket-id="${t.id}"]`);
-      const msgs = t.messages || [];
-      const lastMsg = msgs.length ? msgs[msgs.length - 1].text : "Tichet nou";
-      
-      const isSelected = (t.id === SELECTED_TICKET_ID);
-      
-      let unreadCount = calculateUserUnread(t);
-      if (isSelected) unreadCount = 0; // Vizual e citit dacă e selectat
-
-      const badgeHtml = (unreadCount > 0 && t.status === "open") ? `<span class="unread-badge">${unreadCount}</span>` : "";
-      const statusClass = t.status === "open" ? "open" : "closed";
-      const statusText = t.status === "open" ? "Open" : "Closed";
-
-      const innerHTML = `
-        <div class="chat-item-header-row">
-            <div class="chat-item-title">${t.product_name || "Comandă"}</div>
-            <div style="display:flex;align-items:center;">
-                ${badgeHtml}<span class="ticket-status-pill ${statusClass}">${statusText}</span>
-            </div>
-        </div>
-        <div class="chat-item-line">${lastMsg}</div>
-      `;
-
-      if (!item) {
-        item = document.createElement("div"); item.className = "chat-item";
-        item.setAttribute("data-ticket-id", t.id);
-        item.onclick = () => { selectTicketUser(t.id); bumpUserActive(); closeTicketsDrawer(); userTicketsPoller.bumpFast(); };
-        item.innerHTML = innerHTML; chatListEl.appendChild(item);
-      } else {
-        if (item.innerHTML !== innerHTML) item.innerHTML = innerHTML;
-      }
-      if (isSelected) item.classList.add("active");
-      else item.classList.remove("active");
-      chatListEl.appendChild(item);
-    });
-    Array.from(chatListEl.children).forEach(child => {
-        const id = child.getAttribute("data-ticket-id");
-        if (id && !processedIds.has(id)) child.remove();
-    });
-  }
-
-  function calculateUserUnread(ticket) {
-      if(!ticket.messages) return 0;
-      const lastRead = ticket.last_read_user || "";
-      let count = 0;
-      let start = (lastRead === "") ? true : false;
-      for (let m of ticket.messages) {
-          if (m.id === lastRead) { start = true; continue; }
-          if (start && m.from === 'admin') count++; 
-      }
-      if (!lastRead) return ticket.messages.filter(m => m.from === 'admin').length;
-      return count;
-  }
-
-  function selectTicketUser(ticketId) {
-    SELECTED_TICKET_ID = ticketId;
-    const t = CURRENT_TICKETS.find((x) => x.id === ticketId);
-    
-    if (t) {
-        // OPTIMIZARE: Trimitem mark_seen DOAR dacă sunt mesaje necitite
-        const unreadCount = calculateUserUnread(t);
-        if (unreadCount > 0) {
-            apiCall("mark_seen", { ticket_id: ticketId });
-            // Update local imediat
-            if(t.messages.length) t.last_read_user = t.messages[t.messages.length - 1].id;
-        }
-    }
-
-    renderTicketsListUser();
-    if (!t) { chatMessagesEl.innerHTML = ""; updateUserChatState(null); return; }
-    if (ticketTitleEl) ticketTitleEl.textContent = `${t.product_name || "Tichet"} #${t.id}`;
-    renderUserMessages(t); updateUserChatState(t);
-  }
-
-  function renderUserMessages(ticket) {
-    let lastUserMsgId = null;
-    if (ticket.messages) {
-        for (let i = ticket.messages.length - 1; i >= 0; i--) {
-            const m = ticket.messages[i];
-            if (m.from === 'user' && !m.deleted) {
-                lastUserMsgId = m.id;
-                break;
-            }
-        }
-    }
-
-    let seenConfig = null;
-    if (lastUserMsgId && ticket.last_read_admin) {
-        const idxUserMsg = ticket.messages.findIndex(m => m.id === lastUserMsgId);
-        const idxAdminRead = ticket.messages.findIndex(m => m.id === ticket.last_read_admin);
-
-        if (idxAdminRead >= idxUserMsg) {
-             const timeString = timeAgo(ticket.last_read_admin_at);
-             seenConfig = {
-                 targetId: lastUserMsgId,
-                 text: `Văzut ${timeString}`
-             };
-        }
-    }
-
-    renderDiscordMessages(ticket.messages || [], {
-      container: chatMessagesEl, 
-      ticket, 
-      canReply: ticket.status === "open",
-      onReply: (msg) => { if (ticket.status === "open") setUserReplyMode(msg); },
-      onJumpTo: (mid) => scrollToMessageElement(chatMessagesEl, mid),
-      seenConfig: seenConfig 
-    });
-  }
-
-  // --- SEND MESSAGE OPTIMIZED (1 Request Only) ---
-  async function sendChatMessage() {
-    const text = chatInputEl.value.trim();
-    if (!text || !SELECTED_TICKET_ID) return;
-    
-    // 1. LOCK (Prevenire spam)
-    if (isSending) return;
-    isSending = true;
-
-    // UI Feedback
-    chatSendBtn.disabled = true;
-    chatSendBtn.style.opacity = "0.5";
-
-    const t = CURRENT_TICKETS.find((x) => x.id === SELECTED_TICKET_ID);
-    if (!t || t.status === "closed") {
-        isSending = false;
-        return;
-    }
-    const reply_to = (userMode.type === "reply" && userMode.messageId) ? userMode.messageId : null;
-    
-    // Clear Input
-    chatInputEl.value = ""; 
-    clearUserMode();
-
-    try {
-      const res = await apiCall("user_send_message", { ticket_id: SELECTED_TICKET_ID, text, reply_to });
-      
-      if (!res.ok) {
-        if(res.error === "ticket_closed") {
-            const updated = CURRENT_TICKETS.find(x => x.id === SELECTED_TICKET_ID);
-            if(updated) updated.status = "closed";
-            updateUserChatState(updated);
-        } else if (res.error === "auth_failed") {
-            alert("Sesiune expirată.");
-        }
-        chatInputEl.value = text; // Restore text
-        return;
-      }
-
-      if(res.ticket) {
-          // 2. LOCAL UPDATE (fără re-fetch)
-          const idx = CURRENT_TICKETS.findIndex(x => x.id === res.ticket.id);
-          if (idx >= 0) CURRENT_TICKETS[idx] = res.ticket; else CURRENT_TICKETS.push(res.ticket);
-          
-          // Render direct (fără selectTicketUser pentru a evita mark_seen)
-          renderTicketsListUser();
-          renderUserMessages(res.ticket);
-          smartScrollToBottom(chatMessagesEl, true);
-      }
-      
-      bumpUserActive(); 
-      // NOTĂ: Nu mai apelăm bumpFast() pentru a evita request-ul suplimentar de get_tickets
-
-    } catch (err) { 
-        console.error(err);
-        chatInputEl.value = text;
-    } finally {
-        isSending = false;
-        chatSendBtn.disabled = false;
-        chatSendBtn.style.opacity = "1";
-        setTimeout(() => chatInputEl.focus(), 50);
-    }
-  }
-
-  function openConfirmModal(onConfirm) {
-      if(!confirmModal) {
-          console.error("Modal not found");
-          return;
-      }
-      confirmModal.style.display = "flex";
-      
-      confirmOkBtn.onclick = () => {
-          confirmModal.style.display = "none";
-          if (typeof onConfirm === "function") onConfirm();
-      };
-      confirmCancelBtn.onclick = () => {
-          confirmModal.style.display = "none";
-      };
-      
-      confirmModal.onclick = (e) => {
-          if(e.target === confirmModal) confirmModal.style.display = "none";
-      }
-  }
-
-  function userCloseCurrentTicket() {
-    if (!SELECTED_TICKET_ID) return;
-    
-    openConfirmModal(async () => {
-        try {
-          const res = await apiCall("user_close_ticket", { ticket_id: SELECTED_TICKET_ID });
-          
-          if (res.ok) {
-              const idx = CURRENT_TICKETS.findIndex(x => x.id === SELECTED_TICKET_ID);
-              if (idx >= 0) {
-                  if (res.ticket) {
-                      CURRENT_TICKETS[idx] = res.ticket;
-                  } else {
-                      CURRENT_TICKETS[idx].status = "closed";
-                  }
-                  CURRENT_TICKETS[idx].status = "closed"; 
-                  renderTicketsListUser();
-                  const updatedTicket = CURRENT_TICKETS[idx];
-                  updateUserChatState(updatedTicket); 
-              }
-          }
-          bumpUserActive(); 
-          userTicketsPoller.bumpFast();
-        } catch (err) { 
-            console.error(err); 
-            alert("Eroare de conexiune la închiderea tichetului.");
-        }
-    });
-  }
-
-  // --- LOGICA REDESCHIDERE TICHET ---
-  async function userReopenCurrentTicket() {
-    if (!SELECTED_TICKET_ID) return;
-    
-    userTicketReopenBtn.textContent = "Se redeschide...";
-    userTicketReopenBtn.disabled = true;
-
-    try {
-        const res = await apiCall("user_reopen_ticket", { ticket_id: SELECTED_TICKET_ID });
-
-        if (res.ok && res.ticket) {
-            const idx = CURRENT_TICKETS.findIndex(x => x.id === SELECTED_TICKET_ID);
-            if (idx >= 0) {
-                CURRENT_TICKETS[idx] = res.ticket;
-            } else {
-                CURRENT_TICKETS.push(res.ticket);
-            }
-            
-            renderTicketsListUser();
-            selectTicketUser(res.ticket.id); // Update GUI
-            smartScrollToBottom(chatMessagesEl, true);
-        } else {
-            alert("Eroare la redeschidere: " + (res.error || "Necunoscută"));
-        }
-    } catch (err) {
-        console.error(err);
-        alert("Eroare rețea.");
-    } finally {
-        userTicketReopenBtn.textContent = "Redeschide";
-        userTicketReopenBtn.disabled = false;
-        bumpUserActive();
-        userTicketsPoller.bumpFast();
-    }
-  }
-
-  chatSendBtn?.addEventListener("click", sendChatMessage);
-  chatInputEl?.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChatMessage(); } });
-  ticketsMenuToggle?.addEventListener("click", () => { toggleTicketsDrawer(); bumpUserActive(); });
-  ticketsBackdrop?.addEventListener("click", closeTicketsDrawer);
-  if (userTicketCloseBtn) userTicketCloseBtn.addEventListener("click", userCloseCurrentTicket);
-  if (userTicketReopenBtn) userTicketReopenBtn.addEventListener("click", userReopenCurrentTicket);
-
-  async function pollTicketsUserCore() {
-    if (!CURRENT_USER) return CURRENT_TICKETS;
-    try {
-      const res = await apiCall("user_get_tickets", {});
-      if (!res.ok) return CURRENT_TICKETS;
-      
-      const newTickets = res.tickets || [];
-      
-      if (SELECTED_TICKET_ID) {
-          const localT = CURRENT_TICKETS.find(x => x.id === SELECTED_TICKET_ID);
-          const serverT = newTickets.find(x => x.id === SELECTED_TICKET_ID);
-          
-          if (localT && localT.status === 'closed' && serverT && serverT.status === 'open') {
-              // Dacă serverul zice că e deschis, dar noi îl avem închis, actualizăm
-              serverT.status = 'open';
-          }
-      }
-
-      CURRENT_TICKETS = newTickets;
-      
-      if (SELECTED_TICKET_ID) {
-         const t = CURRENT_TICKETS.find(x => x.id === SELECTED_TICKET_ID);
-         if(t) { 
-             const realUnreads = calculateUserUnread(t);
-             if (realUnreads > 0) {
-                 apiCall("mark_seen", { ticket_id: t.id });
-                 if(t.messages.length > 0) {
-                     t.last_read_user = t.messages[t.messages.length - 1].id;
-                 }
-             }
-             renderUserMessages(t); 
-             updateUserChatState(t); 
-         }
-      }
-      renderTicketsListUser();
-      return CURRENT_TICKETS;
-    } catch (err) { return CURRENT_TICKETS; }
-  }
-
-  // --- POLLED CREATION ---
-  const userTicketsPoller = createSmartPoll(
-    pollTicketsUserCore,
-    () => isTicketsTabActive()
-  );
-
-  /* ===== INIT APP ===== */
-  async function initApp() {
+// --- INIT ---
+on(document, 'DOMContentLoaded', async () => {
+    const tg = window.Telegram?.WebApp;
+    if(!tg?.initData) return show($('#onlyTelegramError')) & hide($('#mainAppWrapper'));
     tg.ready(); tg.expand();
 
-    // 1. Luăm datele doar pentru UI (nesigur, doar vizual)
-    const unsafeUser = tg.initDataUnsafe?.user;
+    // Event Bindings
+    on($('#shopBackBtn'), 'click', () => {$('#viewProducts').classList.remove('active-view'); $('#viewCategories').classList.add('active-view'); hide($('#shopBackBtn')); show($('#headerTitle'));});
+    on($('#creditsBtn'), 'click', () => show($('#creditsModal')));
+    on($('#closeCreditsModalBtn'), 'click', () => hide($('#creditsModal')));
+    on($('#goToTicketsBtn'), 'click', () => showTab('tickets'));
+    on($('#backToShopBtn'), 'click', () => showTab('shop'));
+    on($('#ticketsMenuToggle'), 'click', () => $('#ticketsTab').classList.toggle('tickets-drawer-open'));
+    on($('#ticketsBackdrop'), 'click', () => $('#ticketsTab').classList.remove('tickets-drawer-open'));
+    on($('#panelCloseBtn'), 'click', () => hide($('#productPanel')));
+    on($('#panelBuyBtn'), 'click', buy);
+    on($('#chatSendBtn'), 'click', sendMsg);
+    on($('#chatInput'), 'keydown', e => e.key==='Enter' && !e.shiftKey && (e.preventDefault(), sendMsg()));
     
-    // Setăm datele locale pentru a avea UI rapid
-    CURRENT_USER = { 
-        id: unsafeUser?.id, 
-        username: unsafeUser?.username || "user",
-        first_name: unsafeUser?.first_name,
-        credits: 0 
-    };
-    
-    renderUserHeader(); // Afișăm userul imediat
+    // Ticket Actions
+    on($('#userTicketCloseBtn'), 'click', () => show($('#confirmActionModal')));
+    on($('#confirmCancelBtn'), 'click', () => hide($('#confirmActionModal')));
+    on($('#confirmOkBtn'), 'click', async () => {
+        hide($('#confirmActionModal'));
+        const res = await api('user_close_ticket', {ticket_id: State.selTicketId});
+        if(res.ok) { 
+            const t = State.tickets.find(x=>x.id==State.selTicketId); if(t) t.status='closed';
+            renderTicketList(); renderMsgs(t);
+        }
+    });
+    on($('#userTicketReopenBtn'), 'click', async () => {
+         const res = await api('user_reopen_ticket', {ticket_id: State.selTicketId});
+         if(res.ok && res.ticket) {
+             const idx = State.tickets.findIndex(x=>x.id==res.ticket.id);
+             if(idx>-1) State.tickets[idx]=res.ticket;
+             renderTicketList(); renderMsgs(res.ticket);
+         }
+    });
 
-    // 2. Apelăm API-ul (Secure Init)
-    try {
-      // Backend-ul verifică initData și ne dă creditele reale
-      const res = await apiCall("init", {});
-      
-      if (!res.ok) {
-          if (res.error === "auth_failed") {
-            userLineEl.innerHTML = "<span style='color:red'>Autentificare eșuată!</span>";
-            return;
-          }
-          throw new Error("Init failed: " + res.error);
-      }
+    // Tracking
+    ['mousemove','touchstart','click'].forEach(e => on(document, e, () => State.lastAct=Date.now()));
 
-      // 3. Actualizăm cu datele reale de pe server
-      CURRENT_USER.credits = res.user.credits;
-      CURRENT_SHOP = res.shop;
-      CURRENT_TICKETS = res.tickets || [];
-
-      renderUserHeader(); // Actualizăm cu creditele reale
-      renderCategoriesGrid(CURRENT_SHOP);
-      renderTicketsListUser();
-      
-      showShopTab();
-    } catch (err) {
-      console.error(err);
-      userLineEl.textContent = `Eroare: ${err.message || "Conexiune"}`;
-      userLineEl.style.display = "block";
-    }
-  }
-
-  initApp();
-}
-
-document.addEventListener("DOMContentLoaded", initUserApp);
+    // Load Data
+    const res = await api('init');
+    if(!res.ok) return $('#userLine').textContent = 'Eroare init.';
+    State.user = res.user; State.shop = res.shop; State.tickets = res.tickets || [];
+    renderHeader(); renderGrid(State.shop.categories, 'cat'); renderTicketList();
+    showTab('shop');
+});
