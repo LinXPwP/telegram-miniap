@@ -1,4 +1,4 @@
-// app.js - FIXED SEEN & OPTIMIZED
+// app.js - FIXED SEEN & UNREAD (NUMERIC COMPARISON)
 
 const API_URL = "https://api.redgen.vip/";
 const $ = (id) => document.getElementById(id);
@@ -48,14 +48,22 @@ const smartScrollToBottom = (el, force) => {
 };
 const getImageUrl = (s) => s?.trim() ? s : null;
 
-// --- NEW HELPER: Get Seen Config ---
+// --- FIX: CALCULATE UNREAD (Numeric Comparison) ---
+function calculateUserUnread(ticket) {
+    if (!ticket.messages) return 0;
+    const lastRead = Number(ticket.last_read_user || 0);
+    // Numărăm mesajele de la admin care au ID-ul mai mare decât ultimul citit
+    return ticket.messages.filter(m => m.from === 'admin' && Number(m.id) > lastRead).length;
+}
+
+// --- FIX: GET SEEN CONFIG (Numeric Comparison) ---
 function getSeenConfig(t) {
     if (!t || !t.messages) return null;
     const userMsgs = t.messages.filter(m => m.from === 'user' && !m.deleted);
     if (userMsgs.length === 0) return null;
     
     const lastUserM = userMsgs[userMsgs.length - 1];
-    // Convert to Number ensuring safe comparison
+    // Comparăm numeric ID-urile
     if (t.last_read_admin && Number(t.last_read_admin) >= Number(lastUserM.id)) {
         return { targetId: lastUserM.id, text: `Văzut ${timeAgo(t.last_read_admin_at)}` };
     }
@@ -86,9 +94,10 @@ function renderDiscordMessages(msgs, { container, canReply, onReply, onJumpTo, s
     const sender = m.sender || (m.from === "system" ? "System" : "User");
     const content = m.deleted ? "Mesaj șters" : m.text;
     const btns = (canReply && !m.deleted) ? `<button class="btn-reply-mini" title="Răspunde">↩ Reply</button>` : '';
+    const initial = (sender||"?").slice(0,1).toUpperCase();
 
     const html = `
-        <div class="msg-avatar">${(sender||"?")[0].toUpperCase()}</div>
+        <div class="msg-avatar">${initial}</div>
         <div class="msg-content">
             <div class="msg-header-line">
                 <div class="msg-meta-group"><span class="msg-username ${m.from==="admin"?"msg-username--admin":""}">${sender}</span><span class="msg-timestamp">${formatTimestamp(m.ts)}</span></div>
@@ -104,7 +113,6 @@ function renderDiscordMessages(msgs, { container, canReply, onReply, onJumpTo, s
         row.querySelector('.btn-reply-mini')?.addEventListener('click', (e) => { e.stopPropagation(); onReply?.(m); });
         row.querySelector('.msg-reply-preview')?.addEventListener('click', (e) => { e.stopPropagation(); onJumpTo?.(e.currentTarget.dataset.jumpId); });
     } else {
-         // Update content if changed (e.g. edited or deleted)
          const textEl = row.querySelector('.msg-text');
          if (textEl && textEl.textContent !== content) {
              textEl.textContent = content;
@@ -247,6 +255,7 @@ function initUserApp() {
     SELECTED_PRODUCT = p; SELECTED_VARIANT = null;
     els.mStatus.textContent = ""; els.mStatus.className = "status-message";
     els.mName.textContent = p.name; els.mBuy.disabled = false; els.mBuy.style.opacity = "1"; els.mBuy.textContent = "Cumpără acum";
+    els.mBuy.onclick = buySelectedProduct;
     
     const img = getImageUrl(p.image);
     img ? (els.mImg.src = img, show(els.mImg), hide(els.mPlace)) : (hide(els.mImg), show(els.mPlace));
@@ -273,7 +282,7 @@ function initUserApp() {
   const closeModal = () => { hide(els.modal); STATE.buying = false; };
   els.mClose.onclick = closeModal; els.modal.onclick = (e) => e.target===els.modal && closeModal();
 
-  els.mBuy.onclick = async () => {
+  async function buySelectedProduct() {
     if (!SELECTED_PRODUCT || !STATE.user || STATE.buying) return;
     if (SELECTED_PRODUCT.types?.length && !SELECTED_VARIANT) return (els.mStatus.textContent = "Selectează o variantă!", els.mStatus.className = "status-message status-error");
 
@@ -297,7 +306,7 @@ function initUserApp() {
             updateActivity(); userTicketsPoller.bumpFast();
         }
     } catch { STATE.buying = false; els.mBuy.disabled = false; els.mStatus.textContent = "Eroare rețea."; }
-  };
+  }
 
   // Tickets
   const renderTickets = () => {
@@ -307,9 +316,13 @@ function initUserApp() {
     STATE.tickets.sort((a,b) => (a.status===b.status ? b.id-a.id : (a.status==='open'?-1:1))).forEach(t => {
         const item = document.createElement("div"); item.className = "chat-item " + (t.id === STATE.selTicketId ? "active":"");
         item.dataset.ticketId = t.id;
-        const unread = (t.id === STATE.selTicketId) ? 0 : (t.messages||[]).filter(m=>m.from==='admin' && (!t.last_read_user || m.id > t.last_read_user)).length;
+        
+        // FIX UNREAD CALCULATION
+        const unread = calculateUserUnread(t);
+        const displayUnread = (t.id === STATE.selTicketId) ? 0 : unread;
+
         const lastMsg = t.messages?.length ? t.messages[t.messages.length-1].text : "Tichet nou";
-        item.innerHTML = `<div class="chat-item-header-row"><div class="chat-item-title">${t.product_name||"Comandă"}</div><div>${unread>0?`<span class="unread-badge">${unread}</span>`:""}<span class="ticket-status-pill ${t.status}">${t.status}</span></div></div><div class="chat-item-line">${lastMsg}</div>`;
+        item.innerHTML = `<div class="chat-item-header-row"><div class="chat-item-title">${t.product_name||"Comandă"}</div><div>${displayUnread>0?`<span class="unread-badge">${displayUnread}</span>`:""}<span class="ticket-status-pill ${t.status}">${t.status}</span></div></div><div class="chat-item-line">${lastMsg}</div>`;
         item.onclick = () => { selTicket(t.id); updateActivity(); els.ticketsTab.classList.remove("tickets-drawer-open"); };
         els.chatList.appendChild(item);
     });
@@ -319,8 +332,11 @@ function initUserApp() {
     STATE.selTicketId = id; 
     const t = STATE.tickets.find(x => x.id === id);
     if(t) {
-       const unread = (t.messages||[]).filter(m=>m.from==='admin' && (!t.last_read_user || m.id > t.last_read_user)).length;
-       if(unread > 0) { apiCall("mark_seen", {ticket_id: id}); if(t.messages.length) t.last_read_user = t.messages[t.messages.length-1].id; }
+       const unread = calculateUserUnread(t);
+       if(unread > 0) { 
+           apiCall("mark_seen", {ticket_id: id}); 
+           if(t.messages.length) t.last_read_user = t.messages[t.messages.length-1].id; 
+       }
     }
     renderTickets();
     if(!t) { els.msgs.innerHTML = ""; updateChatUI(null); return; }
@@ -401,7 +417,7 @@ function initUserApp() {
          if(STATE.selTicketId) {
              const t = STATE.tickets.find(x=>x.id===STATE.selTicketId);
              if(t) {
-                const unread = (t.messages||[]).filter(m=>m.from==='admin' && (!t.last_read_user || m.id > t.last_read_user)).length;
+                const unread = calculateUserUnread(t);
                 if(unread>0) { apiCall("mark_seen", {ticket_id:t.id}); if(t.messages.length) t.last_read_user=t.messages[t.messages.length-1].id; }
                 
                 // FIXED: Recalculate seen status on polling update
