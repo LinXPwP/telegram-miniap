@@ -117,11 +117,17 @@
           <h2 id="panelName">Nume Produs</h2>
           <div class="modal-price" id="panelPrice">-</div>
         </div>
+        
         <div class="modal-body">
-          <p class="modal-desc" id="panelDesc"></p>
-          
-          <div class="status-message" id="panelStatus"></div>
+            <div id="panelTypesContainer" class="types-section" style="display:none;">
+                <div class="types-label">Alege Varianta:</div>
+                <div id="panelTypesGrid" class="types-grid"></div>
+            </div>
+
+            <p class="modal-desc" id="panelDesc"></p>
+            <div class="status-message" id="panelStatus"></div>
         </div>
+        
         <div class="modal-footer">
           <button class="btn-primary full-width" id="panelBuyBtn">Cumpără acum</button>
         </div>
