@@ -549,7 +549,7 @@ html, body {
 .modal-header { margin-bottom: 16px; text-align: center; }
 .modal-header h2 { margin: 0 0 8px; font-size: 18px; }
 .modal-price { color: var(--accent); font-weight: 700; font-size: 16px; }
-.modal-desc { font-size: 13px; color: var(--text-secondary); text-align: center; line-height: 1.5; margin-bottom: 20px; }
+.modal-desc { font-size: 13px; color: var(--text-secondary); text-align: center; line-height: 1.5; margin-bottom: 20px; white-space: pre-wrap; }
 .qty-control { background: var(--bg-app); padding: 12px; border-radius: var(--radius-md); display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .qty-inputs { display: flex; align-items: center; gap: 8px; }
 .qty-inputs input { width: 50px; background: #333; border: none; color: #fff; border-radius: 6px; padding: 4px; text-align: center; font-weight: 700; }
@@ -577,3 +577,31 @@ html, body {
 .btn-secondary { background: rgba(255,255,255,0.1); color: #fff; border: none; padding: 12px; border-radius: 99px; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.2s; }
 .btn-secondary:hover { background: rgba(255,255,255,0.2); }
 .btn-danger-solid { background: var(--danger); box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4); }
+
+/* --- NEW: STYLES FOR TYPES GRID --- */
+.types-section { margin-bottom: 16px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px; }
+.types-label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; font-weight: 600; text-align: center; }
+.types-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+.type-card {
+    background: var(--bg-surface-hover);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 10px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+}
+
+.type-card:hover {
+    background: rgba(255,255,255,0.08);
+}
+
+.type-card.active {
+    background: rgba(255, 24, 67, 0.15);
+    border-color: var(--accent);
+    box-shadow: 0 0 10px rgba(255, 24, 67, 0.2);
+}
+
+.type-name { font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 2px; }
+.type-price { font-size: 11px; color: var(--accent); font-weight: 700; }
