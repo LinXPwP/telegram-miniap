@@ -2,126 +2,179 @@
 <html lang="ro">
 <head>
   <meta charset="UTF-8" />
-  <title>Admin Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-  
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" />
-  
-  <link rel="stylesheet" href="style.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-</head>
-<body data-page="admin">
-  <input type="file" id="globalFileInput" style="display: none;" accept="image/*" />
+  <title>RedGen MiniApp</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 
-  <div class="app-layout">
-    <div class="top-bar">
-      <div class="tabs tabs--admin" data-active="chatTab">
-        <button class="tab-btn active" data-tab="chatTab">Chat</button>
-        <button class="tab-btn" data-tab="shopTab">Shop</button>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+   
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body data-page="user">
+  <div class="app-wrapper" id="mainAppWrapper">
+    
+    <div id="shopHeader" class="header-bar">
+      <div class="header-left">
+        <button class="btn-icon-back" id="shopBackBtn" style="display: none;">
+           </button>
+        
+        <div class="brand-logo" id="headerTitle">
+            <img src="logo.png" class="header-logo-img" alt="R">
+            <span class="brand-text-suffix">3DG3N</span>
+        </div>
+
       </div>
-      <div class="connection-status" id="userLine">Conectare...</div>
+      <div class="header-right">
+        <div class="credits-pill">
+          <span class="label">CRD:</span>
+          <span class="value" id="creditsValue">0</span>
+        </div>
+        <button class="btn-icon" id="goToTicketsBtn" aria-label="Tichete">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+        </button>
+      </div>
     </div>
 
-    <div id="chatTab" class="tab-section active">
-      <div class="admin-toolbar" id="adminToolbar">
-        <div class="toolbar-group">
-          <select id="filterStatus" class="toolbar-select">
-            <option value="all">Toate</option>
-            <option value="open">Open</option>
-            <option value="closed">Closed</option>
-          </select>
-          <input id="filterSearch" class="toolbar-search" placeholder="Caută..." autocomplete="off" />
+    <div class="user-info-bar" id="userLine"></div>
+
+    <main class="main-content">
+      
+      <div id="shopTab" class="tab-section active">
+        
+        <div id="viewCategories" class="shop-view active-view">
+          <div class="hero-banner">
+            <h1>Descoperă</h1>
+            <p>Alege o categorie pentru a începe.</p>
+          </div>
+          <div id="categoriesGrid" class="visual-grid"></div>
+          <div class="shop-footer-note">RedGen Visual v3.0</div>
         </div>
-        <div class="toolbar-stats">
-          <span class="stat-text">Total: <b id="statTotal">0</b></span>
-          <span class="stat-text text-green">Open: <b id="statOpen">0</b></span>
+
+        <div id="viewProducts" class="shop-view">
+           <div id="productsGrid" class="visual-grid"></div>
+           <div class="empty-products-msg" id="emptyProductsMsg" style="display:none">Nu există produse aici.</div>
         </div>
+
       </div>
 
-      <div class="chat-admin-layout">
-        <div class="chat-sidebar" id="ticketsList"></div>
-        <div class="chat-main" id="chatMainArea">
-          <div class="chat-header" id="chatHeader">
-            <div class="chat-header-left">
-              <button id="mobileBackBtn" class="btn-ghost mobile-only">←</button>
-              <span id="chatHeaderTitle">Selectează un tichet</span>
+      <div id="ticketsTab" class="tab-section chat-mode">
+        <div class="chat-layout">
+          <div class="chat-sidebar" id="chatList"></div>
+          <div class="chat-main">
+            <div class="chat-navbar" id="chatHeader">
+              <div class="nav-left">
+                <button class="menu-toggle" id="ticketsMenuToggle">
+                  <span></span><span></span><span></span>
+                </button>
+                <div class="chat-info">
+                  <div class="chat-title" id="ticketTitle">Niciun tichet</div>
+                </div>
+              </div>
+              <div class="nav-right">
+                <button class="btn-sm btn-success-ghost" id="userTicketReopenBtn" style="display:none;">Redeschide</button>
+                <button class="btn-sm btn-danger-ghost" id="userTicketCloseBtn" style="display:none;">Închide</button>
+              </div>
             </div>
-          </div>
-          <div class="chat-messages" id="chatMessages"></div>
-          <div class="chat-footer chat-input">
-            <div id="adminModeBar" class="chat-mode-bar" style="display: none;"></div>
-            <div class="chat-input-row">
-              <input id="chatInput" placeholder="Scrie un mesaj..." autocomplete="off" disabled />
-              <button id="chatSendBtn" class="btn-send-icon" disabled>
-                <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
+
+            <div class="chat-viewport" id="chatMessages">
+              <div class="chat-placeholder">
+                <div class="icon">💬</div>
+                <p>Deschide meniu și alege un tichet.</p>
+              </div>
+            </div>
+
+            <div class="chat-footer chat-input">
+              <div class="input-wrapper">
+                <input id="chatInput" type="text" placeholder="Scrie un mesaj..." autocomplete="off" disabled />
+                <button id="chatSendBtn" class="btn-send" disabled>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                </button>
+              </div>
+              <button class="btn-block-back" id="backToShopBtn">
+                <span style="margin-right: 6px;">&larr;</span> Înapoi la Magazin
               </button>
             </div>
           </div>
         </div>
+        <div class="tickets-backdrop" id="ticketsBackdrop"></div>
       </div>
 
-      <div class="ticket-details" id="ticketDetails" style="display:none;">
-        <div class="ticket-info-wrapper"><div id="ticketSummary" class="ticket-summary"></div></div>
-        <div class="ticket-actions">
-          <button class="btn-ghost" id="ticketCloseBtn">Închide</button>
-          <button class="btn-primary" id="ticketCloseWithReasonBtn">Notă</button>
+    </main>
+
+    <div id="productPanel" class="modal-overlay" style="display:none;">
+      <div class="modal-card">
+        <button class="modal-close" id="panelCloseBtn">&times;</button>
+        
+        <div class="modal-img-wrapper">
+            <img id="panelImg" src="" alt="Product" onerror="this.style.display='none'">
+            <div class="modal-img-placeholder" id="panelImgPlaceholder">🎁</div>
+        </div>
+
+        <div class="modal-header">
+          <h2 id="panelName">Nume Produs</h2>
+          <div class="modal-price" id="panelPrice">-</div>
+        </div>
+        
+        <div class="modal-body">
+            <div id="panelTypesContainer" class="types-section" style="display:none;">
+                <div class="types-label">Alege Varianta:</div>
+                <div id="panelTypesGrid" class="types-grid"></div>
+            </div>
+
+            <p class="modal-desc" id="panelDesc"></p>
+            <div class="status-message" id="panelStatus"></div>
+        </div>
+        
+        <div class="modal-footer">
+          <button class="btn-primary full-width" id="panelBuyBtn">Cumpără acum</button>
         </div>
       </div>
     </div>
 
-    <div id="shopTab" class="tab-section">
-      <div class="shop-flex">
-        <div class="shop-container" id="shopContainer"></div>
-        <div class="shop-sidepanel">
-          <div class="shop-sidepanel-header">
-             <h2 class="shop-sidepanel-title">Editare Shop</h2>
-             <div class="shop-metrics" id="shopMetrics"></div>
-          </div>
-          <div class="shop-actions-col">
-              <button class="btn-ghost full-width" id="addCategoryBtn">+ Categorie</button>
-              <button class="btn-primary full-width" id="saveShopBtn">💾 Salvează</button>
-          </div>
-          <div class="status-bar" id="shopStatusBar"></div>
+    <div id="confirmActionModal" class="modal-overlay" style="display:none;">
+      <div class="modal-card" style="text-align: center;">
+        <div class="modal-header">
+          <h2 style="font-size:18px; margin-bottom:5px;">Confirmare</h2>
+        </div>
+        <div class="modal-body">
+          <p class="modal-desc">Ești sigur că vrei să închizi acest tichet?</p>
+        </div>
+        <div class="modal-footer modal-actions-grid">
+          <button class="btn-secondary" id="confirmCancelBtn">Anulează</button>
+          <button class="btn-primary btn-danger-solid" id="confirmOkBtn">Închide Tichetul</button>
         </div>
       </div>
     </div>
+
   </div>
 
-  <div class="modal-backdrop" id="reasonModal" style="display:none;">
-    <div class="modal">
-      <h3>Notă internă</h3>
-      <textarea id="reasonInput" placeholder="Motiv..."></textarea>
-      <div class="modal-actions">
-        <button class="btn-ghost" id="reasonCancelBtn">Anulează</button>
-        <button class="btn-primary" id="reasonConfirmBtn">Salvează</button>
-      </div>
+  <div id="onlyTelegramError" class="access-error-screen" style="display: none;">
+    <div class="error-card">
+        <div class="lock-icon-wrapper">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            <div class="lock-glow"></div>
+        </div>
+
+        <h2>Acces Restricționat</h2>
+        <p>Această aplicație rulează exclusiv în ecosistemul Telegram.</p>
+        
+        <div class="error-actions-modern">
+            <a href="https://t.me/r3dtest_bot" class="btn-modern btn-tg-gradient">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.198 2.433a2.242 2.242 0 0 0-1.022.215l-8.609 3.33c-2.068.8-4.133 1.598-5.724 2.21a405.15 405.15 0 0 1-2.863 1.13c-1.192.501-1.797 1.15-1.797 1.963 0 .821.616 1.5 1.786 2.032.956.434 1.948.878 2.973 1.32.183.078.368.157.555.235l.006.002.003.002c.706.307 1.564.675 2.235.966.307.132.658.284.978.423.16.069.314.136.46.198l.003.001c.203.087.404.173.601.258.423.181.86.368 1.311.561.028.012.056.024.085.035.148.062.296.124.444.187.307.129.615.258.922.387.962.404 1.923.808 2.883 1.212.72.302 1.517.637 2.238.94l.034.015c1.026.43 1.637.69 2.09.84.428.143.916.239 1.406.166a2.15 2.15 0 0 0 1.705-1.39c.604-2.45 2.158-9.916 2.658-12.836a2.31 2.31 0 0 0-1.427-2.735z"></path></svg>
+                <span>Deschide Bot</span>
+            </a>
+
+            <a href="https://discord.gg/CwqeCWF2Qe" target="_blank" class="btn-modern btn-discord-glass">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.8943 4.34399C17.5183 3.71467 16.057 3.256 14.5317 3C14.3396 3.33067 14.127 3.77867 13.9829 4.11467C12.353 3.88133 10.7329 3.88133 9.13096 4.11467C8.98696 3.77867 8.76696 3.33067 8.58296 3C7.05096 3.256 5.58963 3.71467 4.21363 4.34399C1.43963 8.44533 0.690294 12.448 1.0543 16.3973C2.90696 17.752 4.6983 18.5733 6.4583 19.1147C6.8903 18.5307 7.28296 17.912 7.62696 17.2613C6.98696 17.0213 6.37896 16.7333 5.80296 16.4027C5.95496 16.2907 6.10696 16.1707 6.25096 16.0507C9.57896 17.5867 13.563 17.5867 16.859 16.0507C17.003 16.1787 17.155 16.2907 17.307 16.4027C16.731 16.7333 16.123 17.0213 15.483 17.2613C15.835 17.912 16.227 18.5307 16.659 19.1147C18.419 18.5733 20.2103 17.752 22.063 16.3973C22.463 12.16 21.463 8.21867 18.8943 4.34399ZM8.05896 13.5013C7.06696 13.5013 6.25096 12.5893 6.25096 11.4773C6.25096 10.3653 7.03496 9.45333 8.05896 9.45333C9.09096 9.45333 9.90696 10.3653 9.89096 11.4773C9.89096 12.5893 9.08296 13.5013 8.05896 13.5013ZM15.059 13.5013C14.067 13.5013 13.251 12.5893 13.251 11.4773C13.251 10.3653 14.035 9.45333 15.059 9.45333C16.091 9.45333 16.907 10.3653 16.891 11.4773C16.891 12.5893 16.091 13.5013 15.059 13.5013Z"></path></svg>
+                <span>Discord</span>
+            </a>
+        </div>
     </div>
   </div>
 
-  <div class="modal-backdrop" id="cropModal" style="display:none;">
-    <div class="modal modal-large">
-      <h3>Ajustare Imagine</h3>
-      <div class="crop-container">
-        <img id="cropImage" src="" alt="Imagine de decupat">
-      </div>
-      
-      <div class="crop-toolbar">
-         <button class="btn-tool" id="zoomOutBtn" title="Zoom Out">-</button>
-         <button class="btn-tool" id="zoomInBtn" title="Zoom In">+</button>
-         <button class="btn-tool" id="rotateLeftBtn" title="Rotire Stânga">↺</button>
-         <button class="btn-tool" id="rotateRightBtn" title="Rotire Dreapta">↻</button>
-      </div>
-
-      <div class="crop-controls">
-         <div class="modal-actions">
-            <button class="btn-ghost" id="cropCancelBtn">Anulează</button>
-            <button class="btn-primary" id="cropConfirmBtn">Confirmă & Upload</button>
-         </div>
-      </div>
-    </div>
-  </div>
-  
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
