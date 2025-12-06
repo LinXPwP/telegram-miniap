@@ -508,10 +508,28 @@ html, body {
 .tickets-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.8); opacity: 0; pointer-events: none; transition: 0.3s; z-index: 40; }
 .tab-section.tickets-drawer-open .tickets-backdrop { opacity: 1; pointer-events: auto; }
 
-/* MODAL */
+/* MODAL FIX: FLEX + SCROLL INDEPENDENT PENTRU BODY */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); display: none; align-items: center; justify-content: center; z-index: 100; animation: fadeInModal 0.2s ease-out; }
 @keyframes fadeInModal { from { opacity: 0; } to { opacity: 1; } }
-.modal-card { width: 90%; max-width: 360px; background: #1a1c20; border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-xl); padding: 24px; position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.6); transform: scale(1); animation: scaleIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+
+.modal-card { 
+    width: 90%; 
+    max-width: 360px; 
+    background: #1a1c20; 
+    border: 1px solid rgba(255,255,255,0.1); 
+    border-radius: var(--radius-xl); 
+    padding: 24px; 
+    position: relative; 
+    box-shadow: 0 20px 50px rgba(0,0,0,0.6); 
+    transform: scale(1); 
+    animation: scaleIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+
+    /* FIX PENTRU SCROLL */
+    max-height: 85vh; /* Nu depăși 85% din ecran */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Ascunde colțurile */
+}
 @keyframes scaleIn { from { transform: scale(0.9) translateY(10px); } to { transform: scale(1) translateY(0); } }
 
 /* --- MODIFICARE STIL BUTON X --- */
@@ -546,9 +564,28 @@ html, body {
   box-shadow: 0 0 15px rgba(255, 24, 67, 0.6);
 }
 
+/* Elemente FIXE în modal (nu se micșorează) */
+.modal-header, .modal-img-wrapper, .modal-footer { 
+    flex-shrink: 0; 
+}
+
 .modal-header { margin-bottom: 16px; text-align: center; }
 .modal-header h2 { margin: 0 0 8px; font-size: 18px; }
 .modal-price { color: var(--accent); font-weight: 700; font-size: 16px; }
+
+/* CORP MODAL CU SCROLL */
+.modal-body {
+    flex: 1; /* Ocupă spațiul rămas */
+    overflow-y: auto; /* Scroll vertical */
+    min-height: 0; /* Fix flexbox */
+    margin-bottom: 12px;
+    padding-right: 4px;
+}
+
+/* Scrollbar stilizat pentru modal body */
+.modal-body::-webkit-scrollbar { width: 4px; }
+.modal-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+
 .modal-desc { font-size: 13px; color: var(--text-secondary); text-align: center; line-height: 1.5; margin-bottom: 20px; white-space: pre-wrap; }
 .qty-control { background: var(--bg-app); padding: 12px; border-radius: var(--radius-md); display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .qty-inputs { display: flex; align-items: center; gap: 8px; }
