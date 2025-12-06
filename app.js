@@ -345,7 +345,11 @@ function initUserApp() {
   const chatMessagesEl = document.getElementById("chatMessages");
   const chatInputEl = document.getElementById("chatInput");
   const chatSendBtn = document.getElementById("chatSendBtn");
+  
+  // BUTTONS
   const userTicketCloseBtn = document.getElementById("userTicketCloseBtn");
+  const userTicketReopenBtn = document.getElementById("userTicketReopenBtn");
+  
   const ticketsMenuToggle = document.getElementById("ticketsMenuToggle");
   const ticketsBackdrop = document.getElementById("ticketsBackdrop");
   const shopTabEl = document.getElementById("shopTab");
@@ -415,19 +419,38 @@ function initUserApp() {
 
   function updateUserChatState(ticket) {
     if (!chatInputEl || !chatSendBtn) return;
+    
+    // 1. Niciun tichet selectat
     if (!ticket) {
       chatInputEl.disabled = true; chatSendBtn.disabled = true;
       chatInputEl.placeholder = "Alege un tichet din meniu...";
       clearUserMode();
+      
+      // Ascunde ambele butoane
       if (userTicketCloseBtn) userTicketCloseBtn.style.display = "none";
+      if (userTicketReopenBtn) userTicketReopenBtn.style.display = "none";
+      
       if (ticketTitleEl) ticketTitleEl.textContent = "Niciun tichet selectat";
       return;
     }
+
+    // 2. Tichet Selectat
     const isClosed = ticket.status === "closed";
-    chatInputEl.disabled = isClosed; chatSendBtn.disabled = isClosed;
-    chatInputEl.placeholder = isClosed ? "Tichet închis." : "Scrie un mesaj...";
-    if (userTicketCloseBtn) userTicketCloseBtn.style.display = isClosed ? "none" : "block";
-    if (isClosed) clearUserMode();
+    
+    // Logică Input: Dacă e închis, nu poți scrie până nu redeschizi
+    chatInputEl.disabled = isClosed; 
+    chatSendBtn.disabled = isClosed;
+    chatInputEl.placeholder = isClosed ? "Tichet închis. Redeschide pentru a scrie." : "Scrie un mesaj...";
+
+    // Logică Butoane Header (Toggle între Close și Reopen)
+    if (isClosed) {
+        if (userTicketCloseBtn) userTicketCloseBtn.style.display = "none";
+        if (userTicketReopenBtn) userTicketReopenBtn.style.display = "block";
+        clearUserMode();
+    } else {
+        if (userTicketCloseBtn) userTicketCloseBtn.style.display = "block";
+        if (userTicketReopenBtn) userTicketReopenBtn.style.display = "none";
+    }
   }
   updateUserChatState(null);
 
@@ -478,8 +501,8 @@ function initUserApp() {
   }
 
   /* ============================
-       NEW SHOP RENDER LOGIC
-       ============================ */
+        NEW SHOP RENDER LOGIC
+        ============================ */
   
   function renderCategoriesGrid(shop) {
     categoriesGrid.innerHTML = "";
@@ -890,11 +913,49 @@ function initUserApp() {
     });
   }
 
+  // --- NEW FUNCTION: REDESCHIDE TICKET ---
+  async function userReopenCurrentTicket() {
+      if (!SELECTED_TICKET_ID) return;
+      
+      const btn = document.getElementById("userTicketReopenBtn");
+      if(btn) { btn.disabled = true; btn.textContent = "..."; }
+
+      try {
+          const res = await apiCall("user_reopen_ticket", { ticket_id: SELECTED_TICKET_ID });
+          
+          if (res.ok && res.ticket) {
+              // Update local array
+              const idx = CURRENT_TICKETS.findIndex(x => x.id === SELECTED_TICKET_ID);
+              if (idx >= 0) {
+                  CURRENT_TICKETS[idx] = res.ticket;
+              }
+              
+              renderTicketsListUser();
+              renderUserMessages(res.ticket);
+              updateUserChatState(res.ticket);
+              smartScrollToBottom(chatMessagesEl, true);
+          } else {
+              alert("Nu s-a putut redeschide tichetul.");
+          }
+          
+          bumpUserActive();
+          userTicketsPoller.bumpFast();
+
+      } catch (err) {
+          console.error(err);
+          alert("Eroare de rețea.");
+      } finally {
+          if(btn) { btn.disabled = false; btn.textContent = "Redeschide"; }
+      }
+  }
+
   chatSendBtn?.addEventListener("click", sendChatMessage);
   chatInputEl?.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChatMessage(); } });
   ticketsMenuToggle?.addEventListener("click", () => { toggleTicketsDrawer(); bumpUserActive(); });
   ticketsBackdrop?.addEventListener("click", closeTicketsDrawer);
+  
   if (userTicketCloseBtn) userTicketCloseBtn.addEventListener("click", userCloseCurrentTicket);
+  if (userTicketReopenBtn) userTicketReopenBtn.addEventListener("click", userReopenCurrentTicket); // BIND BUTTON
 
   async function pollTicketsUserCore() {
     if (!CURRENT_USER) return CURRENT_TICKETS;
@@ -908,8 +969,10 @@ function initUserApp() {
           const localT = CURRENT_TICKETS.find(x => x.id === SELECTED_TICKET_ID);
           const serverT = newTickets.find(x => x.id === SELECTED_TICKET_ID);
           
-          if (localT && localT.status === 'closed' && serverT && serverT.status === 'open') {
-              serverT.status = 'closed';
+          // Detect status change externally (admin closed/opened)
+          if (localT && serverT && localT.status !== serverT.status) {
+              localT.status = serverT.status;
+              updateUserChatState(localT); // Refresh buttons immediately
           }
       }
 
