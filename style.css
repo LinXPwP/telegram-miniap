@@ -560,22 +560,7 @@ html, body {
 .btn-primary { background: linear-gradient(135deg, var(--accent), #d6002a); color: #fff; font-weight: 600; border: none; padding: 12px; border-radius: 99px; font-size: 14px; cursor: pointer; box-shadow: 0 0 15px var(--accent-glow); }
 .full-width { width: 100%; }
 .btn-danger-ghost { background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.2); padding: 6px 12px; border-radius: 6px; font-size: 11px; cursor: pointer; }
-
-/* === STIL NOU: BUTON REDESCHIDE === */
-.btn-success-ghost { 
-    background: rgba(16, 185, 129, 0.1); 
-    color: var(--success); 
-    border: 1px solid rgba(16, 185, 129, 0.2); 
-    padding: 6px 12px; 
-    border-radius: 6px; 
-    font-size: 11px; 
-    cursor: pointer;
-    transition: all 0.2s;
-}
-.btn-success-ghost:hover {
-    background: rgba(16, 185, 129, 0.2); 
-    border-color: rgba(16, 185, 129, 0.5);
-}
+.btn-success-ghost { background: rgba(16, 185, 129, 0.1); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.2); padding: 6px 12px; border-radius: 6px; font-size: 11px; cursor: pointer; }
 
 /* MODAL IMAGE SPECIFIC */
 .modal-img-wrapper {
