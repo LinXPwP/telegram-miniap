@@ -328,9 +328,10 @@ function initUserApp() {
   const panelNameEl = document.getElementById("panelName");
   const panelDescEl = document.getElementById("panelDesc");
   const panelPriceEl = document.getElementById("panelPrice");
-  // REMOVE QTY ELEMENTS
-  // const panelQtyEl = document.getElementById("panelQty");
-  // const panelQtyRangeEl = document.getElementById("panelQtyRange");
+  // NEW TYPES ELEMENTS
+  const panelTypesContainer = document.getElementById("panelTypesContainer");
+  const panelTypesGrid = document.getElementById("panelTypesGrid");
+
   const panelBuyBtn = document.getElementById("panelBuyBtn");
   const panelCloseBtn = document.getElementById("panelCloseBtn");
   const panelStatusEl = document.getElementById("panelStatus");
@@ -338,6 +339,7 @@ function initUserApp() {
   const panelImgPlaceholderEl = document.getElementById("panelImgPlaceholder");
 
   let SELECTED_PRODUCT = null;
+  let SELECTED_VARIANT = null; // Stocăm varianta selectată (dacă există)
 
   // -- CHAT ELEMENTS --
   const chatListEl = document.getElementById("chatList");
@@ -346,7 +348,7 @@ function initUserApp() {
   const chatInputEl = document.getElementById("chatInput");
   const chatSendBtn = document.getElementById("chatSendBtn");
   const userTicketCloseBtn = document.getElementById("userTicketCloseBtn");
-  const userTicketReopenBtn = document.getElementById("userTicketReopenBtn"); // NEW BUTTON
+  const userTicketReopenBtn = document.getElementById("userTicketReopenBtn");
   const ticketsMenuToggle = document.getElementById("ticketsMenuToggle");
   const ticketsBackdrop = document.getElementById("ticketsBackdrop");
   const shopTabEl = document.getElementById("shopTab");
@@ -414,7 +416,6 @@ function initUserApp() {
     chatInputEl.focus();
   }
 
-  // --- UPDATED LOGIC FOR REOPEN ---
   function updateUserChatState(ticket) {
     if (!chatInputEl || !chatSendBtn) return;
     if (!ticket) {
@@ -556,6 +557,14 @@ function initUserApp() {
                ? `<img src="${imgUrl}" class="card-img" alt="${prod.name}">` 
                : `<div class="img-placeholder">🎁</div>`;
           
+          // Dacă are tipuri, afișăm "De la X" sau prețul simplu
+          let priceDisplay = `${prod.price} CRD`;
+          if (prod.types && prod.types.length > 0) {
+              // Găsim cel mai mic preț
+              const minPrice = Math.min(...prod.types.map(t => Number(t.price || 0)));
+              priceDisplay = `De la ${minPrice} CRD`;
+          }
+
           prodCard.innerHTML = `
              <div class="card-img-container" style="height: 140px; aspect-ratio: unset;">
                 ${imgHtml}
@@ -563,7 +572,7 @@ function initUserApp() {
              <div class="prod-info">
                  <div class="prod-title">${prod.name}</div>
                  <div class="prod-meta">
-                     <div class="prod-price">${prod.price} CRD</div>
+                     <div class="prod-price">${priceDisplay}</div>
                      <div class="prod-btn-mini">&rarr;</div>
                  </div>
              </div>
@@ -584,13 +593,13 @@ function initUserApp() {
 
   if (shopBackBtn) shopBackBtn.onclick = goBackToCategories;
 
-  /* ===== Modal Logic ===== */
+  /* ===== Modal Logic (Updated for Types) ===== */
   function openProductPanel(prod) {
     SELECTED_PRODUCT = prod;
+    SELECTED_VARIANT = null; // Reset selection
+
     panelStatusEl.textContent = ""; panelStatusEl.className = "status-message";
     panelNameEl.textContent = prod.name;
-    panelDescEl.textContent = prod.description || "";
-    panelPriceEl.textContent = `${prod.price} CRD`;
     
     const imgUrl = getImageUrl(prod.image);
     if (imgUrl) {
@@ -602,28 +611,92 @@ function initUserApp() {
         panelImgPlaceholderEl.style.display = "block";
     }
 
-    // REMOVED QTY LOGIC
-    // const min = prod.min_qty || 1; const max = prod.max_qty || min;
-    // panelQtyEl.min = min; panelQtyEl.max = max; panelQtyEl.value = min;
-    // panelQtyRangeEl.textContent = `(min ${min}, max ${max})`;
+    // --- LOGICA PENTRU TIPURI / VARIANTE ---
+    if (prod.types && prod.types.length > 0) {
+        // Mod Multi-Variant
+        panelTypesContainer.style.display = "block";
+        panelTypesGrid.innerHTML = "";
+
+        // Sortăm variantele după preț (opțional)
+        prod.types.sort((a,b) => a.price - b.price);
+
+        prod.types.forEach((type, idx) => {
+            const btn = document.createElement("div");
+            btn.className = "type-card";
+            btn.innerHTML = `
+                <div class="type-name">${type.name}</div>
+                <div class="type-price">${type.price} CRD</div>
+            `;
+            btn.onclick = () => selectVariant(type, btn);
+            panelTypesGrid.appendChild(btn);
+            
+            // Selectăm automat prima opțiune
+            if (idx === 0) selectVariant(type, btn);
+        });
+
+    } else {
+        // Mod Simplu (Legacy)
+        panelTypesContainer.style.display = "none";
+        panelPriceEl.textContent = `${prod.price} CRD`;
+        panelDescEl.textContent = prod.description || "Fără descriere.";
+    }
     
     productPanelEl.style.display = "flex";
   }
-  function closeProductPanel() { SELECTED_PRODUCT = null; productPanelEl.style.display = "none"; }
+
+  function selectVariant(type, btnElement) {
+      SELECTED_VARIANT = type;
+      
+      // Update UI Selection
+      Array.from(panelTypesGrid.children).forEach(child => child.classList.remove('active'));
+      if(btnElement) btnElement.classList.add('active');
+
+      // Update Modal Info based on Variant
+      panelPriceEl.textContent = `${type.price} CRD`;
+      
+      // Construim descrierea (Globală + Specifică Varianta)
+      let finalDesc = "";
+      if (SELECTED_PRODUCT.description) finalDesc += SELECTED_PRODUCT.description + "\n\n";
+      
+      finalDesc += `🔹 Varianta: ${type.name}\n`;
+      if (type.warranty) finalDesc += `🛡️ Garanție: ${type.warranty}\n`;
+      if (type.description) finalDesc += `📝 Note: ${type.description}`;
+      
+      panelDescEl.textContent = finalDesc;
+  }
+
+  function closeProductPanel() { SELECTED_PRODUCT = null; SELECTED_VARIANT = null; productPanelEl.style.display = "none"; }
   if (productPanelEl) productPanelEl.addEventListener("click", (e) => { if (e.target === productPanelEl) closeProductPanel(); });
 
   async function buySelectedProduct() {
     if (!SELECTED_PRODUCT || !CURRENT_USER) return;
     
-    // HARDCODED QUANTITY = 1
-    const qty = 1;
+    // Validare selecție variantă
+    if (SELECTED_PRODUCT.types && SELECTED_PRODUCT.types.length > 0 && !SELECTED_VARIANT) {
+        panelStatusEl.className = "status-message status-error";
+        panelStatusEl.textContent = "Selectează o variantă!";
+        return;
+    }
+
+    const qty = 1; // Hardcoded
     const prod = SELECTED_PRODUCT;
     
     panelStatusEl.textContent = "Se procesează..."; 
     panelStatusEl.className = "status-message";
     
+    // Pregătim payload-ul
+    const payload = { 
+        product_id: prod.id, 
+        qty: qty 
+    };
+
+    // Dacă avem variantă selectată, trimitem și ID-ul ei
+    if (SELECTED_VARIANT) {
+        payload.type_id = SELECTED_VARIANT.id;
+    }
+    
     try {
-      const res = await apiCall("buy_product", { product_id: prod.id, qty: qty });
+      const res = await apiCall("buy_product", payload);
       
       if (!res.ok) {
         panelStatusEl.className = "status-message status-error";
@@ -909,9 +982,6 @@ function initUserApp() {
   async function userReopenCurrentTicket() {
     if (!SELECTED_TICKET_ID) return;
     
-    // Butonul e deja acolo, nu mai e nevoie de modal de confirmare, dar poți adăuga dacă vrei.
-    // Facem request direct.
-    
     userTicketReopenBtn.textContent = "Se redeschide...";
     userTicketReopenBtn.disabled = true;
 
@@ -948,7 +1018,7 @@ function initUserApp() {
   ticketsMenuToggle?.addEventListener("click", () => { toggleTicketsDrawer(); bumpUserActive(); });
   ticketsBackdrop?.addEventListener("click", closeTicketsDrawer);
   if (userTicketCloseBtn) userTicketCloseBtn.addEventListener("click", userCloseCurrentTicket);
-  if (userTicketReopenBtn) userTicketReopenBtn.addEventListener("click", userReopenCurrentTicket); // Event Listener Nou
+  if (userTicketReopenBtn) userTicketReopenBtn.addEventListener("click", userReopenCurrentTicket);
 
   async function pollTicketsUserCore() {
     if (!CURRENT_USER) return CURRENT_TICKETS;
