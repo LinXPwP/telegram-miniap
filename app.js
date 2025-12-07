@@ -273,7 +273,14 @@ function initUserApp() {
         show(els.mTypes); els.mTypesGrid.innerHTML = "";
         p.types.sort((a,b)=>a.price-b.price).forEach((t, i) => {
             const btn = document.createElement("div"); btn.className = "type-card";
-            btn.innerHTML = `<div class="type-name">${t.name}</div><div class="type-price">${t.price} CRD</div>`;
+            // NEW STRUCTURE FOR POLISHED LOOK
+            btn.innerHTML = `
+                <div class="type-radio-indicator"></div>
+                <div class="type-details">
+                    <div class="type-name">${t.name}</div>
+                    <div class="type-price">${t.price} CRD</div>
+                </div>
+            `;
             btn.onclick = () => selVar(t, btn);
             els.mTypesGrid.appendChild(btn);
             if(i===0) selVar(t, btn);
