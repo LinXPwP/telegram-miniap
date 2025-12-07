@@ -647,41 +647,44 @@ html, body {
 .btn-secondary:hover { background: rgba(255,255,255,0.2); }
 .btn-danger-solid { background: var(--danger); box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4); }
 
-/* --- NEW: STYLES FOR TYPES GRID (VERTICAL STACK) --- */
+/* --- NEW: STYLES FOR TYPES GRID (VERTICAL STACK - REDESIGNED) --- */
 .types-section { 
     margin-bottom: 16px; 
     border-top: 1px solid rgba(255,255,255,0.05); 
     padding-top: 16px; 
 }
+/* Eticheta "ALEGE VARIANTA:" */
 .types-label { 
     font-size: 12px; 
     color: var(--text-muted); 
     text-transform: uppercase; 
     margin-bottom: 12px; 
     font-weight: 700; 
-    text-align: center;
+    text-align: left; /* Aliniere la stanga, nu centru */
     letter-spacing: 0.5px;
+    padding-left: 4px;
 }
 
-/* MODIFICAT: Lista verticala (Stack) */
+/* Containerul principal devine o coloana flexibila */
 .types-grid { 
     display: flex; 
     flex-direction: column;
     gap: 8px; 
 }
 
+/* Cardul individual (butonul) */
 .type-card {
     background: var(--bg-surface-hover);
     border: 1px solid rgba(255,255,255,0.08);
     border-radius: 12px;
-    padding: 14px 16px;
+    padding: 14px 16px; /* Padding mai generos */
     cursor: pointer;
     transition: all 0.2s ease;
     
     /* Layout Flex Orizontal: Left Group <-> Price */
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: space-between; /* Impinge pretul in dreapta */
 }
 
 .type-card:hover {
@@ -699,7 +702,7 @@ html, body {
 .type-left-group {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 12px; /* Spatiu intre cerc si nume */
 }
 
 /* Cercul de selecție (Radio) */
