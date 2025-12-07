@@ -1,4 +1,4 @@
-// app.js - FIXED LAYOUT FOR VARIANTS (VERTICAL FULL-WIDTH LIST)
+// app.js - FIXED SEEN & UNREAD WITH NUMERIC IDs
 
 const API_URL = "https://api.redgen.vip/";
 const $ = (id) => document.getElementById(id);
@@ -273,15 +273,13 @@ function initUserApp() {
         show(els.mTypes); els.mTypesGrid.innerHTML = "";
         p.types.sort((a,b)=>a.price-b.price).forEach((t, i) => {
             const btn = document.createElement("div"); btn.className = "type-card";
-            // --- UPDATED LAYOUT FOR VERTICAL LIST ---
-            // We use a flex container 'type-left-group' to keep radio and name together on the left.
-            // The price sits outside this group to be pushed to the far right.
+            // AICI E SCHIMBAREA PENTRU POLISH: STRUCTURA HTML COMPLEXA
             btn.innerHTML = `
-                <div class="type-left-group">
-                    <div class="type-radio-indicator"></div>
+                <div class="type-left">
                     <div class="type-name">${t.name}</div>
+                    <div class="type-price">${t.price} CRD</div>
                 </div>
-                <div class="type-price">${t.price} CRD</div>
+                <div class="type-radio"></div>
             `;
             btn.onclick = () => selVar(t, btn);
             els.mTypesGrid.appendChild(btn);
