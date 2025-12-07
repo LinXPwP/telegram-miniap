@@ -1,4 +1,4 @@
-// app.js - FIXED SEEN & UNREAD WITH NUMERIC IDs & VERTICAL VARIANTS LIST
+// app.js - FIXED LAYOUT FOR VARIANTS (VERTICAL FULL-WIDTH LIST)
 
 const API_URL = "https://api.redgen.vip/";
 const $ = (id) => document.getElementById(id);
@@ -274,7 +274,8 @@ function initUserApp() {
         p.types.sort((a,b)=>a.price-b.price).forEach((t, i) => {
             const btn = document.createElement("div"); btn.className = "type-card";
             // --- UPDATED LAYOUT FOR VERTICAL LIST ---
-            // Left side: Radio + Name. Right side: Price.
+            // We use a flex container 'type-left-group' to keep radio and name together on the left.
+            // The price sits outside this group to be pushed to the far right.
             btn.innerHTML = `
                 <div class="type-left-group">
                     <div class="type-radio-indicator"></div>
