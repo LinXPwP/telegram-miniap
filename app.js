@@ -1,4 +1,4 @@
-// app.js - FIXED SEEN & UNREAD WITH NUMERIC IDs
+// app.js - FIXED SEEN & UNREAD WITH NUMERIC IDs & VERTICAL VARIANTS LIST
 
 const API_URL = "https://api.redgen.vip/";
 const $ = (id) => document.getElementById(id);
@@ -273,13 +273,14 @@ function initUserApp() {
         show(els.mTypes); els.mTypesGrid.innerHTML = "";
         p.types.sort((a,b)=>a.price-b.price).forEach((t, i) => {
             const btn = document.createElement("div"); btn.className = "type-card";
-            // NEW STRUCTURE FOR POLISHED LOOK
+            // --- UPDATED LAYOUT FOR VERTICAL LIST ---
+            // Left side: Radio + Name. Right side: Price.
             btn.innerHTML = `
-                <div class="type-radio-indicator"></div>
-                <div class="type-details">
+                <div class="type-left-group">
+                    <div class="type-radio-indicator"></div>
                     <div class="type-name">${t.name}</div>
-                    <div class="type-price">${t.price} CRD</div>
                 </div>
+                <div class="type-price">${t.price} CRD</div>
             `;
             btn.onclick = () => selVar(t, btn);
             els.mTypesGrid.appendChild(btn);
