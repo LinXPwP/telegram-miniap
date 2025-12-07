@@ -647,7 +647,7 @@ html, body {
 .btn-secondary:hover { background: rgba(255,255,255,0.2); }
 .btn-danger-solid { background: var(--danger); box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4); }
 
-/* --- NEW: STYLES FOR TYPES GRID (POLISHED) --- */
+/* --- NEW: STYLES FOR TYPES GRID (VERTICAL STACK) --- */
 .types-section { 
     margin-bottom: 16px; 
     border-top: 1px solid rgba(255,255,255,0.05); 
@@ -663,31 +663,30 @@ html, body {
     letter-spacing: 0.5px;
 }
 
-/* Modificat din grid de 2 în listă sau grid mai aerisit */
+/* MODIFICAT: Lista verticala (Stack) */
 .types-grid { 
-    display: grid; 
-    grid-template-columns: 1fr 1fr; /* Păstrăm 2 coloane, dar arată mai bine ca butoane */
-    gap: 10px; 
+    display: flex; 
+    flex-direction: column;
+    gap: 8px; 
 }
 
 .type-card {
     background: var(--bg-surface-hover);
     border: 1px solid rgba(255,255,255,0.08);
     border-radius: 12px;
-    padding: 12px;
+    padding: 14px 16px;
     cursor: pointer;
     transition: all 0.2s ease;
     
-    /* Layout Flex pentru a alinia cercul și textul */
+    /* Layout Flex Orizontal: Left Group <-> Price */
     display: flex;
     align-items: center;
-    gap: 10px;
-    text-align: left;
+    justify-content: space-between;
 }
 
 .type-card:hover {
     background: rgba(255,255,255,0.12);
-    transform: translateY(-2px);
+    transform: translateX(4px); /* Mica miscare la hover */
 }
 
 .type-card.active {
@@ -696,9 +695,16 @@ html, body {
     box-shadow: 0 4px 12px rgba(255, 24, 67, 0.15);
 }
 
+/* Grup Stanga: Radio + Nume */
+.type-left-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
 /* Cercul de selecție (Radio) */
 .type-radio-indicator {
-    width: 18px; height: 18px;
+    width: 20px; height: 20px;
     border-radius: 50%;
     border: 2px solid rgba(255,255,255,0.3);
     position: relative;
@@ -713,30 +719,22 @@ html, body {
     box-shadow: 0 0 8px var(--accent-glow);
 }
 
-.type-details {
-    display: flex;
-    flex-direction: column;
-}
-
+/* Text Nume */
 .type-name { 
-    font-size: 13px; 
+    font-size: 14px; 
     font-weight: 600; 
     color: #e5e7eb; 
-    line-height: 1.2;
 }
 .type-card.active .type-name {
     color: #fff;
 }
 
+/* Text Pret (Dreapta) */
 .type-price { 
-    font-size: 11px; 
-    color: var(--text-secondary); 
-    font-weight: 500; 
-    margin-top: 2px;
-}
-.type-card.active .type-price {
-    color: var(--accent);
-    font-weight: 700;
+    font-size: 14px; 
+    color: var(--accent); 
+    font-weight: 700; 
+    text-align: right;
 }
 
 /* --- NEW: CREDITS INSTRUCTIONS STEPS --- */
