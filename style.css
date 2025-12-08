@@ -647,123 +647,135 @@ html, body {
 .btn-secondary:hover { background: rgba(255,255,255,0.2); }
 .btn-danger-solid { background: var(--danger); box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4); }
 
-/* --- NEW: STYLES FOR TYPES GRID (POLISHED) --- */
-.types-section { margin-bottom: 16px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px; }
-.types-label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px; font-weight: 600; text-align: left; padding-left: 4px; }
-.types-grid { display: flex; flex-direction: column; gap: 10px; }
+/* =========================================
+   FIXED & POLISHED TYPES SECTION
+   ========================================= */
 
+/* Containerul principal */
+.types-section {
+    display: flex;
+    flex-direction: column !important; /* !important forțează așezarea verticală */
+    width: 100%;
+    margin-bottom: 20px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    padding-top: 16px;
+    gap: 12px; /* Spațiu între titlu și listă */
+}
+
+/* Eticheta "ALEGE VARIANTA:" */
+.types-label {
+    display: block !important;
+    width: 100%;
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin: 0 0 4px 4px; /* Aliniat ușor cu textul din carduri */
+    text-align: left;
+}
+
+/* Lista de variante (Container) */
+.types-grid {
+    display: flex;
+    flex-direction: column !important; /* Listă verticală obligatorie */
+    gap: 10px;
+    width: 100%;
+}
+
+/* Cardul individual de variantă */
 .type-card {
-    display: flex; 
-    align-items: center; 
+    display: flex;
+    align-items: center;
     justify-content: space-between;
-    background: var(--bg-surface-hover);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 12px;
-    padding: 12px 16px;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 14px 16px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
-    overflow: hidden;
 }
 
+/* Hover Effect */
 .type-card:hover {
-    background: rgba(255,255,255,0.12);
-    border-color: rgba(255,255,255,0.15);
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.15);
+    transform: translateY(-1px);
 }
 
+/* Starea ACTIVE (Selectat) */
 .type-card.active {
-    background: linear-gradient(90deg, rgba(255, 24, 67, 0.1) 0%, rgba(255,255,255,0.02) 100%);
-    border-color: var(--accent);
-    box-shadow: 0 0 12px rgba(255, 24, 67, 0.15);
+    background: linear-gradient(90deg, rgba(255, 24, 67, 0.08) 0%, rgba(255, 24, 67, 0.02) 100%);
+    border: 1px solid var(--accent);
+    box-shadow: 0 4px 12px rgba(255, 24, 67, 0.15);
 }
 
-/* Indicator Vizual (Stanga - Nume) */
+/* Partea Stângă: Numele Variantei */
 .type-info {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
-    gap: 2px;
 }
 
-.type-name { 
-    font-size: 14px; 
-    font-weight: 600; 
-    color: #fff; 
+.type-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    letter-spacing: 0.3px;
 }
 
-/* Indicator Vizual (Dreapta - Pret & Radio) */
+/* Partea Dreaptă: Preț + Radio */
 .type-meta {
     display: flex;
     align-items: center;
     gap: 12px;
 }
 
+/* Pastila de Preț */
 .type-price-pill {
     font-size: 12px;
-    color: var(--accent);
     font-weight: 700;
-    background: rgba(255, 24, 67, 0.1);
-    padding: 4px 8px;
-    border-radius: 6px;
-    border: 1px solid rgba(255, 24, 67, 0.2);
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 4px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.05);
+    transition: 0.2s;
 }
 
-/* Custom Radio Button */
+.type-card.active .type-price-pill {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+/* Radio Button Custom */
 .type-radio-circle {
-    width: 20px; 
-    height: 20px;
+    width: 22px;
+    height: 22px;
     border-radius: 50%;
-    border: 2px solid #444;
+    border: 2px solid rgba(255, 255, 255, 0.2);
     position: relative;
-    transition: all 0.2s;
+    transition: all 0.2s ease;
+    background: transparent;
 }
 
+/* Starea activă a butonului radio */
 .type-card.active .type-radio-circle {
     border-color: var(--accent);
-    background: var(--accent);
-    box-shadow: 0 0 8px var(--accent-glow);
+    background: transparent; /* Păstrăm transparent pentru efectul de inel */
 }
 
+/* Punctul din mijloc */
 .type-card.active .type-radio-circle::after {
     content: '';
     position: absolute;
     top: 50%; left: 50%;
     transform: translate(-50%, -50%);
-    width: 8px; height: 8px;
-    background: #fff;
-    border-radius: 50%;
-}
-
-/* --- NEW: CREDITS INSTRUCTIONS STEPS --- */
-.instructions-list {
-    text-align: left;
-    margin: 20px 0;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.instruction-step {
-    background: rgba(255,255,255,0.03);
-    padding: 10px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-size: 13px;
-    border: 1px solid rgba(255,255,255,0.05);
-}
-
-.step-num {
+    width: 10px; height: 10px;
     background: var(--accent);
-    color: #fff;
-    width: 24px;
-    height: 24px;
     border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    font-size: 12px;
-    flex-shrink: 0;
+    box-shadow: 0 0 8px var(--accent-glow);
 }
