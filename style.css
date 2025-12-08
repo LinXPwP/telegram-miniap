@@ -540,13 +540,16 @@ html, body {
 .tickets-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.8); opacity: 0; pointer-events: none; transition: 0.3s; z-index: 40; }
 .tab-section.tickets-drawer-open .tickets-backdrop { opacity: 1; pointer-events: auto; }
 
-/* MODAL FIX: FLEX + SCROLL INDEPENDENT PENTRU BODY */
-.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); display: none; align-items: center; justify-content: center; z-index: 100; animation: fadeInModal 0.2s ease-out; }
+/* =========================================
+   MODAL REDESIGN - SIDE-BY-SIDE HEADER
+   ========================================= */
+
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; z-index: 100; animation: fadeInModal 0.2s ease-out; }
 @keyframes fadeInModal { from { opacity: 0; } to { opacity: 1; } }
 
 .modal-card { 
     width: 90%; 
-    max-width: 360px; 
+    max-width: 380px; /* Puțin mai lat pentru layout-ul nou */
     background: #1a1c20; 
     border: 1px solid rgba(255,255,255,0.1); 
     border-radius: var(--radius-xl); 
@@ -556,226 +559,131 @@ html, body {
     transform: scale(1); 
     animation: scaleIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
 
-    /* FIX PENTRU SCROLL */
-    max-height: 85vh; /* Nu depăși 85% din ecran */
+    /* FIX PENTRU SCROLL & LAYOUT */
+    max-height: 90vh; /* Folosim mai mult din ecran vertical */
     display: flex;
     flex-direction: column;
-    overflow: hidden; /* Ascunde colțurile */
+    overflow: hidden; 
 }
 @keyframes scaleIn { from { transform: scale(0.9) translateY(10px); } to { transform: scale(1) translateY(0); } }
 
-/* --- MODIFICARE STIL BUTON X --- */
+/* BUTON X (Close) */
 .modal-close {
   position: absolute;
-  top: 12px;
-  right: 12px;
-  background: rgba(0, 0, 0, 0.7); /* Fundal mai închis */
+  top: 16px;
+  right: 16px;
+  background: rgba(0, 0, 0, 0.5); 
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: #fff;
-  width: 36px;  /* Mai mare */
-  height: 36px;
+  width: 32px;  
+  height: 32px;
   border-radius: 50%;
   cursor: pointer;
-  z-index: 50; /* Asigură că e deasupra imaginii */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 22px;
-  font-weight: 300;
-  line-height: 1;
+  z-index: 60;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; line-height: 1;
   transition: all 0.2s ease;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+.modal-close:hover { background: var(--accent); border-color: transparent; }
+
+/* HEADER NOU: SPLIT (Imagine Stânga, Text Dreapta) */
+.modal-top-split {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 
-.modal-close:hover {
-  background: rgba(255, 24, 67, 0.9); /* Roșu accent la hover */
-  transform: rotate(90deg) scale(1.1);
-  border-color: transparent;
-  box-shadow: 0 0 15px rgba(255, 24, 67, 0.6);
+.modal-img-wrapper {
+    width: 100px;
+    height: 100px;
+    flex-shrink: 0;
+    background: #111;
+    border-radius: 16px;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid rgba(255,255,255,0.1);
 }
 
-/* Elemente FIXE în modal (nu se micșorează) */
-.modal-header, .modal-img-wrapper, .modal-footer { 
-    flex-shrink: 0; 
+.modal-img-wrapper img { width: 100%; height: 100%; object-fit: cover; }
+.modal-img-placeholder { position: absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-size: 32px; opacity: 0.5; }
+
+.modal-header-compact {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
-.modal-header { margin-bottom: 16px; text-align: center; }
-.modal-header h2 { margin: 0 0 8px; font-size: 18px; }
-.modal-price { color: var(--accent); font-weight: 700; font-size: 16px; }
+.modal-header-compact h2 {
+    margin: 0 0 8px 0;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.2;
+    color: #fff;
+}
+
+.modal-price { 
+    color: var(--accent); 
+    font-weight: 800; 
+    font-size: 18px; 
+}
 
 /* CORP MODAL CU SCROLL */
 .modal-body {
-    flex: 1; /* Ocupă spațiul rămas */
-    overflow-y: auto; /* Scroll vertical */
-    min-height: 0; /* Fix flexbox */
+    flex: 1; 
+    overflow-y: auto; 
+    min-height: 0; 
     margin-bottom: 12px;
     padding-right: 4px;
 }
-
-/* Scrollbar stilizat pentru modal body */
 .modal-body::-webkit-scrollbar { width: 4px; }
 .modal-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
 
-.modal-desc { font-size: 13px; color: var(--text-secondary); text-align: center; line-height: 1.5; margin-bottom: 20px; white-space: pre-wrap; }
-.qty-control { background: var(--bg-app); padding: 12px; border-radius: var(--radius-md); display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-.qty-inputs { display: flex; align-items: center; gap: 8px; }
-.qty-inputs input { width: 50px; background: #333; border: none; color: #fff; border-radius: 6px; padding: 4px; text-align: center; font-weight: 700; }
-.qty-hint { font-size: 10px; color: var(--text-muted); }
+/* DESCRIERE */
+.desc-container { margin-bottom: 20px; }
+.desc-label { font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; }
+.modal-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.5; white-space: pre-wrap; margin: 0; }
+
+/* TYPES (Variante) - STILUL TĂU BUN */
+.types-section {
+    display: flex; flex-direction: column !important;
+    width: 100%; margin-bottom: 24px; gap: 10px;
+}
+.types-label { display: block !important; width: 100%; font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin: 0 0 4px 4px; }
+.types-grid { display: flex; flex-direction: column !important; gap: 10px; width: 100%; }
+
+.type-card {
+    display: flex; align-items: center; justify-content: space-between; width: 100%;
+    background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px; padding: 12px 14px; cursor: pointer; transition: all 0.2s;
+}
+.type-card:hover { background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 255, 255, 0.15); }
+.type-card.active { background: linear-gradient(90deg, rgba(255, 24, 67, 0.08) 0%, rgba(255, 24, 67, 0.02) 100%); border: 1px solid var(--accent); }
+
+.type-info { display: flex; flex-direction: column; }
+.type-name { font-size: 13px; font-weight: 600; color: #fff; }
+.type-meta { display: flex; align-items: center; gap: 10px; }
+
+.type-price-pill { font-size: 11px; font-weight: 700; color: #fff; background: rgba(255, 255, 255, 0.1); padding: 3px 8px; border-radius: 6px; }
+.type-card.active .type-price-pill { background: var(--accent); }
+
+.type-radio-circle { width: 18px; height: 18px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.2); position: relative; }
+.type-card.active .type-radio-circle { border-color: var(--accent); }
+.type-card.active .type-radio-circle::after { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 8px; height: 8px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 8px var(--accent-glow); }
+
+/* FOOTER & STATUS */
 .status-message { font-size: 12px; text-align: center; min-height: 16px; margin-bottom: 12px; }
 .status-error { color: var(--danger); }
 .status-ok { color: var(--success); }
-.btn-primary { background: linear-gradient(135deg, var(--accent), #d6002a); color: #fff; font-weight: 600; border: none; padding: 12px; border-radius: 99px; font-size: 14px; cursor: pointer; box-shadow: 0 0 15px var(--accent-glow); }
-.full-width { width: 100%; }
-.btn-danger-ghost { background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.2); padding: 6px 12px; border-radius: 6px; font-size: 11px; cursor: pointer; }
-.btn-success-ghost { background: rgba(16, 185, 129, 0.1); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.2); padding: 6px 12px; border-radius: 6px; font-size: 11px; cursor: pointer; }
 
-/* MODAL IMAGE SPECIFIC */
-.modal-img-wrapper {
-    width: 100%; height: 180px;
-    background: #111;
-    border-radius: var(--radius-lg);
-    margin-bottom: 16px; overflow: hidden; position: relative;
-    display: flex; align-items: center; justify-content: center;
-}
-.modal-img-wrapper img { width: 100%; height: 100%; object-fit: cover; position: relative; z-index: 2; }
-.modal-img-placeholder { position: absolute; font-size: 40px; z-index: 1; opacity: 0.5; }
+.modal-footer { flex-shrink: 0; }
+.btn-primary { background: linear-gradient(135deg, var(--accent), #d6002a); color: #fff; font-weight: 600; border: none; padding: 14px; border-radius: 16px; font-size: 14px; cursor: pointer; box-shadow: 0 0 15px var(--accent-glow); width: 100%; transition: transform 0.1s; }
+.btn-primary:active { transform: scale(0.98); }
 
-.modal-actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.btn-secondary { background: rgba(255,255,255,0.1); color: #fff; border: none; padding: 12px; border-radius: 99px; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.2s; }
-.btn-secondary:hover { background: rgba(255,255,255,0.2); }
-.btn-danger-solid { background: var(--danger); box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4); }
-
-/* =========================================
-   FIXED & POLISHED TYPES SECTION
-   ========================================= */
-
-/* Containerul principal */
-.types-section {
-    display: flex;
-    flex-direction: column !important; /* !important forțează așezarea verticală */
-    width: 100%;
-    margin-bottom: 20px;
-    border-top: 1px solid rgba(255,255,255,0.08);
-    padding-top: 16px;
-    gap: 12px; /* Spațiu între titlu și listă */
-}
-
-/* Eticheta "ALEGE VARIANTA:" */
-.types-label {
-    display: block !important;
-    width: 100%;
-    font-size: 11px;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    margin: 0 0 4px 4px; /* Aliniat ușor cu textul din carduri */
-    text-align: left;
-}
-
-/* Lista de variante (Container) */
-.types-grid {
-    display: flex;
-    flex-direction: column !important; /* Listă verticală obligatorie */
-    gap: 10px;
-    width: 100%;
-}
-
-/* Cardul individual de variantă */
-.type-card {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 14px;
-    padding: 14px 16px;
-    cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-}
-
-/* Hover Effect */
-.type-card:hover {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.15);
-    transform: translateY(-1px);
-}
-
-/* Starea ACTIVE (Selectat) */
-.type-card.active {
-    background: linear-gradient(90deg, rgba(255, 24, 67, 0.08) 0%, rgba(255, 24, 67, 0.02) 100%);
-    border: 1px solid var(--accent);
-    box-shadow: 0 4px 12px rgba(255, 24, 67, 0.15);
-}
-
-/* Partea Stângă: Numele Variantei */
-.type-info {
-    display: flex;
-    flex-direction: column;
-}
-
-.type-name {
-    font-size: 14px;
-    font-weight: 600;
-    color: #fff;
-    letter-spacing: 0.3px;
-}
-
-/* Partea Dreaptă: Preț + Radio */
-.type-meta {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-/* Pastila de Preț */
-.type-price-pill {
-    font-size: 12px;
-    font-weight: 700;
-    color: #fff;
-    background: rgba(255, 255, 255, 0.1);
-    padding: 4px 10px;
-    border-radius: 8px;
-    border: 1px solid rgba(255,255,255,0.05);
-    transition: 0.2s;
-}
-
-.type-card.active .type-price-pill {
-    background: var(--accent);
-    color: #fff;
-    border-color: var(--accent);
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-}
-
-/* Radio Button Custom */
-.type-radio-circle {
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    position: relative;
-    transition: all 0.2s ease;
-    background: transparent;
-}
-
-/* Starea activă a butonului radio */
-.type-card.active .type-radio-circle {
-    border-color: var(--accent);
-    background: transparent; /* Păstrăm transparent pentru efectul de inel */
-}
-
-/* Punctul din mijloc */
-.type-card.active .type-radio-circle::after {
-    content: '';
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    width: 10px; height: 10px;
-    background: var(--accent);
-    border-radius: 50%;
-    box-shadow: 0 0 8px var(--accent-glow);
-}
+/* --- NEW: CREDITS INSTRUCTIONS STEPS --- */
+.instructions-list { text-align: left; margin: 20px 0; display: flex; flex-direction: column; gap: 12px; }
+.instruction-step { background: rgba(255,255,255,0.03); padding: 10px; border-radius: 12px; display: flex; align-items: center; gap: 12px; font-size: 13px; border: 1px solid rgba(255,255,255,0.05); }
+.step-num { background: var(--accent); color: #fff; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; flex-shrink: 0; }
