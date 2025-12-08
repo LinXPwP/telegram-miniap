@@ -12,6 +12,7 @@
 </head>
 <body data-page="user">
   <div class="app-wrapper" id="mainAppWrapper">
+    
     <div id="shopHeader" class="header-bar">
       <div class="header-left">
         <button class="btn-icon-back" id="shopBackBtn" style="display: none;">
@@ -32,9 +33,11 @@
         </button>
       </div>
     </div>
+    
     <div class="user-info-bar" id="userLine"></div>
 
     <main class="main-content">
+      
       <div id="shopTab" class="tab-section active">
         <div id="viewCategories" class="shop-view active-view">
           <div class="hero-banner"><h1>Descoperă</h1><p>Alege o categorie pentru a începe.</p></div>
@@ -50,6 +53,7 @@
       <div id="ticketsTab" class="tab-section chat-mode">
         <div class="chat-layout">
           <div class="chat-sidebar" id="chatList"></div>
+          
           <div class="chat-main">
             <div class="chat-navbar" id="chatHeader">
               <div class="nav-left">
@@ -61,11 +65,20 @@
                 <button class="btn-sm btn-danger-ghost" id="userTicketCloseBtn" style="display:none;">Închide</button>
               </div>
             </div>
+            
             <div class="chat-viewport" id="chatMessages">
               <div class="chat-placeholder"><div class="icon">💬</div><p>Deschide meniu și alege un tichet.</p></div>
             </div>
+            
             <div class="chat-footer chat-input">
+              <div id="uploadPreview" class="upload-preview-bar" style="display: none;"></div>
+
               <div class="input-wrapper">
+                <button id="attachBtn" class="btn-attach" title="Atașează imagine sau txt">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                </button>
+                <input type="file" id="chatFileInput" hidden accept="image/*, .txt">
+
                 <input id="chatInput" type="text" placeholder="Scrie un mesaj..." autocomplete="off" disabled />
                 <button id="chatSendBtn" class="btn-send" disabled>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
@@ -152,6 +165,7 @@
         </div>
     </div>
   </div>
+  
   <script src="app.js"></script>
 </body>
 </html>
