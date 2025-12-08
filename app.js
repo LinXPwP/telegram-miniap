@@ -1,4 +1,4 @@
-// app.js - FIXED SEEN & UNREAD WITH NUMERIC IDs & ENGLISH TRANSLATION
+// app.js - FIXED: Handles Access Denied Screen Properly
 
 const API_URL = "https://api.redgen.vip/";
 const $ = (id) => document.getElementById(id);
@@ -56,11 +56,9 @@ function getSeenConfig(t) {
     
     const lastUserM = userMsgs[userMsgs.length - 1];
     
-    // Convert to number for strict comparison (Fixes the NaN issue)
     const lastReadAdmin = Number(t.last_read_admin || 0);
     const lastUserMsgId = Number(lastUserM.id);
 
-    // If admin read a message with ID >= user's last message ID
     if (lastReadAdmin >= lastUserMsgId) {
         return { targetId: lastUserM.id, text: `Seen ${t.last_read_admin_at ? timeAgo(t.last_read_admin_at) : ''}` };
     }
@@ -70,14 +68,8 @@ function getSeenConfig(t) {
 // --- FIXED HELPER: Calculate Unread ---
 function calculateUserUnread(ticket) {
     if (!ticket || !ticket.messages) return 0;
-    
     const lastReadId = Number(ticket.last_read_user || 0);
-    
-    // Count messages from admin that have an ID strictly greater than lastReadId
-    const count = ticket.messages.filter(m => 
-        m.from === 'admin' && Number(m.id) > lastReadId
-    ).length;
-
+    const count = ticket.messages.filter(m => m.from === 'admin' && Number(m.id) > lastReadId).length;
     return count;
 }
 
@@ -130,7 +122,6 @@ function renderDiscordMessages(msgs, { container, canReply, onReply, onJumpTo, s
          }
     }
 
-    // HANDLE SEEN FOOTER
     const seenEl = row.querySelector('.seen-footer');
     if (seenEl) {
         if (seenConfig && String(m.id) === String(seenConfig.targetId)) {
@@ -162,15 +153,15 @@ function initUserApp() {
   
   // Elements
   const els = {
+     mainWrapper: $("mainAppWrapper"), // IMPORTANT REFERINTA
+     linkError: $("linkAccountError"), // IMPORTANT REFERINTA ECRAN EROARE
      credits: $("creditsValue"), creditsBtn: $("creditsBtn"), userLine: $("userLine"),
      catGrid: $("categoriesGrid"), prodGrid: $("productsGrid"), 
      viewCat: $("viewCategories"), viewProd: $("viewProducts"),
      backBtn: $("shopBackBtn"), title: $("headerTitle"), emptyMsg: $("emptyProductsMsg"),
-     // Modal
      modal: $("productPanel"), mName: $("panelName"), mDesc: $("panelDesc"), mPrice: $("panelPrice"),
      mTypes: $("panelTypesContainer"), mTypesGrid: $("panelTypesGrid"), mBuy: $("panelBuyBtn"),
      mClose: $("panelCloseBtn"), mStatus: $("panelStatus"), mImg: $("panelImg"), mPlace: $("panelImgPlaceholder"),
-     // Chat
      chatList: $("chatList"), tTitle: $("ticketTitle"), msgs: $("chatMessages"), 
      input: $("chatInput"), send: $("chatSendBtn"), 
      closeT: $("userTicketCloseBtn"), reopenT: $("userTicketReopenBtn"), 
@@ -178,12 +169,9 @@ function initUserApp() {
      shopTab: $("shopTab"), ticketsTab: $("ticketsTab"), shopHead: $("shopHeader"),
      goT: $("goToTicketsBtn"), backShop: $("backToShopBtn"), inputCont: $(".chat-input"),
      confirm: $("confirmActionModal"), okConf: $("confirmOkBtn"), canConf: $("confirmCancelBtn"),
-     creditsM: $("creditsModal"), closeCred: $("closeCreditsModalBtn"),
-     // Errors
-     linkError: $("linkAccountError")
+     creditsM: $("creditsModal"), closeCred: $("closeCreditsModalBtn")
   };
 
-  // Nav
   const setTab = (isShop) => {
     if(isShop) { els.shopTab.classList.add("active"); els.ticketsTab.classList.remove("active"); show(els.shopHead); userTicketsPoller.stop(); }
     else { els.shopTab.classList.remove("active"); els.ticketsTab.classList.add("active"); hide(els.shopHead); updateActivity(); userTicketsPoller.start(); }
@@ -191,12 +179,10 @@ function initUserApp() {
   els.goT?.addEventListener("click", () => setTab(false));
   els.backShop?.addEventListener("click", () => setTab(true));
 
-  // Credits Modal
   els.creditsBtn?.addEventListener("click", () => show(els.creditsM));
   els.closeCred?.addEventListener("click", () => hide(els.creditsM));
   els.creditsM?.addEventListener("click", (e) => { if(e.target===els.creditsM) hide(els.creditsM); });
 
-  // Chat Mode UI
   const modeBar = document.createElement("div"); modeBar.className = "chat-mode-bar"; modeBar.style.display = 'none';
   modeBar.innerHTML = `<span class="chat-mode-text"></span><button>Cancel</button>`;
   modeBar.querySelector("button").onclick = () => { userMode = {type:null}; hide(modeBar); };
@@ -217,23 +203,23 @@ function initUserApp() {
   };
   updateChatUI(null);
 
-  // API
   const apiCall = async (action, extra = {}) => {
     try {
         const r = await fetch(API_URL, { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ action, initData: TG_INIT_DATA, ...extra }) });
-        if (r.status === 401) return { ok: false, error: "auth_failed" };
+        
+        // Daca serverul raspunde cu 403, cel mai probabil este eroarea de link
         if (r.status === 403) {
-            // Check for specific error body
             const data = await r.json();
-            return data;
+            return data; // Returnam eroarea ca sa o putem procesa
         }
+        if (r.status === 401) return { ok: false, error: "auth_failed" };
+        
         return await r.json();
     } catch (e) { console.error(e); return { ok: false, error: "network" }; }
   };
 
   const renderHeader = () => { if(STATE.user) { els.credits.textContent = STATE.user.credits; els.userLine.innerHTML = `User: <b>${STATE.user.username ? "@"+STATE.user.username : "ID "+STATE.user.id}</b>`; }};
 
-  // Shop Logic
   const renderCats = (shop) => {
     els.catGrid.innerHTML = "";
     shop?.categories?.forEach(cat => {
@@ -267,7 +253,6 @@ function initUserApp() {
     els.viewProd.classList.remove("active-view"); els.viewCat.classList.add("active-view"); hide(els.backBtn); show(els.title);
   };
 
-  // Modal
   const openModal = (p) => {
     SELECTED_PRODUCT = p; SELECTED_VARIANT = null;
     els.mStatus.textContent = ""; els.mStatus.className = "status-message";
@@ -280,15 +265,9 @@ function initUserApp() {
         show(els.mTypes); els.mTypesGrid.innerHTML = "";
         p.types.sort((a,b)=>a.price-b.price).forEach((t, i) => {
             const btn = document.createElement("div"); btn.className = "type-card";
-            // NEW DESIGN FOR TYPES
             btn.innerHTML = `
-                <div class="type-info">
-                    <span class="type-name">${t.name}</span>
-                </div>
-                <div class="type-meta">
-                    <span class="type-price-pill">${t.price} CRD</span>
-                    <div class="type-radio-circle"></div>
-                </div>
+                <div class="type-info"><span class="type-name">${t.name}</span></div>
+                <div class="type-meta"><span class="type-price-pill">${t.price} CRD</span><div class="type-radio-circle"></div></div>
             `;
             btn.onclick = () => selVar(t, btn);
             els.mTypesGrid.appendChild(btn);
@@ -333,7 +312,6 @@ function initUserApp() {
     } catch { STATE.buying = false; els.mBuy.disabled = false; els.mStatus.textContent = "Network error."; }
   };
 
-  // Tickets
   const renderTickets = () => {
     els.chatList.innerHTML = "";
     if(!STATE.tickets.length) return (els.chatList.innerHTML = '<div style="padding:20px;text-align:center;color:#555;">No tickets found.</div>');
@@ -341,12 +319,7 @@ function initUserApp() {
     STATE.tickets.sort((a,b) => (a.status===b.status ? b.id-a.id : (a.status==='open'?-1:1))).forEach(t => {
         const item = document.createElement("div"); item.className = "chat-item " + (t.id === STATE.selTicketId ? "active":"");
         item.dataset.ticketId = t.id;
-        
-        let unread = 0;
-        if (t.id !== STATE.selTicketId) {
-             unread = calculateUserUnread(t);
-        }
-
+        let unread = (t.id !== STATE.selTicketId) ? calculateUserUnread(t) : 0;
         const lastMsg = t.messages?.length ? t.messages[t.messages.length-1].text : "New ticket";
         item.innerHTML = `<div class="chat-item-header-row"><div class="chat-item-title">${t.product_name||"Order"}</div><div>${unread>0?`<span class="unread-badge">${unread}</span>`:""}<span class="ticket-status-pill ${t.status}">${t.status}</span></div></div><div class="chat-item-line">${lastMsg}</div>`;
         item.onclick = () => { selTicket(t.id); updateActivity(); els.ticketsTab.classList.remove("tickets-drawer-open"); };
@@ -358,19 +331,15 @@ function initUserApp() {
     STATE.selTicketId = id; 
     const t = STATE.tickets.find(x => x.id === id);
     if(t) {
-       const unread = calculateUserUnread(t);
-       if(unread > 0) { 
+       if(calculateUserUnread(t) > 0) { 
            apiCall("mark_seen", {ticket_id: id}); 
-           // Local update for instant feel
            if(t.messages.length) t.last_read_user = t.messages[t.messages.length-1].id; 
        }
     }
     renderTickets();
     if(!t) { els.msgs.innerHTML = ""; updateChatUI(null); return; }
     els.tTitle.textContent = `${t.product_name} #${t.id}`;
-    
     const seen = getSeenConfig(t);
-
     renderDiscordMessages(t.messages, { container: els.msgs, ticket: t, canReply: t.status==="open", onReply: setReply, onJumpTo: (mid) => {
         const el = els.msgs.querySelector(`.msg-row[data-message-id="${mid}"]`);
         if(el) { el.classList.add("msg-row--highlight"); el.scrollIntoView({behavior:"smooth",block:"center"}); setTimeout(()=>el.classList.remove("msg-row--highlight"),1200); }
@@ -382,7 +351,6 @@ function initUserApp() {
     const text = els.input.value.trim();
     if(!text || !STATE.selTicketId || STATE.sending) return;
     STATE.sending = true; els.send.disabled = true; els.input.value = ""; hide(modeBar);
-    
     try {
         const res = await apiCall("user_send_message", { ticket_id: STATE.selTicketId, text, reply_to: userMode.type==="reply"?userMode.msgId:null });
         if(res.ok && res.ticket) {
@@ -401,7 +369,6 @@ function initUserApp() {
   els.send?.addEventListener("click", sendMsg);
   els.input?.addEventListener("keydown", e => { if(e.key==="Enter"&&!e.shiftKey) { e.preventDefault(); sendMsg(); }});
 
-  // Ticket Actions
   els.menu?.addEventListener("click", () => els.ticketsTab.classList.toggle("tickets-drawer-open"));
   els.backdrop?.addEventListener("click", () => els.ticketsTab.classList.remove("tickets-drawer-open"));
   
@@ -433,7 +400,6 @@ function initUserApp() {
       }
   });
 
-  // Polling
   const userTicketsPoller = createSmartPoll(async () => {
      if(!STATE.user) return;
      const res = await apiCall("user_get_tickets", {});
@@ -447,7 +413,6 @@ function initUserApp() {
                     apiCall("mark_seen", {ticket_id:t.id}); 
                     if(t.messages.length) t.last_read_user=t.messages[t.messages.length-1].id; 
                 }
-                
                 const seen = getSeenConfig(t);
                 renderDiscordMessages(t.messages, {container: els.msgs, ticket:t, canReply:t.status==="open", onReply:setReply, seenConfig: seen });
                 updateChatUI(t);
@@ -457,24 +422,30 @@ function initUserApp() {
      }
   }, () => els.ticketsTab.classList.contains("active"));
 
-  // Init
+  // INIT SI GESTIONARE ERORI
   (async () => {
      tg.ready(); tg.expand();
      const unsafe = tg.initDataUnsafe?.user;
      STATE.user = { id: unsafe?.id, username: unsafe?.username||"user", credits: 0 };
      renderHeader();
+     
      const res = await apiCall("init", {});
+     
      if(res.ok) {
+        // Daca totul e ok, afisam magazinul
         STATE.user.credits = res.user.credits; STATE.shop = res.shop; STATE.tickets = res.tickets||[];
         renderHeader(); renderCats(STATE.shop); renderTickets(); setTab(true);
      } else {
-        // --- HANDLE "access_denied_link_required" ERROR ---
+        // --- AICI ESTE FIX-UL PENTRU ECRANUL DE DISCORD ---
         if (res.error === "access_denied_link_required") {
-            hide($("mainAppWrapper"));
-            show(els.linkError);
+            // Ascundem COMPLET interfata principala
+            if(els.mainWrapper) els.mainWrapper.style.display = "none";
+            // Afisam ecranul de eroare specific
+            if(els.linkError) els.linkError.style.display = "flex";
             return;
         }
 
+        // Alte erori (afisate in header)
         els.userLine.innerHTML = `<span style="color:red">Error: ${res.error||"Auth"}</span>`; show(els.userLine);
      }
   })();
