@@ -2,7 +2,7 @@
 
 // ================= CONFIGURARE API =================
 // ⚠️ INLOCUIESTE CU CHEIA TA DE LA https://api.imgbb.com/
-const IMGBB_API_KEY = "6d207e02198a847aa98d0a2a901485a5"; 
+const IMGBB_API_KEY = "8b7eef65280614c71acd1e1ce317aa64"; 
 const API_URL = "https://api.redgen.vip/";
 
 const $ = (id) => document.getElementById(id);
