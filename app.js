@@ -273,13 +273,15 @@ function initUserApp() {
         show(els.mTypes); els.mTypesGrid.innerHTML = "";
         p.types.sort((a,b)=>a.price-b.price).forEach((t, i) => {
             const btn = document.createElement("div"); btn.className = "type-card";
-            // AICI E SCHIMBAREA PENTRU POLISH: STRUCTURA HTML COMPLEXA
+            // NEW DESIGN FOR TYPES
             btn.innerHTML = `
-                <div class="type-left">
-                    <div class="type-name">${t.name}</div>
-                    <div class="type-price">${t.price} CRD</div>
+                <div class="type-info">
+                    <span class="type-name">${t.name}</span>
                 </div>
-                <div class="type-radio"></div>
+                <div class="type-meta">
+                    <span class="type-price-pill">${t.price} CRD</span>
+                    <div class="type-radio-circle"></div>
+                </div>
             `;
             btn.onclick = () => selVar(t, btn);
             els.mTypesGrid.appendChild(btn);
