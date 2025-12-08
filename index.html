@@ -1,157 +1,157 @@
 <!DOCTYPE html>
 <html lang="ro">
 <head>
-  <meta charset="UTF-8" />
-  <title>MiniApp Shop & Chat</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8" />
+  <title>MiniApp Shop & Chat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body data-page="user">
-  <div class="app-wrapper" id="mainAppWrapper">
-    <div id="shopHeader" class="header-bar">
-      <div class="header-left">
-        <button class="btn-icon-back" id="shopBackBtn" style="display: none;">
-             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-             <span class="back-btn-text"></span>
-        </button>
-        <div class="brand-logo" id="headerTitle">
-            <img src="logo.png" class="header-logo-img" alt="R">
-            <span class="brand-text-suffix">3DG3N</span>
-        </div>
-      </div>
-      <div class="header-right">
-        <button class="credits-pill-btn" id="creditsBtn">
-          <span class="label">CRD:</span><span class="value" id="creditsValue">0</span><span class="add-icon">+</span>
-        </button>
-        <button class="btn-icon" id="goToTicketsBtn" aria-label="Tichete">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
-        </button>
-      </div>
-    </div>
-    <div class="user-info-bar" id="userLine"></div>
+  <div class="app-wrapper" id="mainAppWrapper">
+    <div id="shopHeader" class="header-bar">
+      <div class="header-left">
+        <button class="btn-icon-back" id="shopBackBtn" style="display: none;">
+             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+             <span class="back-btn-text"></span>
+        </button>
+        <div class="brand-logo" id="headerTitle">
+            <img src="logo.png" class="header-logo-img" alt="R">
+            <span class="brand-text-suffix">3DG3N</span>
+        </div>
+      </div>
+      <div class="header-right">
+        <button class="credits-pill-btn" id="creditsBtn">
+          <span class="label">CRD:</span><span class="value" id="creditsValue">0</span><span class="add-icon">+</span>
+        </button>
+        <button class="btn-icon" id="goToTicketsBtn" aria-label="Tichete">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+        </button>
+      </div>
+    </div>
+    <div class="user-info-bar" id="userLine"></div>
 
-    <main class="main-content">
-      <div id="shopTab" class="tab-section active">
-        <div id="viewCategories" class="shop-view active-view">
-          <div class="hero-banner"><h1>Descoperă</h1><p>Alege o categorie pentru a începe.</p></div>
-          <div id="categoriesGrid" class="visual-grid"></div>
-          <div class="shop-footer-note">RedGen Visual v3.0</div>
-        </div>
-        <div id="viewProducts" class="shop-view">
-           <div id="productsGrid" class="visual-grid"></div>
-           <div class="empty-products-msg" id="emptyProductsMsg" style="display:none">Nu există produse aici.</div>
-        </div>
-      </div>
+    <main class="main-content">
+      <div id="shopTab" class="tab-section active">
+        <div id="viewCategories" class="shop-view active-view">
+          <div class="hero-banner"><h1>Descoperă</h1><p>Alege o categorie pentru a începe.</p></div>
+          <div id="categoriesGrid" class="visual-grid"></div>
+          <div class="shop-footer-note">RedGen Visual v3.0</div>
+        </div>
+        <div id="viewProducts" class="shop-view">
+           <div id="productsGrid" class="visual-grid"></div>
+           <div class="empty-products-msg" id="emptyProductsMsg" style="display:none">Nu există produse aici.</div>
+        </div>
+      </div>
 
-      <div id="ticketsTab" class="tab-section chat-mode">
-        <div class="chat-layout">
-          <div class="chat-sidebar" id="chatList"></div>
-          <div class="chat-main">
-            <div class="chat-navbar" id="chatHeader">
-              <div class="nav-left">
-                <button class="menu-toggle" id="ticketsMenuToggle"><span></span><span></span><span></span></button>
-                <div class="chat-info"><div class="chat-title" id="ticketTitle">Niciun tichet</div></div>
-              </div>
-              <div class="nav-right">
-                <button class="btn-sm btn-success-ghost" id="userTicketReopenBtn" style="display:none;">Redeschide</button>
-                <button class="btn-sm btn-danger-ghost" id="userTicketCloseBtn" style="display:none;">Închide</button>
-              </div>
-            </div>
-            <div class="chat-viewport" id="chatMessages">
-              <div class="chat-placeholder"><div class="icon">💬</div><p>Deschide meniu și alege un tichet.</p></div>
-            </div>
-            <div class="chat-footer chat-input">
-              <div class="input-wrapper">
-                <input id="chatInput" type="text" placeholder="Scrie un mesaj..." autocomplete="off" disabled />
-                <button id="chatSendBtn" class="btn-send" disabled>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                </button>
-              </div>
-              <button class="btn-block-back" id="backToShopBtn"><span style="margin-right: 6px;">&larr;</span> Înapoi la Magazin</button>
-            </div>
-          </div>
-        </div>
-        <div class="tickets-backdrop" id="ticketsBackdrop"></div>
-      </div>
-    </main>
+      <div id="ticketsTab" class="tab-section chat-mode">
+        <div class="chat-layout">
+          <div class="chat-sidebar" id="chatList"></div>
+          <div class="chat-main">
+            <div class="chat-navbar" id="chatHeader">
+              <div class="nav-left">
+                <button class="menu-toggle" id="ticketsMenuToggle"><span></span><span></span><span></span></button>
+                <div class="chat-info"><div class="chat-title" id="ticketTitle">Niciun tichet</div></div>
+              </div>
+              <div class="nav-right">
+                <button class="btn-sm btn-success-ghost" id="userTicketReopenBtn" style="display:none;">Redeschide</button>
+                <button class="btn-sm btn-danger-ghost" id="userTicketCloseBtn" style="display:none;">Închide</button>
+              </div>
+            </div>
+            <div class="chat-viewport" id="chatMessages">
+              <div class="chat-placeholder"><div class="icon">💬</div><p>Deschide meniu și alege un tichet.</p></div>
+            </div>
+            <div class="chat-footer chat-input">
+              <div class="input-wrapper">
+                <input id="chatInput" type="text" placeholder="Scrie un mesaj..." autocomplete="off" disabled />
+                <button id="chatSendBtn" class="btn-send" disabled>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                </button>
+              </div>
+              <button class="btn-block-back" id="backToShopBtn"><span style="margin-right: 6px;">&larr;</span> Înapoi la Magazin</button>
+            </div>
+          </div>
+        </div>
+        <div class="tickets-backdrop" id="ticketsBackdrop"></div>
+      </div>
+    </main>
 
-    <div id="productPanel" class="modal-overlay">
-      <div class="modal-card">
-        <button class="modal-close" id="panelCloseBtn">&times;</button>
-        
-        <div class="modal-top-split">
-            <div class="modal-img-wrapper">
-                <img id="panelImg" src="" alt="Product" onerror="this.style.display='none'">
-                <div class="modal-img-placeholder" id="panelImgPlaceholder">🎁</div>
-            </div>
-            <div class="modal-header-compact">
-                <h2 id="panelName">Nume Produs</h2>
-                <div class="modal-price" id="panelPrice">0 CRD</div>
-            </div>
-        </div>
+    <div id="productPanel" class="modal-overlay">
+      <div class="modal-card">
+        <button class="modal-close" id="panelCloseBtn">&times;</button>
+        
+        <div class="modal-top-split">
+            <div class="modal-img-wrapper">
+                <img id="panelImg" src="" alt="Product" onerror="this.style.display='none'">
+                <div class="modal-img-placeholder" id="panelImgPlaceholder">🎁</div>
+            </div>
+            <div class="modal-header-compact">
+                <h2 id="panelName">Nume Produs</h2>
+                <div class="modal-price" id="panelPrice">0 CRD</div>
+            </div>
+        </div>
 
-        <div class="modal-body">
-            <div id="panelTypesContainer" class="types-section" style="display:none;">
-                <div class="types-label">Alege Varianta:</div>
-                <div id="panelTypesGrid" class="types-grid"></div>
-            </div>
-            
-            <div class="desc-container">
-                <div class="desc-label">Descriere:</div>
-                <p class="modal-desc" id="panelDesc"></p>
-            </div>
-            
-            <div class="status-message" id="panelStatus"></div>
-        </div>
-        <div class="modal-footer"><button class="btn-primary full-width" id="panelBuyBtn">Cumpără acum</button></div>
-      </div>
-    </div>
+        <div class="modal-body">
+            <div id="panelTypesContainer" class="types-section" style="display:none;">
+                <div class="types-label">Alege Varianta:</div>
+                <div id="panelTypesGrid" class="types-grid"></div>
+            </div>
+            
+            <div class="desc-container">
+                <div class="desc-label">Descriere:</div>
+                <p class="modal-desc" id="panelDesc"></p>
+            </div>
+            
+            <div class="status-message" id="panelStatus"></div>
+        </div>
+        <div class="modal-footer"><button class="btn-primary full-width" id="panelBuyBtn">Cumpără acum</button></div>
+      </div>
+    </div>
 
-    <div id="confirmActionModal" class="modal-overlay">
-      <div class="modal-card" style="text-align: center;">
-        <div class="modal-header"><h2 style="font-size:18px; margin-bottom:5px;">Confirmare</h2></div>
-        <div class="modal-body"><p class="modal-desc">Ești sigur că vrei să închizi acest tichet?</p></div>
-        <div class="modal-footer modal-actions-grid">
-          <button class="btn-secondary" id="confirmCancelBtn">Anulează</button>
-          <button class="btn-primary btn-danger-solid" id="confirmOkBtn">Închide Tichetul</button>
-        </div>
-      </div>
-    </div>
+    <div id="confirmActionModal" class="modal-overlay">
+      <div class="modal-card" style="text-align: center;">
+        <div class="modal-header"><h2 style="font-size:18px; margin-bottom:5px;">Confirmare</h2></div>
+        <div class="modal-body"><p class="modal-desc">Ești sigur că vrei să închizi acest tichet?</p></div>
+        <div class="modal-footer modal-actions-grid">
+          <button class="btn-secondary" id="confirmCancelBtn">Anulează</button>
+          <button class="btn-primary btn-danger-solid" id="confirmOkBtn">Închide Tichetul</button>
+        </div>
+      </div>
+    </div>
 
-    <div id="creditsModal" class="modal-overlay">
-        <div class="modal-card">
-            <button class="modal-close" id="closeCreditsModalBtn">&times;</button>
-            <div class="modal-header"><h2 style="color: var(--accent);">Alimentare Cont</h2></div>
-            <div class="modal-body" style="text-align: center; padding: 0 10px;">
-                <p class="modal-desc" style="font-size: 14px; color: #ccc;">Urmează pașii pentru a cumpăra credite:</p>
-                <div class="instructions-list">
-                    <div class="instruction-step"><span class="step-num">1</span><span>Intră pe serverul de Discord.</span></div>
-                    <div class="instruction-step"><span class="step-num">2</span><span>Deschide un tichet de suport.</span></div>
-                    <div class="instruction-step"><span class="step-num">3</span><span>Sau contactează owner-ul <b>"LinX"</b>.</span></div>
-                </div>
-                <a href="https://discord.gg/cDdDSkcB" target="_blank" class="btn-modern btn-discord-solid">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;"><path d="M18.8943 4.34399C17.5183 3.71467 16.057 3.256 14.5317 3C14.3396 3.33067 14.127 3.77867 13.9829 4.11467C12.353 3.88133 10.7329 3.88133 9.13096 4.11467C8.98696 3.77867 8.76696 3.33067 8.58296 3C7.05096 3.256 5.58963 3.71467 4.21363 4.34399C1.43963 8.44533 0.690294 12.448 1.0543 16.3973C2.90696 17.752 4.6983 18.5733 6.4583 19.1147C6.8903 18.5307 7.28296 17.912 7.62696 17.2613C6.98696 17.0213 6.37896 16.7333 5.80296 16.4027C5.95496 16.2907 6.10696 16.1707 6.25096 16.0507C9.57896 17.5867 13.563 17.5867 16.859 16.0507C17.003 16.1787 17.155 16.2907 17.307 16.4027C16.731 16.7333 16.123 17.0213 15.483 17.2613C15.835 17.912 16.227 18.5307 16.659 19.1147C18.419 18.5733 20.2103 17.752 22.063 16.3973C22.463 12.16 21.463 8.21867 18.8943 4.34399ZM8.05896 13.5013C7.06696 13.5013 6.25096 12.5893 6.25096 11.4773C6.25096 10.3653 7.03496 9.45333 8.05896 9.45333C9.09096 9.45333 9.90696 10.3653 9.89096 11.4773C9.89096 12.5893 9.08296 13.5013 8.05896 13.5013ZM15.059 13.5013C14.067 13.5013 13.251 12.5893 13.251 11.4773C13.251 10.3653 14.035 9.45333 15.059 9.45333C16.091 9.45333 16.907 10.3653 16.891 11.4773C16.891 12.5893 16.091 13.5013 15.059 13.5013Z"></path></svg>
-                    <span>Intră pe Discord</span>
-                </a>
-            </div>
-        </div>
-    </div>
+    <div id="creditsModal" class="modal-overlay">
+        <div class="modal-card">
+            <button class="modal-close" id="closeCreditsModalBtn">&times;</button>
+            <div class="modal-header"><h2 style="color: var(--accent);">Alimentare Cont</h2></div>
+            <div class="modal-body" style="text-align: center; padding: 0 10px;">
+                <p class="modal-desc" style="font-size: 14px; color: #ccc;">Urmează pașii pentru a cumpăra credite:</p>
+                <div class="instructions-list">
+                    <div class="instruction-step"><span class="step-num">1</span><span>Intră pe serverul de Discord.</span></div>
+                    <div class="instruction-step"><span class="step-num">2</span><span>Deschide un tichet de suport.</span></div>
+                    <div class="instruction-step"><span class="step-num">3</span><span>Sau contactează owner-ul <b>"LinX"</b>.</span></div>
+                </div>
+                <a href="https://discord.gg/cDdDSkcB" target="_blank" class="btn-modern btn-discord-solid">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;"><path d="M18.8943 4.34399C17.5183 3.71467 16.057 3.256 14.5317 3C14.3396 3.33067 14.127 3.77867 13.9829 4.11467C12.353 3.88133 10.7329 3.88133 9.13096 4.11467C8.98696 3.77867 8.76696 3.33067 8.58296 3C7.05096 3.256 5.58963 3.71467 4.21363 4.34399C1.43963 8.44533 0.690294 12.448 1.0543 16.3973C2.90696 17.752 4.6983 18.5733 6.4583 19.1147C6.8903 18.5307 7.28296 17.912 7.62696 17.2613C6.98696 17.0213 6.37896 16.7333 5.80296 16.4027C5.95496 16.2907 6.10696 16.1707 6.25096 16.0507C9.57896 17.5867 13.563 17.5867 16.859 16.0507C17.003 16.1787 17.155 16.2907 17.307 16.4027C16.731 16.7333 16.123 17.0213 15.483 17.2613C15.835 17.912 16.227 18.5307 16.659 19.1147C18.419 18.5733 20.2103 17.752 22.063 16.3973C22.463 12.16 21.463 8.21867 18.8943 4.34399ZM8.05896 13.5013C7.06696 13.5013 6.25096 12.5893 6.25096 11.4773C6.25096 10.3653 7.03496 9.45333 8.05896 9.45333C9.09096 9.45333 9.90696 10.3653 9.89096 11.4773C9.89096 12.5893 9.08296 13.5013 8.05896 13.5013ZM15.059 13.5013C14.067 13.5013 13.251 12.5893 13.251 11.4773C13.251 10.3653 14.035 9.45333 15.059 9.45333C16.091 9.45333 16.907 10.3653 16.891 11.4773C16.891 12.5893 16.091 13.5013 15.059 13.5013Z"></path></svg>
+                    <span>Intră pe Discord</span>
+                </a>
+            </div>
+        </div>
+    </div>
 
-  <div id="onlyTelegramError" class="access-error-screen" style="display: none;">
-    <div class="error-card">
-        <div class="lock-icon-wrapper"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg><div class="lock-glow"></div></div>
-        <h2>Acces Restricționat</h2>
-        <p>Această aplicație rulează exclusiv în ecosistemul Telegram.</p>
-        <div class="error-actions-modern">
-            <a href="https://t.me/r3dtest_bot" class="btn-modern btn-tg-gradient"><span>Deschide Bot</span></a>
-            <a href="https://discord.gg/CwqeCWF2Qe" target="_blank" class="btn-modern btn-discord-glass"><span>Discord</span></a>
-        </div>
-    </div>
-  </div>
-  <script src="app.js"></script>
+  <div id="onlyTelegramError" class="access-error-screen" style="display: none;">
+    <div class="error-card">
+        <div class="lock-icon-wrapper"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg><div class="lock-glow"></div></div>
+        <h2>Acces Restricționat</h2>
+        <p>Această aplicație rulează exclusiv în ecosistemul Telegram.</p>
+        <div class="error-actions-modern">
+            <a href="https://t.me/r3dtest_bot" class="btn-modern btn-tg-gradient"><span>Deschide Bot</span></a>
+            <a href="https://discord.gg/CwqeCWF2Qe" target="_blank" class="btn-modern btn-discord-glass"><span>Discord</span></a>
+        </div>
+    </div>
+  </div>
+  <script src="app.js"></script>
 </body>
 </html>
