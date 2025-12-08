@@ -74,10 +74,10 @@
               <div id="uploadPreview" class="upload-preview-bar" style="display: none;"></div>
 
               <div class="input-wrapper">
-                <button id="attachBtn" class="btn-attach" title="Atașează imagine sau txt">
+                <button id="attachBtn" class="btn-attach" title="Atașează imagine sau fișier">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
                 </button>
-                <input type="file" id="chatFileInput" hidden accept="image/*, .txt">
+                <input type="file" id="chatFileInput" hidden multiple accept="image/*, .txt, .pdf, .zip">
 
                 <input id="chatInput" type="text" placeholder="Scrie un mesaj..." autocomplete="off" disabled />
                 <button id="chatSendBtn" class="btn-send" disabled>
@@ -95,7 +95,6 @@
     <div id="productPanel" class="modal-overlay">
       <div class="modal-card">
         <button class="modal-close" id="panelCloseBtn">&times;</button>
-        
         <div class="modal-top-split">
             <div class="modal-img-wrapper">
                 <img id="panelImg" src="" alt="Product" onerror="this.style.display='none'">
@@ -106,18 +105,15 @@
                 <div class="modal-price" id="panelPrice">0 CRD</div>
             </div>
         </div>
-
         <div class="modal-body">
             <div id="panelTypesContainer" class="types-section" style="display:none;">
                 <div class="types-label">Alege Varianta:</div>
                 <div id="panelTypesGrid" class="types-grid"></div>
             </div>
-            
             <div class="desc-container">
                 <div class="desc-label">Descriere:</div>
                 <p class="modal-desc" id="panelDesc"></p>
             </div>
-            
             <div class="status-message" id="panelStatus"></div>
         </div>
         <div class="modal-footer"><button class="btn-primary full-width" id="panelBuyBtn">Cumpără acum</button></div>
@@ -164,6 +160,17 @@
             <a href="https://discord.gg/CwqeCWF2Qe" target="_blank" class="btn-modern btn-discord-glass"><span>Discord</span></a>
         </div>
     </div>
+  </div>
+
+  <div id="imageLightbox" class="lightbox-overlay">
+      <div class="lightbox-controls">
+          <button id="lbZoomOut" class="lb-btn">-</button>
+          <button id="lbZoomIn" class="lb-btn">+</button>
+          <button id="lbClose" class="lb-btn lb-close">✕</button>
+      </div>
+      <div class="lightbox-content">
+          <img id="lightboxImg" src="" alt="Fullscreen">
+      </div>
   </div>
   
   <script src="app.js"></script>
