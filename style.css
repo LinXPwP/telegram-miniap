@@ -758,3 +758,118 @@ html, body {
     background: rgba(16, 185, 129, 0.25);
     border-color: var(--success);
 }
+/* ============================
+   UPLOAD & CHAT MEDIA STYLES
+   ============================ */
+
+/* Butonul de agrafă */
+.btn-attach {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0 8px 0 0;
+    display: flex;
+    align-items: center;
+    transition: color 0.2s;
+}
+.btn-attach:hover {
+    color: var(--accent);
+}
+
+/* Zona de Preview (deasupra inputului) */
+.upload-preview-bar {
+    display: flex;
+    gap: 10px;
+    padding: 8px 12px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 12px;
+    margin-bottom: 8px;
+    overflow-x: auto;
+    border: 1px dashed rgba(255,255,255,0.1);
+}
+
+.preview-item {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #000;
+    border: 1px solid rgba(255,255,255,0.2);
+    flex-shrink: 0;
+}
+
+.preview-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.preview-remove {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: rgba(0,0,0,0.7);
+    color: #fff;
+    border: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+/* Imagini în interiorul chat-ului */
+.chat-media-img {
+    max-width: 100%;
+    border-radius: 8px;
+    margin-top: 6px;
+    cursor: pointer;
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: transform 0.2s;
+}
+.chat-media-img:hover {
+    transform: scale(1.02);
+}
+
+/* Link de download stilizat */
+.chat-download-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.05);
+    padding: 8px 12px;
+    border-radius: 8px;
+    color: var(--accent);
+    text-decoration: none;
+    margin-top: 5px;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid rgba(255, 24, 67, 0.2);
+    transition: all 0.2s;
+}
+.chat-download-link:hover {
+    background: rgba(255, 24, 67, 0.1);
+}
+
+/* Loading overlay pentru imagine */
+.uploading-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.spinner-mini {
+    width: 16px; height: 16px;
+    border: 2px solid #fff;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
