@@ -647,58 +647,41 @@ html, body {
 .btn-secondary:hover { background: rgba(255,255,255,0.2); }
 .btn-danger-solid { background: var(--danger); box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4); }
 
-/* --- NEW: STYLES FOR TYPES GRID (REDESIGNED FOR POLISH) --- */
-.types-section { 
-    margin-bottom: 20px; 
-    border-top: 1px solid rgba(255,255,255,0.05); 
-    padding-top: 16px; 
-}
-.types-label { 
-    font-size: 12px; 
-    color: var(--text-muted); 
-    text-transform: uppercase; 
-    margin-bottom: 10px; 
-    font-weight: 700; 
-    letter-spacing: 0.5px;
-    padding-left: 4px;
-}
-
-/* Modificat din Grid in Lista verticala pentru aspect mai bun */
-.types-grid { 
-    display: flex; 
-    flex-direction: column; 
-    gap: 10px; 
-}
+/* --- NEW: STYLES FOR TYPES GRID (POLISHED) --- */
+.types-section { margin-bottom: 16px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px; }
+.types-label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px; font-weight: 600; text-align: left; padding-left: 4px; }
+.types-grid { display: flex; flex-direction: column; gap: 10px; }
 
 .type-card {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex; 
+    align-items: center; 
+    justify-content: space-between;
+    background: var(--bg-surface-hover);
+    border: 1px solid rgba(255,255,255,0.08);
     border-radius: 12px;
     padding: 12px 16px;
     cursor: pointer;
     transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: space-between; /* Text stanga, radio dreapta */
     position: relative;
     overflow: hidden;
 }
 
 .type-card:hover {
-    background: rgba(255, 255, 255, 0.06);
-    transform: translateX(2px);
+    background: rgba(255,255,255,0.12);
+    border-color: rgba(255,255,255,0.15);
 }
 
 .type-card.active {
-    background: rgba(255, 24, 67, 0.1);
+    background: linear-gradient(90deg, rgba(255, 24, 67, 0.1) 0%, rgba(255,255,255,0.02) 100%);
     border-color: var(--accent);
-    box-shadow: 0 0 15px rgba(255, 24, 67, 0.15);
+    box-shadow: 0 0 12px rgba(255, 24, 67, 0.15);
 }
 
-/* Info container (Nume + Pret) */
-.type-left {
+/* Indicator Vizual (Stanga - Nume) */
+.type-info {
     display: flex;
     flex-direction: column;
+    align-items: flex-start;
     gap: 2px;
 }
 
@@ -708,26 +691,47 @@ html, body {
     color: #fff; 
 }
 
-.type-price { 
-    font-size: 12px; 
-    color: var(--accent); 
-    font-weight: 700; 
+/* Indicator Vizual (Dreapta - Pret & Radio) */
+.type-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
-/* Radio Button Vizual */
-.type-radio {
-    width: 20px;
+.type-price-pill {
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 700;
+    background: rgba(255, 24, 67, 0.1);
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 24, 67, 0.2);
+}
+
+/* Custom Radio Button */
+.type-radio-circle {
+    width: 20px; 
     height: 20px;
     border-radius: 50%;
-    border: 2px solid rgba(255, 255, 255, 0.3);
+    border: 2px solid #444;
     position: relative;
     transition: all 0.2s;
 }
 
-.type-card.active .type-radio {
+.type-card.active .type-radio-circle {
     border-color: var(--accent);
     background: var(--accent);
-    box-shadow: inset 0 0 0 4px #1a1c20; /* Gaura din mijloc */
+    box-shadow: 0 0 8px var(--accent-glow);
+}
+
+.type-card.active .type-radio-circle::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px; height: 8px;
+    background: #fff;
+    border-radius: 50%;
 }
 
 /* --- NEW: CREDITS INSTRUCTIONS STEPS --- */
