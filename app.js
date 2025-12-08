@@ -1,4 +1,4 @@
-// app.js - FIXED SEEN & UNREAD WITH NUMERIC IDs
+// app.js - FIXED SEEN & UNREAD WITH NUMERIC IDs & ENGLISH TRANSLATION
 
 const API_URL = "https://api.redgen.vip/";
 const $ = (id) => document.getElementById(id);
@@ -39,8 +39,8 @@ const formatTimestamp = (ts) => {
 };
 const timeAgo = (ts) => {
     if (!ts) return ""; const diff = Math.floor((new Date() - new Date(ts)) / 1000);
-    if (diff < 60) return "acum"; const m = Math.floor(diff/60); if(m<60) return `${m}m`;
-    const h = Math.floor(m/60); return h<24 ? `${h}h` : `${Math.floor(h/24)}z`;
+    if (diff < 60) return "now"; const m = Math.floor(diff/60); if(m<60) return `${m}m`;
+    const h = Math.floor(m/60); return h<24 ? `${h}h` : `${Math.floor(h/24)}d`;
 };
 const smartScrollToBottom = (el, force) => {
     if (!el) return;
@@ -60,9 +60,9 @@ function getSeenConfig(t) {
     const lastReadAdmin = Number(t.last_read_admin || 0);
     const lastUserMsgId = Number(lastUserM.id);
 
-    // Daca adminul a citit un mesaj cu ID >= ID-ul ultimului mesaj trimis de user
+    // If admin read a message with ID >= user's last message ID
     if (lastReadAdmin >= lastUserMsgId) {
-        return { targetId: lastUserM.id, text: `Văzut ${t.last_read_admin_at ? timeAgo(t.last_read_admin_at) : ''}` };
+        return { targetId: lastUserM.id, text: `Seen ${t.last_read_admin_at ? timeAgo(t.last_read_admin_at) : ''}` };
     }
     return null;
 }
@@ -86,7 +86,7 @@ function renderDiscordMessages(msgs, { container, canReply, onReply, onJumpTo, s
   if (!container) return;
   const wasNearBottom = container.scrollHeight - (container.scrollTop + container.clientHeight) < 150;
   if (!msgs?.length) {
-     if (!container.querySelector('.chat-placeholder')) container.innerHTML = `<div class="chat-placeholder"><div class="icon">💬</div><p>Începe conversația...</p></div>`;
+     if (!container.querySelector('.chat-placeholder')) container.innerHTML = `<div class="chat-placeholder"><div class="icon">💬</div><p>Start conversation...</p></div>`;
      return;
   }
   container.querySelector('.chat-placeholder')?.remove();
@@ -103,8 +103,8 @@ function renderDiscordMessages(msgs, { container, canReply, onReply, onJumpTo, s
             <strong style="margin-right:5px;">${msgMap[m.reply_to].sender||"User"}</strong><span>${(msgMap[m.reply_to].text||"").slice(0,50)}...</span>
         </div>` : '';
     const sender = m.sender || (m.from === "system" ? "System" : "User");
-    const content = m.deleted ? "Mesaj șters" : m.text;
-    const btns = (canReply && !m.deleted) ? `<button class="btn-reply-mini" title="Răspunde">↩ Reply</button>` : '';
+    const content = m.deleted ? "Message deleted" : m.text;
+    const btns = (canReply && !m.deleted) ? `<button class="btn-reply-mini" title="Reply">↩ Reply</button>` : '';
 
     const html = `
         <div class="msg-avatar">${(sender||"?")[0].toUpperCase()}</div>
@@ -178,7 +178,9 @@ function initUserApp() {
      shopTab: $("shopTab"), ticketsTab: $("ticketsTab"), shopHead: $("shopHeader"),
      goT: $("goToTicketsBtn"), backShop: $("backToShopBtn"), inputCont: $(".chat-input"),
      confirm: $("confirmActionModal"), okConf: $("confirmOkBtn"), canConf: $("confirmCancelBtn"),
-     creditsM: $("creditsModal"), closeCred: $("closeCreditsModalBtn")
+     creditsM: $("creditsModal"), closeCred: $("closeCreditsModalBtn"),
+     // Errors
+     linkError: $("linkAccountError")
   };
 
   // Nav
@@ -196,21 +198,21 @@ function initUserApp() {
 
   // Chat Mode UI
   const modeBar = document.createElement("div"); modeBar.className = "chat-mode-bar"; modeBar.style.display = 'none';
-  modeBar.innerHTML = `<span class="chat-mode-text"></span><button>Anulează</button>`;
+  modeBar.innerHTML = `<span class="chat-mode-text"></span><button>Cancel</button>`;
   modeBar.querySelector("button").onclick = () => { userMode = {type:null}; hide(modeBar); };
   els.inputCont?.prepend(modeBar);
 
   const setReply = (msg) => {
     userMode = { type: "reply", msgId: msg.id, txt: (msg.text||"").slice(0,50), sender: msg.sender||"User" };
-    modeBar.querySelector("span").textContent = `Răspunzi lui ${userMode.sender}: "${userMode.txt}..."`;
+    modeBar.querySelector("span").textContent = `Replying to ${userMode.sender}: "${userMode.txt}..."`;
     show(modeBar); els.input.focus();
   };
 
   const updateChatUI = (t) => {
     if (!els.input || !els.send) return;
-    if (!t) { els.input.disabled = els.send.disabled = true; els.input.placeholder = "Alege un tichet..."; hide(modeBar); hide(els.closeT); hide(els.reopenT); els.tTitle.textContent = "Niciun tichet"; return; }
+    if (!t) { els.input.disabled = els.send.disabled = true; els.input.placeholder = "Select a ticket..."; hide(modeBar); hide(els.closeT); hide(els.reopenT); els.tTitle.textContent = "No ticket"; return; }
     const closed = t.status === "closed";
-    els.input.disabled = els.send.disabled = closed; els.input.placeholder = closed ? "Tichet închis." : "Scrie un mesaj...";
+    els.input.disabled = els.send.disabled = closed; els.input.placeholder = closed ? "Ticket closed." : "Type a message...";
     closed ? (hide(els.closeT), show(els.reopenT), hide(modeBar)) : (show(els.closeT), hide(els.reopenT));
   };
   updateChatUI(null);
@@ -220,11 +222,16 @@ function initUserApp() {
     try {
         const r = await fetch(API_URL, { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ action, initData: TG_INIT_DATA, ...extra }) });
         if (r.status === 401) return { ok: false, error: "auth_failed" };
+        if (r.status === 403) {
+            // Check for specific error body
+            const data = await r.json();
+            return data;
+        }
         return await r.json();
     } catch (e) { console.error(e); return { ok: false, error: "network" }; }
   };
 
-  const renderHeader = () => { if(STATE.user) { els.credits.textContent = STATE.user.credits; els.userLine.innerHTML = `Utilizator: <b>${STATE.user.username ? "@"+STATE.user.username : "ID "+STATE.user.id}</b>`; }};
+  const renderHeader = () => { if(STATE.user) { els.credits.textContent = STATE.user.credits; els.userLine.innerHTML = `User: <b>${STATE.user.username ? "@"+STATE.user.username : "ID "+STATE.user.id}</b>`; }};
 
   // Shop Logic
   const renderCats = (shop) => {
@@ -232,7 +239,7 @@ function initUserApp() {
     shop?.categories?.forEach(cat => {
         const d = document.createElement("div"); d.className = "card-visual";
         const img = getImageUrl(cat.image);
-        d.innerHTML = `<div class="card-img-container">${img ? `<img src="${img}" class="card-img">` : `<div class="img-placeholder">📁</div>`}<div class="card-overlay"><div class="cat-name">${cat.name}</div><div class="cat-count">${(cat.products||[]).length} produse</div></div></div>`;
+        d.innerHTML = `<div class="card-img-container">${img ? `<img src="${img}" class="card-img">` : `<div class="img-placeholder">📁</div>`}<div class="card-overlay"><div class="cat-name">${cat.name}</div><div class="cat-count">${(cat.products||[]).length} products</div></div></div>`;
         d.onclick = () => {
             els.viewCat.classList.remove("active-view"); els.viewProd.classList.add("active-view"); hide(els.title);
             show(els.backBtn); els.backBtn.querySelector(".back-btn-text").textContent = cat.name;
@@ -250,7 +257,7 @@ function initUserApp() {
         const d = document.createElement("div"); d.className = "card-visual";
         const img = getImageUrl(p.image);
         const minP = p.types?.length ? Math.min(...p.types.map(t=>Number(t.price||0))) : p.price;
-        d.innerHTML = `<div class="card-img-container" style="height:140px;aspect-ratio:unset;">${img ? `<img src="${img}" class="card-img">`:`<div class="img-placeholder">🎁</div>`}</div><div class="prod-info"><div class="prod-title">${p.name}</div><div class="prod-meta"><div class="prod-price">${p.types?.length ? "De la ":""}${minP} CRD</div><div class="prod-btn-mini">&rarr;</div></div></div>`;
+        d.innerHTML = `<div class="card-img-container" style="height:140px;aspect-ratio:unset;">${img ? `<img src="${img}" class="card-img">`:`<div class="img-placeholder">🎁</div>`}</div><div class="prod-info"><div class="prod-title">${p.name}</div><div class="prod-meta"><div class="prod-price">${p.types?.length ? "From ":""}${minP} CRD</div><div class="prod-btn-mini">&rarr;</div></div></div>`;
         d.onclick = () => openModal(p);
         els.prodGrid.appendChild(d);
     });
@@ -264,7 +271,7 @@ function initUserApp() {
   const openModal = (p) => {
     SELECTED_PRODUCT = p; SELECTED_VARIANT = null;
     els.mStatus.textContent = ""; els.mStatus.className = "status-message";
-    els.mName.textContent = p.name; els.mBuy.disabled = false; els.mBuy.style.opacity = "1"; els.mBuy.textContent = "Cumpără acum";
+    els.mName.textContent = p.name; els.mBuy.disabled = false; els.mBuy.style.opacity = "1"; els.mBuy.textContent = "Buy Now";
     
     const img = getImageUrl(p.image);
     img ? (els.mImg.src = img, show(els.mImg), hide(els.mPlace)) : (hide(els.mImg), show(els.mPlace));
@@ -288,48 +295,48 @@ function initUserApp() {
             if(i===0) selVar(t, btn);
         });
     } else {
-        hide(els.mTypes); els.mPrice.textContent = `${p.price} CRD`; els.mDesc.textContent = p.description || "Fără descriere.";
+        hide(els.mTypes); els.mPrice.textContent = `${p.price} CRD`; els.mDesc.textContent = p.description || "No description.";
     }
     show(els.modal);
   };
   const selVar = (t, btn) => {
     SELECTED_VARIANT = t; Array.from(els.mTypesGrid.children).forEach(c=>c.classList.remove('active')); btn.classList.add('active');
     els.mPrice.textContent = `${t.price} CRD`;
-    els.mDesc.textContent = `${SELECTED_PRODUCT.description||""}\n\n🔹 Varianta: ${t.name}\n${t.warranty?`🛡️ Garanție: ${t.warranty}\n`:""}${t.description?`📝 Note: ${t.description}`:""}`;
+    els.mDesc.textContent = `${SELECTED_PRODUCT.description||""}\n\n🔹 Variant: ${t.name}\n${t.warranty?`🛡️ Warranty: ${t.warranty}\n`:""}${t.description?`📝 Notes: ${t.description}`:""}`;
   };
   const closeModal = () => { hide(els.modal); STATE.buying = false; };
   els.mClose.onclick = closeModal; els.modal.onclick = (e) => e.target===els.modal && closeModal();
 
   els.mBuy.onclick = async () => {
     if (!SELECTED_PRODUCT || !STATE.user || STATE.buying) return;
-    if (SELECTED_PRODUCT.types?.length && !SELECTED_VARIANT) return (els.mStatus.textContent = "Selectează o variantă!", els.mStatus.className = "status-message status-error");
+    if (SELECTED_PRODUCT.types?.length && !SELECTED_VARIANT) return (els.mStatus.textContent = "Select a variant!", els.mStatus.className = "status-message status-error");
 
-    STATE.buying = true; els.mBuy.disabled = true; els.mBuy.textContent = "Se procesează...";
-    els.mStatus.textContent = "Se inițializează...";
+    STATE.buying = true; els.mBuy.disabled = true; els.mBuy.textContent = "Processing...";
+    els.mStatus.textContent = "Initializing...";
     
     const payload = { product_id: SELECTED_PRODUCT.id, qty: 1, ...(SELECTED_VARIANT && { type_id: SELECTED_VARIANT.id }) };
     try {
         const res = await apiCall("buy_product", payload);
         if (!res.ok) {
-            STATE.buying = false; els.mBuy.disabled = false; els.mBuy.textContent = "Încearcă din nou";
+            STATE.buying = false; els.mBuy.disabled = false; els.mBuy.textContent = "Try again";
             els.mStatus.className = "status-message status-error";
             if (res.error === "not_enough_credits") {
-                els.mStatus.innerHTML = `Fonduri insuficiente! <span style="text-decoration:underline;cursor:pointer;font-weight:bold" onclick="document.getElementById('creditsModal').style.display='flex'">Încarcă</span>`;
-            } else els.mStatus.textContent = "Eroare: " + res.error;
+                els.mStatus.innerHTML = `Insufficient funds! <span style="text-decoration:underline;cursor:pointer;font-weight:bold" onclick="document.getElementById('creditsModal').style.display='flex'">Add Funds</span>`;
+            } else els.mStatus.textContent = "Error: " + res.error;
         } else {
             STATE.user.credits = res.new_balance; els.credits.textContent = STATE.user.credits;
             STATE.tickets.push(res.ticket); renderTickets(); selTicket(res.ticket.id);
-            els.mStatus.className = "status-message status-ok"; els.mStatus.textContent = "Succes!";
+            els.mStatus.className = "status-message status-ok"; els.mStatus.textContent = "Success!";
             setTimeout(() => { closeModal(); setTab(false); STATE.buying = false; }, 1000);
             updateActivity(); userTicketsPoller.bumpFast();
         }
-    } catch { STATE.buying = false; els.mBuy.disabled = false; els.mStatus.textContent = "Eroare rețea."; }
+    } catch { STATE.buying = false; els.mBuy.disabled = false; els.mStatus.textContent = "Network error."; }
   };
 
   // Tickets
   const renderTickets = () => {
     els.chatList.innerHTML = "";
-    if(!STATE.tickets.length) return (els.chatList.innerHTML = '<div style="padding:20px;text-align:center;color:#555;">Nu ai tichete.</div>');
+    if(!STATE.tickets.length) return (els.chatList.innerHTML = '<div style="padding:20px;text-align:center;color:#555;">No tickets found.</div>');
     
     STATE.tickets.sort((a,b) => (a.status===b.status ? b.id-a.id : (a.status==='open'?-1:1))).forEach(t => {
         const item = document.createElement("div"); item.className = "chat-item " + (t.id === STATE.selTicketId ? "active":"");
@@ -340,8 +347,8 @@ function initUserApp() {
              unread = calculateUserUnread(t);
         }
 
-        const lastMsg = t.messages?.length ? t.messages[t.messages.length-1].text : "Tichet nou";
-        item.innerHTML = `<div class="chat-item-header-row"><div class="chat-item-title">${t.product_name||"Comandă"}</div><div>${unread>0?`<span class="unread-badge">${unread}</span>`:""}<span class="ticket-status-pill ${t.status}">${t.status}</span></div></div><div class="chat-item-line">${lastMsg}</div>`;
+        const lastMsg = t.messages?.length ? t.messages[t.messages.length-1].text : "New ticket";
+        item.innerHTML = `<div class="chat-item-header-row"><div class="chat-item-title">${t.product_name||"Order"}</div><div>${unread>0?`<span class="unread-badge">${unread}</span>`:""}<span class="ticket-status-pill ${t.status}">${t.status}</span></div></div><div class="chat-item-line">${lastMsg}</div>`;
         item.onclick = () => { selTicket(t.id); updateActivity(); els.ticketsTab.classList.remove("tickets-drawer-open"); };
         els.chatList.appendChild(item);
     });
@@ -418,7 +425,7 @@ function initUserApp() {
       if(!STATE.selTicketId) return;
       els.reopenT.textContent = "..."; els.reopenT.disabled = true;
       const res = await apiCall("user_reopen_ticket", {ticket_id: STATE.selTicketId});
-      els.reopenT.textContent = "Redeschide"; els.reopenT.disabled = false;
+      els.reopenT.textContent = "Reopen"; els.reopenT.disabled = false;
       if(res.ok && res.ticket) {
            const idx = STATE.tickets.findIndex(x=>x.id===STATE.selTicketId);
            if(idx>=0) STATE.tickets[idx] = res.ticket;
@@ -461,7 +468,14 @@ function initUserApp() {
         STATE.user.credits = res.user.credits; STATE.shop = res.shop; STATE.tickets = res.tickets||[];
         renderHeader(); renderCats(STATE.shop); renderTickets(); setTab(true);
      } else {
-        els.userLine.innerHTML = `<span style="color:red">Eroare: ${res.error||"Auth"}</span>`; show(els.userLine);
+        // --- HANDLE "access_denied_link_required" ERROR ---
+        if (res.error === "access_denied_link_required") {
+            hide($("mainAppWrapper"));
+            show(els.linkError);
+            return;
+        }
+
+        els.userLine.innerHTML = `<span style="color:red">Error: ${res.error||"Auth"}</span>`; show(els.userLine);
      }
   })();
 }
