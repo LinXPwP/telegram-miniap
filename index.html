@@ -82,17 +82,29 @@
     <div id="productPanel" class="modal-overlay">
       <div class="modal-card">
         <button class="modal-close" id="panelCloseBtn">&times;</button>
-        <div class="modal-img-wrapper">
-            <img id="panelImg" src="" alt="Product" onerror="this.style.display='none'">
-            <div class="modal-img-placeholder" id="panelImgPlaceholder">🎁</div>
+        
+        <div class="modal-top-split">
+            <div class="modal-img-wrapper">
+                <img id="panelImg" src="" alt="Product" onerror="this.style.display='none'">
+                <div class="modal-img-placeholder" id="panelImgPlaceholder">🎁</div>
+            </div>
+            <div class="modal-header-compact">
+                <h2 id="panelName">Nume Produs</h2>
+                <div class="modal-price" id="panelPrice">0 CRD</div>
+            </div>
         </div>
-        <div class="modal-header"><h2 id="panelName"></h2><div class="modal-price" id="panelPrice">-</div></div>
+
         <div class="modal-body">
             <div id="panelTypesContainer" class="types-section" style="display:none;">
                 <div class="types-label">Alege Varianta:</div>
                 <div id="panelTypesGrid" class="types-grid"></div>
             </div>
-            <p class="modal-desc" id="panelDesc"></p>
+            
+            <div class="desc-container">
+                <div class="desc-label">Descriere:</div>
+                <p class="modal-desc" id="panelDesc"></p>
+            </div>
+            
             <div class="status-message" id="panelStatus"></div>
         </div>
         <div class="modal-footer"><button class="btn-primary full-width" id="panelBuyBtn">Cumpără acum</button></div>
