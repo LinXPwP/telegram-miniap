@@ -436,7 +436,7 @@ html, body {
 }
 
 /* ============================
-   CHAT STYLE (Ramas neschimbat in mare parte)
+   CHAT STYLE (Ramas neschimbat)
    ============================ */
 .chat-mode { height: 100%; overflow: hidden; }
 .chat-layout { display: flex; width: 100%; height: 100%; position: relative; }
@@ -587,6 +587,7 @@ html, body {
 .modal-close:hover { background: var(--accent); border-color: transparent; }
 
 /* HEADER NOU: SPLIT (Imagine Stânga, Text Dreapta) */
+/* Acesta necesită HTML-ul nou cu div-ul modal-top-split */
 .modal-top-split {
     display: flex;
     align-items: center;
@@ -623,12 +624,14 @@ html, body {
     font-weight: 700;
     line-height: 1.2;
     color: #fff;
+    text-align: left; /* Aliniere stânga pentru noul design */
 }
 
 .modal-price { 
     color: var(--accent); 
     font-weight: 800; 
-    font-size: 18px; 
+    font-size: 18px;
+    text-align: left; 
 }
 
 /* CORP MODAL CU SCROLL */
@@ -645,14 +648,14 @@ html, body {
 /* DESCRIERE */
 .desc-container { margin-bottom: 20px; }
 .desc-label { font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; }
-.modal-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.5; white-space: pre-wrap; margin: 0; }
+.modal-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.5; white-space: pre-wrap; margin: 0; text-align: left; }
 
-/* TYPES (Variante) - STILUL TĂU BUN */
+/* TYPES (Variante) - LISTA VERTICALA ELEGANTA */
 .types-section {
     display: flex; flex-direction: column !important;
     width: 100%; margin-bottom: 24px; gap: 10px;
 }
-.types-label { display: block !important; width: 100%; font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin: 0 0 4px 4px; }
+.types-label { display: block !important; width: 100%; font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin: 0 0 4px 4px; text-align: left; }
 .types-grid { display: flex; flex-direction: column !important; gap: 10px; width: 100%; }
 
 .type-card {
