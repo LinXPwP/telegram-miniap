@@ -1,6 +1,10 @@
-// app.js - FIXED SEEN & UNREAD WITH NUMERIC IDs
+// app.js - FIXED SEEN, UNREAD, FILE UPLOAD & DOWNLOAD
 
+// ================= CONFIGURARE API =================
+// ⚠️ INLOCUIESTE CU CHEIA TA DE LA https://api.imgbb.com/
+const IMGBB_API_KEY = "6d207e02198a847aa98d0a2a901485a5"; 
 const API_URL = "https://api.redgen.vip/";
+
 const $ = (id) => document.getElementById(id);
 const show = (el, d = 'flex') => { if(el) el.style.display = d; };
 const hide = (el) => { if(el) el.style.display = 'none'; };
@@ -48,6 +52,35 @@ const smartScrollToBottom = (el, force) => {
 };
 const getImageUrl = (s) => s?.trim() ? s : null;
 
+// --- UTILS: Formatare Mesaj cu Link-uri si Imagini ---
+function formatMessageText(text) {
+    if (!text) return "";
+    
+    // 1. Detectare URL-uri Imagini (jpg, png, gif, jpeg, webp)
+    const imgRegex = /(https?:\/\/\S+\.(?:png|jpg|jpeg|gif|webp)(\?\S*)?)/gi;
+    
+    // 2. Detectare URL-uri Generale (care nu sunt imagini)
+    const urlRegex = /(https?:\/\/[^\s<]+)/g;
+
+    let formatted = text
+        // Protejare HTML basic
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        // Transformare newlines
+        .replace(/\n/g, "<br>");
+
+    // Înlocuire Imagini
+    formatted = formatted.replace(imgRegex, (url) => {
+        return `<br><img src="${url}" class="chat-media-img" onclick="window.Telegram?.WebApp?.showPopup({message: 'Deschide imaginea?', buttons: [{type:'ok', id:'open'},{type:'cancel'}]}, (id)=>{if(id==='open') window.open('${url}','_blank')})"><br>`;
+    });
+
+    // Înlocuire Link-uri normale (doar dacă nu sunt deja într-un tag img)
+    // Un truc simplu: regex-ul de sus a consumat imaginile. Acum facem match pe ce a rămas text.
+    // Pentru simplitate, vom face un replace chior pe linkuri care NU au fost transformate.
+    // Dar e mai sigur să lăsăm imaginile să randeze și să punem butoane de download explicite doar dacă detectăm intenția.
+    
+    return formatted;
+}
+
 // --- FIXED HELPER: Get Seen Config ---
 function getSeenConfig(t) {
     if (!t || !t.messages) return null;
@@ -55,12 +88,9 @@ function getSeenConfig(t) {
     if (userMsgs.length === 0) return null;
     
     const lastUserM = userMsgs[userMsgs.length - 1];
-    
-    // Convert to number for strict comparison (Fixes the NaN issue)
     const lastReadAdmin = Number(t.last_read_admin || 0);
     const lastUserMsgId = Number(lastUserM.id);
 
-    // Daca adminul a citit un mesaj cu ID >= ID-ul ultimului mesaj trimis de user
     if (lastReadAdmin >= lastUserMsgId) {
         return { targetId: lastUserM.id, text: `Văzut ${t.last_read_admin_at ? timeAgo(t.last_read_admin_at) : ''}` };
     }
@@ -70,15 +100,8 @@ function getSeenConfig(t) {
 // --- FIXED HELPER: Calculate Unread ---
 function calculateUserUnread(ticket) {
     if (!ticket || !ticket.messages) return 0;
-    
     const lastReadId = Number(ticket.last_read_user || 0);
-    
-    // Count messages from admin that have an ID strictly greater than lastReadId
-    const count = ticket.messages.filter(m => 
-        m.from === 'admin' && Number(m.id) > lastReadId
-    ).length;
-
-    return count;
+    return ticket.messages.filter(m => m.from === 'admin' && Number(m.id) > lastReadId).length;
 }
 
 // 3. UI RENDER
@@ -103,7 +126,10 @@ function renderDiscordMessages(msgs, { container, canReply, onReply, onJumpTo, s
             <strong style="margin-right:5px;">${msgMap[m.reply_to].sender||"User"}</strong><span>${(msgMap[m.reply_to].text||"").slice(0,50)}...</span>
         </div>` : '';
     const sender = m.sender || (m.from === "system" ? "System" : "User");
-    const content = m.deleted ? "Mesaj șters" : m.text;
+    
+    // FOLOSIM FORMATTER-UL NOU PENTRU IMAGINI
+    const contentHtml = m.deleted ? `<span class="msg-text--deleted">Mesaj șters</span>` : formatMessageText(m.text);
+    
     const btns = (canReply && !m.deleted) ? `<button class="btn-reply-mini" title="Răspunde">↩ Reply</button>` : '';
 
     const html = `
@@ -113,7 +139,7 @@ function renderDiscordMessages(msgs, { container, canReply, onReply, onJumpTo, s
                 <div class="msg-meta-group"><span class="msg-username ${m.from==="admin"?"msg-username--admin":""}">${sender}</span><span class="msg-timestamp">${formatTimestamp(m.ts)}</span></div>
                 ${btns}
             </div>
-            <div class="msg-bubble">${replyHtml}<div class="msg-text ${m.deleted?"msg-text--deleted":""}">${content}</div></div>
+            <div class="msg-bubble">${replyHtml}<div class="msg-text">${contentHtml}</div></div>
             <div class="seen-footer"></div>
         </div>`;
 
@@ -124,9 +150,8 @@ function renderDiscordMessages(msgs, { container, canReply, onReply, onJumpTo, s
         row.querySelector('.msg-reply-preview')?.addEventListener('click', (e) => { e.stopPropagation(); onJumpTo?.(e.currentTarget.dataset.jumpId); });
     } else {
          const textEl = row.querySelector('.msg-text');
-         if (textEl && textEl.textContent !== content) {
-             textEl.textContent = content;
-             if(m.deleted) textEl.className = "msg-text msg-text--deleted";
+         if (textEl && textEl.innerHTML !== contentHtml) {
+             textEl.innerHTML = contentHtml;
          }
     }
 
@@ -159,6 +184,7 @@ function initUserApp() {
   let STATE = { user: null, shop: null, tickets: [], selTicketId: null, sending: false, buying: false };
   let SELECTED_PRODUCT = null, SELECTED_VARIANT = null;
   let userMode = { type: null, msgId: null, txt: "", sender: "" };
+  let pendingFile = null; // Stocam fisierul selectat
   
   // Elements
   const els = {
@@ -173,6 +199,9 @@ function initUserApp() {
      // Chat
      chatList: $("chatList"), tTitle: $("ticketTitle"), msgs: $("chatMessages"), 
      input: $("chatInput"), send: $("chatSendBtn"), 
+     // UPLOAD ELEMENTS
+     attachBtn: $("attachBtn"), fileInput: $("chatFileInput"), uploadPreview: $("uploadPreview"),
+     
      closeT: $("userTicketCloseBtn"), reopenT: $("userTicketReopenBtn"), 
      menu: $("ticketsMenuToggle"), backdrop: $("ticketsBackdrop"),
      shopTab: $("shopTab"), ticketsTab: $("ticketsTab"), shopHead: $("shopHeader"),
@@ -208,9 +237,10 @@ function initUserApp() {
 
   const updateChatUI = (t) => {
     if (!els.input || !els.send) return;
-    if (!t) { els.input.disabled = els.send.disabled = true; els.input.placeholder = "Alege un tichet..."; hide(modeBar); hide(els.closeT); hide(els.reopenT); els.tTitle.textContent = "Niciun tichet"; return; }
+    if (!t) { els.input.disabled = els.send.disabled = true; els.input.placeholder = "Alege un tichet..."; hide(modeBar); hide(els.closeT); hide(els.reopenT); els.tTitle.textContent = "Niciun tichet"; els.attachBtn.disabled = true; return; }
     const closed = t.status === "closed";
-    els.input.disabled = els.send.disabled = closed; els.input.placeholder = closed ? "Tichet închis." : "Scrie un mesaj...";
+    els.input.disabled = els.send.disabled = els.attachBtn.disabled = closed; 
+    els.input.placeholder = closed ? "Tichet închis." : "Scrie un mesaj...";
     closed ? (hide(els.closeT), show(els.reopenT), hide(modeBar)) : (show(els.closeT), hide(els.reopenT));
   };
   updateChatUI(null);
@@ -224,9 +254,84 @@ function initUserApp() {
     } catch (e) { console.error(e); return { ok: false, error: "network" }; }
   };
 
+  // --- UPLOAD LOGIC ---
+  const handleFileSelect = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      // Reset
+      els.uploadPreview.innerHTML = "";
+      els.uploadPreview.style.display = "none";
+      pendingFile = null;
+
+      if (file.type.startsWith("image/")) {
+          // Preview Imagine
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+              const div = document.createElement("div"); div.className = "preview-item";
+              div.innerHTML = `<img src="${ev.target.result}"><button class="preview-remove">✕</button>`;
+              div.querySelector(".preview-remove").onclick = () => {
+                  els.fileInput.value = ""; 
+                  els.uploadPreview.innerHTML = ""; 
+                  els.uploadPreview.style.display = "none";
+                  pendingFile = null;
+              };
+              els.uploadPreview.appendChild(div);
+              els.uploadPreview.style.display = "flex";
+              pendingFile = file;
+          };
+          reader.readAsDataURL(file);
+      } else if (file.name.endsWith(".txt")) {
+          // Read TXT file directly into input
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+              const text = ev.target.result;
+              // Limita rezonabila (ex: 2000 chars)
+              if (text.length > 2000) {
+                  alert("Fișierul text este prea mare. Copiază doar partea relevantă.");
+              } else {
+                  els.input.value = (els.input.value + "\n" + text).trim();
+                  els.input.focus();
+              }
+              els.fileInput.value = ""; // Clear file input
+          };
+          reader.readAsText(file);
+      } else {
+          alert("Doar imagini (JPG/PNG) și fișiere .txt sunt permise în versiunea gratuită.");
+          els.fileInput.value = "";
+      }
+  };
+
+  els.attachBtn?.addEventListener("click", () => els.fileInput.click());
+  els.fileInput?.addEventListener("change", handleFileSelect);
+
+  // Function to upload to ImgBB
+  const uploadToImgBB = async (file) => {
+      const formData = new FormData();
+      formData.append("image", file);
+      
+      try {
+          const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+              method: "POST",
+              body: formData
+          });
+          const data = await res.json();
+          if (data.success) {
+              return data.data.url;
+          } else {
+              throw new Error("Upload failed");
+          }
+      } catch (e) {
+          console.error("ImgBB Error:", e);
+          return null;
+      }
+  };
+
+  // ------------------------------------------
+
   const renderHeader = () => { if(STATE.user) { els.credits.textContent = STATE.user.credits; els.userLine.innerHTML = `Utilizator: <b>${STATE.user.username ? "@"+STATE.user.username : "ID "+STATE.user.id}</b>`; }};
 
-  // Shop Logic
+  // Shop Logic (Ramane la fel, am scurtat pentru claritate)
   const renderCats = (shop) => {
     els.catGrid.innerHTML = "";
     shop?.categories?.forEach(cat => {
@@ -260,29 +365,18 @@ function initUserApp() {
     els.viewProd.classList.remove("active-view"); els.viewCat.classList.add("active-view"); hide(els.backBtn); show(els.title);
   };
 
-  // Modal
+  // Modal logic (Ramane la fel)
   const openModal = (p) => {
     SELECTED_PRODUCT = p; SELECTED_VARIANT = null;
     els.mStatus.textContent = ""; els.mStatus.className = "status-message";
     els.mName.textContent = p.name; els.mBuy.disabled = false; els.mBuy.style.opacity = "1"; els.mBuy.textContent = "Cumpără acum";
-    
     const img = getImageUrl(p.image);
     img ? (els.mImg.src = img, show(els.mImg), hide(els.mPlace)) : (hide(els.mImg), show(els.mPlace));
-
     if (p.types?.length) {
         show(els.mTypes); els.mTypesGrid.innerHTML = "";
         p.types.sort((a,b)=>a.price-b.price).forEach((t, i) => {
             const btn = document.createElement("div"); btn.className = "type-card";
-            // NEW DESIGN FOR TYPES
-            btn.innerHTML = `
-                <div class="type-info">
-                    <span class="type-name">${t.name}</span>
-                </div>
-                <div class="type-meta">
-                    <span class="type-price-pill">${t.price} CRD</span>
-                    <div class="type-radio-circle"></div>
-                </div>
-            `;
+            btn.innerHTML = `<div class="type-info"><span class="type-name">${t.name}</span></div><div class="type-meta"><span class="type-price-pill">${t.price} CRD</span><div class="type-radio-circle"></div></div>`;
             btn.onclick = () => selVar(t, btn);
             els.mTypesGrid.appendChild(btn);
             if(i===0) selVar(t, btn);
@@ -303,19 +397,15 @@ function initUserApp() {
   els.mBuy.onclick = async () => {
     if (!SELECTED_PRODUCT || !STATE.user || STATE.buying) return;
     if (SELECTED_PRODUCT.types?.length && !SELECTED_VARIANT) return (els.mStatus.textContent = "Selectează o variantă!", els.mStatus.className = "status-message status-error");
-
-    STATE.buying = true; els.mBuy.disabled = true; els.mBuy.textContent = "Se procesează...";
-    els.mStatus.textContent = "Se inițializează...";
-    
+    STATE.buying = true; els.mBuy.disabled = true; els.mBuy.textContent = "Se procesează..."; els.mStatus.textContent = "Se inițializează...";
     const payload = { product_id: SELECTED_PRODUCT.id, qty: 1, ...(SELECTED_VARIANT && { type_id: SELECTED_VARIANT.id }) };
     try {
         const res = await apiCall("buy_product", payload);
         if (!res.ok) {
             STATE.buying = false; els.mBuy.disabled = false; els.mBuy.textContent = "Încearcă din nou";
             els.mStatus.className = "status-message status-error";
-            if (res.error === "not_enough_credits") {
-                els.mStatus.innerHTML = `Fonduri insuficiente! <span style="text-decoration:underline;cursor:pointer;font-weight:bold" onclick="document.getElementById('creditsModal').style.display='flex'">Încarcă</span>`;
-            } else els.mStatus.textContent = "Eroare: " + res.error;
+            if (res.error === "not_enough_credits") els.mStatus.innerHTML = `Fonduri insuficiente! <span style="text-decoration:underline;cursor:pointer;font-weight:bold" onclick="document.getElementById('creditsModal').style.display='flex'">Încarcă</span>`;
+            else els.mStatus.textContent = "Eroare: " + res.error;
         } else {
             STATE.user.credits = res.new_balance; els.credits.textContent = STATE.user.credits;
             STATE.tickets.push(res.ticket); renderTickets(); selTicket(res.ticket.id);
@@ -330,16 +420,10 @@ function initUserApp() {
   const renderTickets = () => {
     els.chatList.innerHTML = "";
     if(!STATE.tickets.length) return (els.chatList.innerHTML = '<div style="padding:20px;text-align:center;color:#555;">Nu ai tichete.</div>');
-    
     STATE.tickets.sort((a,b) => (a.status===b.status ? b.id-a.id : (a.status==='open'?-1:1))).forEach(t => {
         const item = document.createElement("div"); item.className = "chat-item " + (t.id === STATE.selTicketId ? "active":"");
         item.dataset.ticketId = t.id;
-        
-        let unread = 0;
-        if (t.id !== STATE.selTicketId) {
-             unread = calculateUserUnread(t);
-        }
-
+        let unread = (t.id !== STATE.selTicketId) ? calculateUserUnread(t) : 0;
         const lastMsg = t.messages?.length ? t.messages[t.messages.length-1].text : "Tichet nou";
         item.innerHTML = `<div class="chat-item-header-row"><div class="chat-item-title">${t.product_name||"Comandă"}</div><div>${unread>0?`<span class="unread-badge">${unread}</span>`:""}<span class="ticket-status-pill ${t.status}">${t.status}</span></div></div><div class="chat-item-line">${lastMsg}</div>`;
         item.onclick = () => { selTicket(t.id); updateActivity(); els.ticketsTab.classList.remove("tickets-drawer-open"); };
@@ -354,16 +438,13 @@ function initUserApp() {
        const unread = calculateUserUnread(t);
        if(unread > 0) { 
            apiCall("mark_seen", {ticket_id: id}); 
-           // Local update for instant feel
            if(t.messages.length) t.last_read_user = t.messages[t.messages.length-1].id; 
        }
     }
     renderTickets();
     if(!t) { els.msgs.innerHTML = ""; updateChatUI(null); return; }
     els.tTitle.textContent = `${t.product_name} #${t.id}`;
-    
     const seen = getSeenConfig(t);
-
     renderDiscordMessages(t.messages, { container: els.msgs, ticket: t, canReply: t.status==="open", onReply: setReply, onJumpTo: (mid) => {
         const el = els.msgs.querySelector(`.msg-row[data-message-id="${mid}"]`);
         if(el) { el.classList.add("msg-row--highlight"); el.scrollIntoView({behavior:"smooth",block:"center"}); setTimeout(()=>el.classList.remove("msg-row--highlight"),1200); }
@@ -371,13 +452,54 @@ function initUserApp() {
     updateChatUI(t);
   };
 
+  // SEND MSG CU UPLOAD
   const sendMsg = async () => {
-    const text = els.input.value.trim();
-    if(!text || !STATE.selTicketId || STATE.sending) return;
-    STATE.sending = true; els.send.disabled = true; els.input.value = ""; hide(modeBar);
+    let text = els.input.value.trim();
+    const hasFile = !!pendingFile;
     
+    if((!text && !hasFile) || !STATE.selTicketId || STATE.sending) return;
+    
+    STATE.sending = true; 
+    els.send.disabled = true; els.attachBtn.disabled = true;
+    
+    // Add loading indicator for upload
+    if (hasFile) {
+        const previewItem = els.uploadPreview.querySelector(".preview-item");
+        if(previewItem) {
+            const overlay = document.createElement("div"); overlay.className = "uploading-overlay";
+            overlay.innerHTML = `<div class="spinner-mini"></div>`;
+            previewItem.appendChild(overlay);
+        }
+    }
+
     try {
+        let imageUrl = null;
+        // 1. Daca avem fisier, il uploadam intai
+        if (hasFile && pendingFile.type.startsWith("image/")) {
+             imageUrl = await uploadToImgBB(pendingFile);
+             if (!imageUrl) {
+                 alert("Eroare la upload imagine. Încearcă din nou.");
+                 STATE.sending = false; els.send.disabled = false; els.attachBtn.disabled = false;
+                 // Remove overlay
+                 els.uploadPreview.querySelector(".uploading-overlay")?.remove();
+                 return;
+             }
+             // Adaugam URL-ul la textul mesajului
+             text = text ? `${text}\n\n${imageUrl}` : imageUrl;
+        }
+
+        // 2. Trimitem mesajul la backend
+        els.input.value = ""; 
+        
+        // Reset Upload UI imediat ca sa para rapid
+        els.fileInput.value = "";
+        els.uploadPreview.innerHTML = "";
+        els.uploadPreview.style.display = "none";
+        pendingFile = null;
+        hide(modeBar);
+
         const res = await apiCall("user_send_message", { ticket_id: STATE.selTicketId, text, reply_to: userMode.type==="reply"?userMode.msgId:null });
+        
         if(res.ok && res.ticket) {
             const idx = STATE.tickets.findIndex(x=>x.id===res.ticket.id);
             if(idx>=0) STATE.tickets[idx] = res.ticket; else STATE.tickets.push(res.ticket);
@@ -389,12 +511,22 @@ function initUserApp() {
         } else if(res.error === "ticket_closed") {
             const t = STATE.tickets.find(x=>x.id===STATE.selTicketId); if(t) t.status="closed"; updateChatUI(t);
         }
-    } finally { STATE.sending = false; els.send.disabled = false; setTimeout(()=>els.input.focus(),50); userMode={type:null}; }
+    } catch(e) {
+        console.error(e);
+        alert("Eroare trimitere mesaj.");
+    } finally { 
+        STATE.sending = false; 
+        els.send.disabled = false; 
+        els.attachBtn.disabled = false;
+        setTimeout(()=>els.input.focus(),50); 
+        userMode={type:null}; 
+    }
   };
+
   els.send?.addEventListener("click", sendMsg);
   els.input?.addEventListener("keydown", e => { if(e.key==="Enter"&&!e.shiftKey) { e.preventDefault(); sendMsg(); }});
 
-  // Ticket Actions
+  // Ticket Actions (Close/Reopen) - Same as before
   els.menu?.addEventListener("click", () => els.ticketsTab.classList.toggle("tickets-drawer-open"));
   els.backdrop?.addEventListener("click", () => els.ticketsTab.classList.remove("tickets-drawer-open"));
   
@@ -440,7 +572,6 @@ function initUserApp() {
                     apiCall("mark_seen", {ticket_id:t.id}); 
                     if(t.messages.length) t.last_read_user=t.messages[t.messages.length-1].id; 
                 }
-                
                 const seen = getSeenConfig(t);
                 renderDiscordMessages(t.messages, {container: els.msgs, ticket:t, canReply:t.status==="open", onReply:setReply, seenConfig: seen });
                 updateChatUI(t);
