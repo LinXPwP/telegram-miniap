@@ -690,3 +690,71 @@ html, body {
 .instructions-list { text-align: left; margin: 20px 0; display: flex; flex-direction: column; gap: 12px; }
 .instruction-step { background: rgba(255,255,255,0.03); padding: 10px; border-radius: 12px; display: flex; align-items: center; gap: 12px; font-size: 13px; border: 1px solid rgba(255,255,255,0.05); }
 .step-num { background: var(--accent); color: #fff; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; flex-shrink: 0; }
+/* =========================================
+   MISSING BUTTON STYLES & CONFIRM MODAL
+   ========================================= */
+
+/* Grid pentru butoane în modalul de confirmare */
+.modal-actions-grid { 
+    display: grid; 
+    grid-template-columns: 1fr 1fr; 
+    gap: 12px; 
+    width: 100%;
+}
+
+/* Buton Secundar (Ex: Anulează) */
+.btn-secondary { 
+    background: rgba(255,255,255,0.1); 
+    color: #fff; 
+    border: none; 
+    padding: 14px; 
+    border-radius: 16px; 
+    cursor: pointer; 
+    font-weight: 600; 
+    font-size: 14px; 
+    transition: 0.2s; 
+    width: 100%;
+}
+.btn-secondary:hover { 
+    background: rgba(255,255,255,0.2); 
+}
+
+/* Stil pentru butonul roșu solid (Închide Tichet) */
+.btn-danger-solid { 
+    background: var(--danger); 
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4); 
+    color: #fff;
+}
+.btn-danger-solid:hover {
+    background: #d32f2f;
+}
+
+/* Butoane Ghost mici (pentru Header Chat) */
+.btn-sm {
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-danger-ghost { 
+    background: rgba(239, 68, 68, 0.15); 
+    color: var(--danger); 
+    border: 1px solid rgba(239, 68, 68, 0.3); 
+}
+.btn-danger-ghost:hover {
+    background: rgba(239, 68, 68, 0.25);
+    border-color: var(--danger);
+}
+
+.btn-success-ghost { 
+    background: rgba(16, 185, 129, 0.15); 
+    color: var(--success); 
+    border: 1px solid rgba(16, 185, 129, 0.3); 
+}
+.btn-success-ghost:hover {
+    background: rgba(16, 185, 129, 0.25);
+    border-color: var(--success);
+}
