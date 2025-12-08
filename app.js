@@ -1,13 +1,7 @@
-// app.js - FIXED: MULTI-UPLOAD, LIGHTBOX, FILE DOWNLOAD API
+// app.js - FIXED: MULTI-UPLOAD, LIGHTBOX, PROXY FILE UPLOAD
 
 // ================= CONFIGURARE API =================
-// 1. API Imagini (ImgBB)
 const IMGBB_API_KEY = "8b7eef65280614c71acd1e1ce317aa64"; 
-
-// 2. API Fisiere (File.io - GRATUIT, sterge dupa 1 download sau 2 saptamani)
-// Daca ai cheie platita sau alt serviciu, modifica URL-ul si Header-ul.
-// Pentru File.io free nu e nevoie de cheie obligatorie, dar e mai bine.
-const FILE_HOST_URL = "https://file.io"; 
 const API_URL = "https://api.redgen.vip/";
 
 const $ = (id) => document.getElementById(id);
@@ -87,15 +81,13 @@ const smartScrollToBottom = (el, force) => {
 };
 const getImageUrl = (s) => s?.trim() ? s : null;
 
-// --- UTILS: Formatare Mesaj cu Link-uri, Imagini si Fisiere ---
+// --- UTILS: Formatare Mesaj ---
 function formatMessageText(text) {
     if (!text) return "";
     
     // 1. Detectare Tag-uri Fisier Custom: [FILE]url|nume_fisier[END_FILE]
-    // Vom formata mesajul inainte de trimitere sa arate asa
     const fileRegex = /\[FILE\](.*?)\|(.*?)\[END_FILE\]/g;
-    
-    // 2. Detectare URL-uri Imagini (jpg, png, gif, jpeg, webp)
+    // 2. Detectare URL-uri Imagini
     const imgRegex = /(https?:\/\/\S+\.(?:png|jpg|jpeg|gif|webp)(\?\S*)?)/gi;
     
     let formatted = text
@@ -115,7 +107,6 @@ function formatMessageText(text) {
 
     // Inlocuire Imagini (Cu onclick Lightbox)
     formatted = formatted.replace(imgRegex, (url) => {
-        // Folosim ghilimele simple in onclick pentru a evita conflictele
         return `<br><img src="${url}" class="chat-media-img" onclick="openLightbox('${url}')"><br>`;
     });
     
@@ -210,8 +201,6 @@ function initUserApp() {
   let STATE = { user: null, shop: null, tickets: [], selTicketId: null, sending: false, buying: false };
   let SELECTED_PRODUCT = null, SELECTED_VARIANT = null;
   let userMode = { type: null, msgId: null, txt: "", sender: "" };
-  
-  // Array pentru fisiere multiple
   let pendingFiles = []; 
   
   const els = {
@@ -224,9 +213,7 @@ function initUserApp() {
      mClose: $("panelCloseBtn"), mStatus: $("panelStatus"), mImg: $("panelImg"), mPlace: $("panelImgPlaceholder"),
      chatList: $("chatList"), tTitle: $("ticketTitle"), msgs: $("chatMessages"), 
      input: $("chatInput"), send: $("chatSendBtn"), 
-     // UPLOAD
      attachBtn: $("attachBtn"), fileInput: $("chatFileInput"), uploadPreview: $("uploadPreview"),
-     
      closeT: $("userTicketCloseBtn"), reopenT: $("userTicketReopenBtn"), 
      menu: $("ticketsMenuToggle"), backdrop: $("ticketsBackdrop"),
      shopTab: $("shopTab"), ticketsTab: $("ticketsTab"), shopHead: $("shopHeader"),
@@ -289,30 +276,45 @@ function initUserApp() {
       } catch (e) { console.error(e); return null; }
   };
 
-  // 2. Upload Fisier la FileHost (Ex: File.io)
+  // 2. Upload Fisier la FileHost VIA PROXY PYTHON (Rezolva CORS)
   const uploadToFileHost = async (file) => {
       const formData = new FormData();
       formData.append("file", file);
+      
       try {
-          // File.io este o solutie simpla pentru demo. Sterge fisierul dupa 1 download.
-          const res = await fetch(FILE_HOST_URL, { method: "POST", body: formData });
+          // Trimitem catre Backend-ul nostru Python, care forwardeaza la File.io
+          // Eliminam "/api" din final daca exista, pentru a construi ruta corecta
+          const baseUrl = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
+          // NOTA: API_URL e setat de obicei la "https://api.redgen.vip/" care duce la root
+          // Ruta noastra Python este /api/upload_proxy
+          // Daca API_URL este deja /api, trebuie ajustat. In codul de mai sus pare a fi root.
+          
+          // Daca API_URL este doar domeniul (ex: https://api.redgen.vip/), atunci:
+          const proxyUrl = baseUrl + "/api/upload_proxy";
+
+          const res = await fetch(proxyUrl, { 
+              method: "POST", 
+              body: formData 
+              // Nu setam Content-Type, browserul il pune automat pt FormData
+          });
+          
           const data = await res.json();
+          
           if (data.success) return data.link; // file.io returneaza .link
-          else throw new Error("Upload file failed");
+          else {
+              console.error("Proxy Error:", data);
+              throw new Error("Upload file failed via proxy");
+          }
       } catch (e) { console.error(e); return null; }
   };
 
   const updatePreview = () => {
       els.uploadPreview.innerHTML = "";
-      if(pendingFiles.length === 0) {
-          hide(els.uploadPreview);
-          return;
-      }
+      if(pendingFiles.length === 0) { hide(els.uploadPreview); return; }
       show(els.uploadPreview);
       
       pendingFiles.forEach((file, index) => {
           const div = document.createElement("div"); div.className = "preview-item";
-          
           if(file.type.startsWith("image/")) {
               const reader = new FileReader();
               reader.onload = (ev) => {
@@ -321,7 +323,6 @@ function initUserApp() {
               };
               reader.readAsDataURL(file);
           } else {
-              // Fisier Text/Other
               div.innerHTML = `<div class="preview-file-icon">📄</div><button class="preview-remove">✕</button>`;
               div.querySelector(".preview-remove").onclick = () => { pendingFiles.splice(index, 1); updatePreview(); };
           }
@@ -332,17 +333,15 @@ function initUserApp() {
   const handleFileSelect = (e) => {
       const files = Array.from(e.target.files);
       if (!files.length) return;
-      
-      // Adaugam la coada existenta
       pendingFiles = [...pendingFiles, ...files];
-      els.fileInput.value = ""; // Reset input ca sa putem selecta aceleasi fisiere iar
+      els.fileInput.value = "";
       updatePreview();
   };
 
   els.attachBtn?.addEventListener("click", () => els.fileInput.click());
   els.fileInput?.addEventListener("change", handleFileSelect);
 
-  // --- SHOP & MODALS (neschimbate) ---
+  // --- SHOP LOGIC (Scurtat) ---
   const renderCats = (shop) => {
     els.catGrid.innerHTML = "";
     shop?.categories?.forEach(cat => {
@@ -453,32 +452,25 @@ function initUserApp() {
     STATE.sending = true; 
     els.send.disabled = true; els.attachBtn.disabled = true;
 
-    // Show Loader in Preview
     if (pendingFiles.length > 0) {
         els.uploadPreview.innerHTML = '<div style="color:#fff; padding:10px;">Se încarcă fișierele...</div>';
     }
 
     try {
         let uploadsText = "";
-
-        // Procesare secventiala a fisierelor
         for (const file of pendingFiles) {
             if(file.type.startsWith("image/")) {
                 const url = await uploadToImgBB(file);
-                if(url) uploadsText += `\n${url}`; // Imaginile raman URL-uri simple ca sa se randeze ca <img>
+                if(url) uploadsText += `\n${url}`; 
             } else {
                 const url = await uploadToFileHost(file);
-                // FORMATARE CUSTOM: [FILE]url|nume_fisier[END_FILE]
                 if(url) uploadsText += `\n[FILE]${url}|${file.name}[END_FILE]`;
             }
         }
         
-        // Concatenam textul utilizatorului cu link-urile generate
         text = (text + "\n" + uploadsText).trim();
-
         if(!text) throw new Error("Nimic de trimis");
 
-        // Reset UI
         els.input.value = ""; 
         els.fileInput.value = "";
         pendingFiles = [];
@@ -501,8 +493,6 @@ function initUserApp() {
     } catch(e) {
         console.error(e);
         alert("Eroare trimitere (posibil upload esuat).");
-        // Restauram preview-ul daca da eroare, ca sa nu piarda userul fisierele?
-        // Pentru simplitate, momentan se pierd la eroare, dar userul poate reselecta.
         pendingFiles = []; hide(els.uploadPreview);
     } finally { 
         STATE.sending = false; 
