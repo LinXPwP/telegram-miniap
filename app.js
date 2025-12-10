@@ -172,8 +172,9 @@ function initUserApp() {
       confirm: $("confirmActionModal"), okConf: $("confirmOkBtn"), canConf: $("confirmCancelBtn"),
       creditsM: $("creditsModal"), closeCred: $("closeCreditsModalBtn"),
       // Generator Elements
-      genBtnAction: $("btnGenAction"), genResult: $("genResultCard"), genStatus: $("genStatusPill"),
-      resPlan: $("resPlan"), resCountry: $("resCountry"), resEmail: $("resEmail"), resCookieArea: $("resCookieArea"), btnCopy: $("btnCopyCookie")
+      genBtnAction: $("btnGenAction"), genResult: $("genResultCard"), genStatus: $("genStatusArea"),
+      resPlan: $("resPlan"), resCountry: $("resCountry"), resEmail: $("resEmail"), resCookieArea: $("resCookieArea"), 
+      btnCopyCookie: $("btnCopyCookie"), btnCopyEmail: $("btnCopyEmail")
   };
 
   const setTab = (tabName) => {
@@ -248,7 +249,7 @@ function initUserApp() {
     
     // UI Loading
     els.genBtnAction.classList.add("loading");
-    els.genBtnAction.querySelector(".btn-text").textContent = "GENERATING...";
+    els.genBtnAction.querySelector(".btn-txt").textContent = "PROCESSING...";
     hide(els.genResult);
     hide(els.genStatus);
 
@@ -259,46 +260,56 @@ function initUserApp() {
              // Success
              els.resPlan.textContent = res.details?.plan || "Premium";
              els.resCountry.textContent = res.details?.country || "Global";
-             els.resEmail.textContent = res.details?.email || "********@gmail.com";
+             // No more hiding logic - direct assignment
+             els.resEmail.value = res.details?.email || "Unknown Email";
              els.resCookieArea.value = res.cookies;
              
-             show(els.genResult);
-             els.genStatus.textContent = "Success";
-             els.genStatus.className = "status-pill status-success";
-             show(els.genStatus);
+             show(els.genResult, 'flex');
         } else {
              // Error Handling
-             els.genStatus.className = "status-pill status-error";
-             show(els.genStatus);
+             els.genStatus.className = "status-msg-v2 error";
+             show(els.genStatus, 'block');
              
              if (res.error === "missing_role") {
-                 els.genStatus.innerHTML = "VIP Role Required. <a href='https://discord.gg/gc2VGGakQM' style='color:#fff;text-decoration:underline'>Join Discord</a>";
+                 els.genStatus.innerHTML = "❌ VIP Role Required. <a href='https://discord.gg/gc2VGGakQM' style='color:#fff;text-decoration:underline'>Join Discord</a>";
              } else if (res.error === "out_of_stock") {
-                 els.genStatus.textContent = "Stock Empty. Try later.";
+                 els.genStatus.textContent = "❌ Stock Empty. Try later.";
              } else {
-                 els.genStatus.textContent = "Error: " + (res.error || "Unknown");
+                 els.genStatus.textContent = "❌ Error: " + (res.error || "Unknown");
              }
         }
     } catch (e) {
-        els.genStatus.textContent = "Network Error";
-        els.genStatus.className = "status-pill status-error";
-        show(els.genStatus);
+        els.genStatus.textContent = "❌ Network Error";
+        els.genStatus.className = "status-msg-v2 error";
+        show(els.genStatus, 'block');
     } finally {
         STATE.generating = false;
         els.genBtnAction.classList.remove("loading");
-        els.genBtnAction.querySelector(".btn-text").textContent = "GENERATE ACCESS";
+        els.genBtnAction.querySelector(".btn-txt").textContent = "GENERATE ACCOUNT";
     }
   };
 
   els.genBtnAction?.addEventListener("click", handleNetflixGenerate);
-  els.btnCopy?.addEventListener("click", () => {
-      els.resCookieArea.style.display = 'block';
+  
+  // Copy Cookie (Full)
+  els.btnCopyCookie?.addEventListener("click", () => {
       els.resCookieArea.select();
+      els.resCookieArea.setSelectionRange(0, 99999); // Mobile compatibility
       document.execCommand('copy');
-      els.resCookieArea.style.display = 'none';
-      const originalText = els.btnCopy.innerHTML;
-      els.btnCopy.innerHTML = "✓ Copied!";
-      setTimeout(() => els.btnCopy.innerHTML = originalText, 2000);
+      
+      const originalText = els.btnCopyCookie.innerHTML;
+      els.btnCopyCookie.innerHTML = "✓ COPIED";
+      setTimeout(() => els.btnCopyCookie.innerHTML = originalText, 2000);
+  });
+
+  // Copy Email (Full)
+  els.btnCopyEmail?.addEventListener("click", () => {
+      els.resEmail.select();
+      document.execCommand('copy');
+      
+      const originalText = els.btnCopyEmail.textContent;
+      els.btnCopyEmail.textContent = "✓";
+      setTimeout(() => els.btnCopyEmail.textContent = originalText, 1500);
   });
   // -----------------------
 
