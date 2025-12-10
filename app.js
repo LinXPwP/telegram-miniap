@@ -1,4 +1,4 @@
-// app.js - FIXED: Claim Modal & Purchases Filter
+// app.js - FIXED: No Alerts for Claiming Warranty
 
 const API_URL = "https://api.redgen.vip/";
 const $ = (id) => document.getElementById(id);
@@ -150,7 +150,7 @@ function initUserApp() {
   let STATE = { user: null, shop: null, tickets: [], selTicketId: null, sending: false, buying: false };
   let SELECTED_PRODUCT = null, SELECTED_VARIANT = null;
   let userMode = { type: null, msgId: null, txt: "", sender: "" };
-  let CLAIM_TARGET_ID = null; // Store ID for modal
+  let CLAIM_TARGET_ID = null; 
   
   const els = {
      mainWrapper: $("mainAppWrapper"),
@@ -174,7 +174,7 @@ function initUserApp() {
      creditsM: $("creditsModal"), closeCred: $("closeCreditsModalBtn"),
      purchasesList: $("purchasesList"),
      // CLAIM MODAL ELS
-     claimM: $("claimWarrantyModal"), claimIn: $("claimReasonInput"), claimSub: $("claimSubmitBtn"), claimCan: $("claimCancelBtn")
+     claimM: $("claimWarrantyModal"), claimIn: $("claimReasonInput"), claimSub: $("claimSubmitBtn"), claimCan: $("claimCancelBtn"), claimStatus: $("claimStatus")
   };
 
   const setTab = (tabName) => {
@@ -302,10 +302,12 @@ function initUserApp() {
       els.purchasesList.appendChild(card);
   };
 
-  // NEW: Open Claim Modal instead of direct alert
+  // Open Claim Modal
   const openClaimModal = (p) => {
       CLAIM_TARGET_ID = p.id;
       els.claimIn.value = ""; // Clear previous input
+      els.claimStatus.textContent = ""; // Clear errors
+      els.claimStatus.className = "status-message";
       show(els.claimM);
   };
 
@@ -316,7 +318,13 @@ function initUserApp() {
   els.claimSub.onclick = async () => {
       if(!CLAIM_TARGET_ID) return;
       const reason = els.claimIn.value.trim();
-      if(!reason) return alert("Please describe the issue.");
+      
+      // ERROR HANDLING: IN-MODAL
+      if(!reason) {
+          els.claimStatus.textContent = "Please describe the issue.";
+          els.claimStatus.className = "status-message status-error";
+          return;
+      }
       
       els.claimSub.textContent = "Sending...";
       els.claimSub.disabled = true;
@@ -328,11 +336,13 @@ function initUserApp() {
       
       if(res.ok) {
           hide(els.claimM);
-          alert("Ticket opened! Switching to chat.");
+          // SUCCESS: NO ALERT, JUST SWITCH
           setTab("tickets");
           userTicketsPoller.bumpFast();
       } else {
-          alert("Error: " + (res.error === "warranty_expired" ? "Warranty Expired!" : res.error));
+          // ERROR HANDLING: IN-MODAL
+          els.claimStatus.textContent = "Error: " + (res.error === "warranty_expired" ? "Warranty Expired!" : res.error);
+          els.claimStatus.className = "status-message status-error";
       }
   };
 
