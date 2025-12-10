@@ -1,4 +1,4 @@
-// app.js - FIXED: Handles Access Denied Screen Properly
+// app.js - FIXED: Handles Access Denied Screen Properly + Netflix Generator
 
 const API_URL = "https://api.redgen.vip/";
 const $ = (id) => document.getElementById(id);
@@ -153,8 +153,8 @@ function initUserApp() {
   
   // Elements
   const els = {
-     mainWrapper: $("mainAppWrapper"), // IMPORTANT REFERINTA
-     linkError: $("linkAccountError"), // IMPORTANT REFERINTA ECRAN EROARE
+     mainWrapper: $("mainAppWrapper"),
+     linkError: $("linkAccountError"),
      credits: $("creditsValue"), creditsBtn: $("creditsBtn"), userLine: $("userLine"),
      catGrid: $("categoriesGrid"), prodGrid: $("productsGrid"), 
      viewCat: $("viewCategories"), viewProd: $("viewProducts"),
@@ -166,18 +166,43 @@ function initUserApp() {
      input: $("chatInput"), send: $("chatSendBtn"), 
      closeT: $("userTicketCloseBtn"), reopenT: $("userTicketReopenBtn"), 
      menu: $("ticketsMenuToggle"), backdrop: $("ticketsBackdrop"),
-     shopTab: $("shopTab"), ticketsTab: $("ticketsTab"), shopHead: $("shopHeader"),
-     goT: $("goToTicketsBtn"), backShop: $("backToShopBtn"), inputCont: $(".chat-input"),
+     shopTab: $("shopTab"), ticketsTab: $("ticketsTab"), toolsTab: $("toolsTab"), // ADDED
+     shopHead: $("shopHeader"),
+     goT: $("goToTicketsBtn"), goTools: $("goToToolsBtn"), backShop: $("backToShopBtn"), backShopFromTools: $("backToShopFromTools"), // ADDED
+     inputCont: $(".chat-input"),
      confirm: $("confirmActionModal"), okConf: $("confirmOkBtn"), canConf: $("confirmCancelBtn"),
-     creditsM: $("creditsModal"), closeCred: $("closeCreditsModalBtn")
+     creditsM: $("creditsModal"), closeCred: $("closeCreditsModalBtn"),
+     // NETFLIX GENERATOR
+     btnGenNetflix: $("btnGenerateNetflix"), netflixOut: $("netflixOutputArea"), netflixRes: $("netflixResultText"), netflixErr: $("netflixErrorMsg"), netflixErrText: $("netflixErrorText"), copyCookies: $("copyCookiesBtn")
   };
 
-  const setTab = (isShop) => {
-    if(isShop) { els.shopTab.classList.add("active"); els.ticketsTab.classList.remove("active"); show(els.shopHead); userTicketsPoller.stop(); }
-    else { els.shopTab.classList.remove("active"); els.ticketsTab.classList.add("active"); hide(els.shopHead); updateActivity(); userTicketsPoller.start(); }
+  const setTab = (tabName) => {
+    // Reset all tabs
+    els.shopTab.classList.remove("active");
+    els.ticketsTab.classList.remove("active");
+    els.toolsTab.classList.remove("active");
+    els.ticketsTab.classList.remove("tickets-drawer-open"); // Close drawer if open
+
+    if(tabName === 'shop') {
+        els.shopTab.classList.add("active");
+        show(els.shopHead);
+        userTicketsPoller.stop();
+    } else if (tabName === 'tickets') {
+        els.ticketsTab.classList.add("active");
+        hide(els.shopHead);
+        updateActivity();
+        userTicketsPoller.start();
+    } else if (tabName === 'tools') {
+        els.toolsTab.classList.add("active");
+        hide(els.shopHead);
+        userTicketsPoller.stop();
+    }
   };
-  els.goT?.addEventListener("click", () => setTab(false));
-  els.backShop?.addEventListener("click", () => setTab(true));
+
+  els.goT?.addEventListener("click", () => setTab('tickets'));
+  els.goTools?.addEventListener("click", () => setTab('tools'));
+  els.backShop?.addEventListener("click", () => setTab('shop'));
+  els.backShopFromTools?.addEventListener("click", () => setTab('shop'));
 
   els.creditsBtn?.addEventListener("click", () => show(els.creditsM));
   els.closeCred?.addEventListener("click", () => hide(els.creditsM));
@@ -207,16 +232,56 @@ function initUserApp() {
     try {
         const r = await fetch(API_URL, { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ action, initData: TG_INIT_DATA, ...extra }) });
         
-        // Daca serverul raspunde cu 403, cel mai probabil este eroarea de link
         if (r.status === 403) {
             const data = await r.json();
-            return data; // Returnam eroarea ca sa o putem procesa
+            return data; 
         }
         if (r.status === 401) return { ok: false, error: "auth_failed" };
         
         return await r.json();
     } catch (e) { console.error(e); return { ok: false, error: "network" }; }
   };
+
+  // --- NETFLIX GENERATOR LOGIC ---
+  els.btnGenNetflix?.addEventListener("click", async () => {
+      if(els.btnGenNetflix.classList.contains("loading")) return;
+
+      // Reset UI
+      hide(els.netflixOut); hide(els.netflixErr);
+      els.btnGenNetflix.classList.add("loading");
+      
+      try {
+          const res = await apiCall("generate_netflix", {});
+          
+          if (res.ok && res.cookies) {
+              // SUCCESS
+              els.netflixRes.value = res.cookies;
+              show(els.netflixOut);
+              smartScrollToBottom(els.toolsTab, true);
+          } else {
+              // ERROR HANDLING
+              show(els.netflixErr);
+              if (res.error === "missing_role" || res.required_role === "1406925140985643011") {
+                   els.netflixErrText.innerHTML = `Access Denied. You need the <b>VIP Role</b> <span style="font-size:10px;opacity:0.7;">(ID: 1406925140985643011)</span> linked to your account to use this generator.`;
+              } else {
+                   els.netflixErrText.textContent = res.error || "Unknown error occurred.";
+              }
+          }
+      } catch (e) {
+          show(els.netflixErr); els.netflixErrText.textContent = "Network error. Try again.";
+      } finally {
+          els.btnGenNetflix.classList.remove("loading");
+      }
+  });
+
+  els.copyCookies?.addEventListener("click", () => {
+      els.netflixRes.select();
+      document.execCommand("copy");
+      const originalText = els.copyCookies.textContent;
+      els.copyCookies.textContent = "Copied!";
+      setTimeout(() => els.copyCookies.textContent = originalText, 1500);
+  });
+  // ------------------------------
 
   const renderHeader = () => { if(STATE.user) { els.credits.textContent = STATE.user.credits; els.userLine.innerHTML = `User: <b>${STATE.user.username ? "@"+STATE.user.username : "ID "+STATE.user.id}</b>`; }};
 
@@ -306,7 +371,7 @@ function initUserApp() {
             STATE.user.credits = res.new_balance; els.credits.textContent = STATE.user.credits;
             STATE.tickets.push(res.ticket); renderTickets(); selTicket(res.ticket.id);
             els.mStatus.className = "status-message status-ok"; els.mStatus.textContent = "Success!";
-            setTimeout(() => { closeModal(); setTab(false); STATE.buying = false; }, 1000);
+            setTimeout(() => { closeModal(); setTab('tickets'); STATE.buying = false; }, 1000);
             updateActivity(); userTicketsPoller.bumpFast();
         }
     } catch { STATE.buying = false; els.mBuy.disabled = false; els.mStatus.textContent = "Network error."; }
@@ -408,14 +473,14 @@ function initUserApp() {
          if(STATE.selTicketId) {
              const t = STATE.tickets.find(x=>x.id===STATE.selTicketId);
              if(t) {
-                const unread = calculateUserUnread(t);
-                if(unread>0) { 
-                    apiCall("mark_seen", {ticket_id:t.id}); 
-                    if(t.messages.length) t.last_read_user=t.messages[t.messages.length-1].id; 
-                }
-                const seen = getSeenConfig(t);
-                renderDiscordMessages(t.messages, {container: els.msgs, ticket:t, canReply:t.status==="open", onReply:setReply, seenConfig: seen });
-                updateChatUI(t);
+                 const unread = calculateUserUnread(t);
+                 if(unread>0) { 
+                     apiCall("mark_seen", {ticket_id:t.id}); 
+                     if(t.messages.length) t.last_read_user=t.messages[t.messages.length-1].id; 
+                 }
+                 const seen = getSeenConfig(t);
+                 renderDiscordMessages(t.messages, {container: els.msgs, ticket:t, canReply:t.status==="open", onReply:setReply, seenConfig: seen });
+                 updateChatUI(t);
              }
          }
          renderTickets();
@@ -434,18 +499,13 @@ function initUserApp() {
      if(res.ok) {
         // Daca totul e ok, afisam magazinul
         STATE.user.credits = res.user.credits; STATE.shop = res.shop; STATE.tickets = res.tickets||[];
-        renderHeader(); renderCats(STATE.shop); renderTickets(); setTab(true);
+        renderHeader(); renderCats(STATE.shop); renderTickets(); setTab('shop');
      } else {
-        // --- AICI ESTE FIX-UL PENTRU ECRANUL DE DISCORD ---
         if (res.error === "access_denied_link_required") {
-            // Ascundem COMPLET interfata principala
             if(els.mainWrapper) els.mainWrapper.style.display = "none";
-            // Afisam ecranul de eroare specific
             if(els.linkError) els.linkError.style.display = "flex";
             return;
         }
-
-        // Alte erori (afisate in header)
         els.userLine.innerHTML = `<span style="color:red">Error: ${res.error||"Auth"}</span>`; show(els.userLine);
      }
   })();
