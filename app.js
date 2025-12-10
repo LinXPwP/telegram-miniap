@@ -1,6 +1,6 @@
-// app.js - FIXED: Warranty Logic (UTC) & Purchases List
+// app.js - FIXED: Warranty Date Logic (Timezone Fix)
 
-const API_URL = "https://api.redgen.vip/";
+const API_URL = "https://api.redgen.vip/"; // Sau URL-ul tau de tunel/domeniu
 const $ = (id) => document.getElementById(id);
 const show = (el, d = 'flex') => { if(el) el.style.display = d; };
 const hide = (el) => { if(el) el.style.display = 'none'; };
@@ -34,14 +34,17 @@ function createSmartPoll(fetchFn, isEnabledFn) {
 
 // 2. UTILS
 const formatTimestamp = (ts) => {
-    if (!ts) return ""; const d = new Date(ts);
+    if (!ts) return ""; 
+    const d = new Date(ts); // Browser handles UTC automatically if 'Z' is present
     return isNaN(d.getTime()) ? "" : `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}, ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
 };
+
 const timeAgo = (ts) => {
     if (!ts) return ""; const diff = Math.floor((new Date() - new Date(ts)) / 1000);
     if (diff < 60) return "now"; const m = Math.floor(diff/60); if(m<60) return `${m}m`;
     const h = Math.floor(m/60); return h<24 ? `${h}h` : `${Math.floor(h/24)}d`;
 };
+
 const smartScrollToBottom = (el, force) => {
     if (!el) return;
     if (force || (el.scrollHeight - (el.scrollTop + el.clientHeight) < 150)) requestAnimationFrame(() => el.scrollTop = el.scrollHeight);
@@ -162,9 +165,9 @@ function initUserApp() {
      input: $("chatInput"), send: $("chatSendBtn"), 
      closeT: $("userTicketCloseBtn"), reopenT: $("userTicketReopenBtn"), 
      menu: $("ticketsMenuToggle"), backdrop: $("ticketsBackdrop"),
-     shopTab: $("shopTab"), ticketsTab: $("ticketsTab"), purchasesTab: $("purchasesTab"), 
+     shopTab: $("shopTab"), ticketsTab: $("ticketsTab"), purchasesTab: $("purchasesTab"),
      shopHead: $("shopHeader"),
-     goT: $("goToTicketsBtn"), goPurch: $("goToPurchasesBtn"), backShop: $("backToShopBtn"), backPurch: $("backFromPurchases"), 
+     goT: $("goToTicketsBtn"), goPurch: $("goToPurchasesBtn"), backShop: $("backToShopBtn"), backPurch: $("backFromPurchases"),
      inputCont: $("chatFooter"), 
      confirm: $("confirmActionModal"), okConf: $("confirmOkBtn"), canConf: $("confirmCancelBtn"),
      creditsM: $("creditsModal"), closeCred: $("closeCreditsModalBtn"),
@@ -172,6 +175,7 @@ function initUserApp() {
   };
 
   const setTab = (tabName) => {
+    // Hide all
     els.shopTab.classList.remove("active");
     els.ticketsTab.classList.remove("active");
     if(els.purchasesTab) els.purchasesTab.classList.remove("active");
@@ -189,7 +193,7 @@ function initUserApp() {
     } else if (tabName === "purchases") {
         els.purchasesTab.classList.add("active");
         hide(els.shopHead);
-        loadPurchases(); 
+        loadPurchases(); // Fetch orders
     }
   };
 
@@ -252,15 +256,19 @@ function initUserApp() {
       
       let warrantyBadge = "";
       let isWarrantyActive = false;
+      let warrantyMsg = "";
       
       if(p.warranty_ends_at) {
-          // --- FIX: USE UTC TIME CORRECTLY ---
+          // FIX: Do NOT remove "Z". Allow 'new Date()' to handle UTC correctly.
           const expiryDate = new Date(p.warranty_ends_at); 
           const now = new Date();
-          isWarrantyActive = expiryDate > now;
+          
+          isWarrantyActive = expiryDate.getTime() > now.getTime();
           
           if(isWarrantyActive) {
-              warrantyBadge = `<span class="badge-warranty active">Warranty Active</span>`;
+              const diffTime = Math.abs(expiryDate - now);
+              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+              warrantyBadge = `<span class="badge-warranty active">Warranty Active (${diffDays}d left)</span>`;
           } else {
               warrantyBadge = `<span class="badge-warranty expired">Warranty Expired</span>`;
           }
@@ -279,14 +287,18 @@ function initUserApp() {
             <div style="margin-top:8px;">${warrantyBadge}</div>
         </div>
         <div class="pch-actions">
-            <button class="btn-sm ${isWarrantyActive ? 'btn-support-active' : 'btn-support-disabled'}" ${!isWarrantyActive?'disabled':''}>
+            <button class="btn-sm ${isWarrantyActive ? 'btn-support-active' : 'btn-support-disabled'}">
                 ${isWarrantyActive ? '🛠️ Support / Claim' : '⛔ Support Ended'}
             </button>
         </div>
       `;
       
+      // CLAIM BUTTON LOGIC
+      const btn = card.querySelector("button");
       if(isWarrantyActive) {
-          card.querySelector("button").onclick = () => claimWarranty(p);
+          btn.onclick = () => claimWarranty(p);
+      } else {
+          btn.disabled = true;
       }
 
       els.purchasesList.appendChild(card);
@@ -367,7 +379,7 @@ function initUserApp() {
   const selVar = (t, btn) => {
     SELECTED_VARIANT = t; Array.from(els.mTypesGrid.children).forEach(c=>c.classList.remove('active')); btn.classList.add('active');
     els.mPrice.textContent = `${t.price} CRD`;
-    els.mDesc.textContent = `${SELECTED_PRODUCT.description||""}\n\n🔹 Variant: ${t.name}\n${t.warranty?`🛡️ Warranty: ${t.warranty}\n`:""}${t.description?`📝 Notes: ${t.description}`:""}`;
+    els.mDesc.textContent = `${SELECTED_PRODUCT.description||""}\n\n🔹 Variant: ${t.name}\n${t.warranty_days?`🛡️ Warranty: ${t.warranty_days} days\n`:""}${t.description?`📝 Notes: ${t.description}`:""}`;
   };
   const closeModal = () => { hide(els.modal); STATE.buying = false; };
   els.mClose.onclick = closeModal; els.modal.onclick = (e) => e.target===els.modal && closeModal();
@@ -474,45 +486,45 @@ function initUserApp() {
   });
 
   const userTicketsPoller = createSmartPoll(async () => {
-     if(!STATE.user) return;
-     const res = await apiCall("user_get_tickets", {});
-     if(res.ok && res.tickets) {
-         STATE.tickets = res.tickets;
-         if(STATE.selTicketId) {
-             const t = STATE.tickets.find(x=>x.id===STATE.selTicketId);
-             if(t) {
-                const unread = calculateUserUnread(t);
-                if(unread>0) { 
-                    apiCall("mark_seen", {ticket_id:t.id}); 
-                    if(t.messages.length) t.last_read_user=t.messages[t.messages.length-1].id; 
-                }
-                const seen = getSeenConfig(t);
-                renderDiscordMessages(t.messages, {container: els.msgs, ticket:t, canReply:t.status==="open", onReply:setReply, seenConfig: seen });
-                updateChatUI(t);
-             }
-         }
-         renderTickets();
-     }
+      if(!STATE.user) return;
+      const res = await apiCall("user_get_tickets", {});
+      if(res.ok && res.tickets) {
+          STATE.tickets = res.tickets;
+          if(STATE.selTicketId) {
+              const t = STATE.tickets.find(x=>x.id===STATE.selTicketId);
+              if(t) {
+                 const unread = calculateUserUnread(t);
+                 if(unread>0) { 
+                     apiCall("mark_seen", {ticket_id:t.id}); 
+                     if(t.messages.length) t.last_read_user=t.messages[t.messages.length-1].id; 
+                 }
+                 const seen = getSeenConfig(t);
+                 renderDiscordMessages(t.messages, {container: els.msgs, ticket:t, canReply:t.status==="open", onReply:setReply, seenConfig: seen });
+                 updateChatUI(t);
+              }
+          }
+          renderTickets();
+      }
   }, () => els.ticketsTab.classList.contains("active"));
 
   // INIT
   (async () => {
-     tg.ready(); tg.expand();
-     const unsafe = tg.initDataUnsafe?.user;
-     STATE.user = { id: unsafe?.id, username: unsafe?.username||"user", credits: 0 };
-     renderHeader();
-     const res = await apiCall("init", {});
-     if(res.ok) {
+      tg.ready(); tg.expand();
+      const unsafe = tg.initDataUnsafe?.user;
+      STATE.user = { id: unsafe?.id, username: unsafe?.username||"user", credits: 0 };
+      renderHeader();
+      const res = await apiCall("init", {});
+      if(res.ok) {
         STATE.user.credits = res.user.credits; STATE.shop = res.shop; STATE.tickets = res.tickets||[];
         renderHeader(); renderCats(STATE.shop); renderTickets(); setTab("shop");
-     } else {
+      } else {
         if (res.error === "access_denied_link_required") {
             if(els.mainWrapper) els.mainWrapper.style.display = "none";
             if(els.linkError) els.linkError.style.display = "flex";
             return;
         }
         els.userLine.innerHTML = `<span style="color:red">Error: ${res.error||"Auth"}</span>`; show(els.userLine);
-     }
+      }
   })();
 }
 
