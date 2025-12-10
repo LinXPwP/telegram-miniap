@@ -1,4 +1,4 @@
-// app.js - FIXED: Handles Reply Bar & Delete Actions
+// app.js - FIXED: Warranty Logic & Purchases List
 
 const API_URL = "https://api.redgen.vip/";
 const $ = (id) => document.getElementById(id);
@@ -148,7 +148,6 @@ function initUserApp() {
   let SELECTED_PRODUCT = null, SELECTED_VARIANT = null;
   let userMode = { type: null, msgId: null, txt: "", sender: "" };
   
-  // Elements
   const els = {
      mainWrapper: $("mainAppWrapper"),
      linkError: $("linkAccountError"),
@@ -163,64 +162,146 @@ function initUserApp() {
      input: $("chatInput"), send: $("chatSendBtn"), 
      closeT: $("userTicketCloseBtn"), reopenT: $("userTicketReopenBtn"), 
      menu: $("ticketsMenuToggle"), backdrop: $("ticketsBackdrop"),
-     shopTab: $("shopTab"), ticketsTab: $("ticketsTab"), shopHead: $("shopHeader"),
-     goT: $("goToTicketsBtn"), backShop: $("backToShopBtn"), 
-     inputCont: $("chatFooter"), // FIXED: Selects by ID now
+     shopTab: $("shopTab"), ticketsTab: $("ticketsTab"), purchasesTab: $("purchasesTab"), // New
+     shopHead: $("shopHeader"),
+     goT: $("goToTicketsBtn"), goPurch: $("goToPurchasesBtn"), backShop: $("backToShopBtn"), backPurch: $("backFromPurchases"), // New Buttons
+     inputCont: $("chatFooter"), 
      confirm: $("confirmActionModal"), okConf: $("confirmOkBtn"), canConf: $("confirmCancelBtn"),
-     creditsM: $("creditsModal"), closeCred: $("closeCreditsModalBtn")
+     creditsM: $("creditsModal"), closeCred: $("closeCreditsModalBtn"),
+     purchasesList: $("purchasesList")
   };
 
-  const setTab = (isShop) => {
-    if(isShop) { els.shopTab.classList.add("active"); els.ticketsTab.classList.remove("active"); show(els.shopHead); userTicketsPoller.stop(); }
-    else { els.shopTab.classList.remove("active"); els.ticketsTab.classList.add("active"); hide(els.shopHead); updateActivity(); userTicketsPoller.start(); }
+  const setTab = (tabName) => {
+    // Hide all
+    els.shopTab.classList.remove("active");
+    els.ticketsTab.classList.remove("active");
+    if(els.purchasesTab) els.purchasesTab.classList.remove("active");
+    
+    userTicketsPoller.stop();
+
+    if(tabName === "shop") {
+        els.shopTab.classList.add("active");
+        show(els.shopHead);
+    } else if(tabName === "tickets") {
+        els.ticketsTab.classList.add("active");
+        hide(els.shopHead);
+        updateActivity();
+        userTicketsPoller.start();
+    } else if (tabName === "purchases") {
+        els.purchasesTab.classList.add("active");
+        hide(els.shopHead);
+        loadPurchases(); // Fetch orders
+    }
   };
-  els.goT?.addEventListener("click", () => setTab(false));
-  els.backShop?.addEventListener("click", () => setTab(true));
+
+  els.goT?.addEventListener("click", () => setTab("tickets"));
+  els.goPurch?.addEventListener("click", () => setTab("purchases"));
+  els.backShop?.addEventListener("click", () => setTab("shop"));
+  els.backPurch?.addEventListener("click", () => setTab("shop"));
 
   els.creditsBtn?.addEventListener("click", () => show(els.creditsM));
   els.closeCred?.addEventListener("click", () => hide(els.creditsM));
   els.creditsM?.addEventListener("click", (e) => { if(e.target===els.creditsM) hide(els.creditsM); });
 
-  // REPLAY BAR LOGIC
+  // REPLAY BAR
   const modeBar = document.createElement("div"); 
   modeBar.className = "chat-mode-bar"; 
-  modeBar.style.display = 'none'; // Initially hidden
+  modeBar.style.display = 'none';
   modeBar.innerHTML = `<span class="chat-mode-text"></span><button style="color:var(--text-muted);border:1px solid var(--text-muted);padding:2px 8px;">Cancel</button>`;
-  
-  modeBar.querySelector("button").onclick = () => { 
-      userMode = {type:null}; 
-      hide(modeBar); 
-  };
-
-  // PREPEND TO FOOTER (FIXED)
+  modeBar.querySelector("button").onclick = () => { userMode = {type:null}; hide(modeBar); };
   if(els.inputCont) els.inputCont.prepend(modeBar);
 
   const setReply = (msg) => {
     userMode = { type: "reply", msgId: msg.id, txt: (msg.text||"").slice(0,50), sender: msg.sender||"User" };
     modeBar.querySelector("span").textContent = `Replying to ${userMode.sender}: "${userMode.txt}..."`;
-    show(modeBar, 'flex'); // Force flex display
-    els.input.focus();
+    show(modeBar, 'flex'); els.input.focus();
   };
 
   const updateChatUI = (t) => {
     if (!els.input || !els.send) return;
-    if (!t) { els.input.disabled = els.send.disabled = true; els.input.placeholder = "Select a ticket..."; hide(modeBar); hide(els.closeT); hide(els.reopenT); els.tTitle.textContent = "No ticket"; return; }
+    if (!t) { els.input.disabled = els.send.disabled = true; els.input.placeholder = "Select a ticket..."; hide(modeBar); hide(els.closeT); els.tTitle.textContent = "No ticket"; return; }
     const closed = t.status === "closed";
     els.input.disabled = els.send.disabled = closed; els.input.placeholder = closed ? "Ticket closed." : "Type a message...";
-    closed ? (hide(els.closeT), show(els.reopenT), hide(modeBar)) : (show(els.closeT), hide(els.reopenT));
+    closed ? (hide(els.closeT), hide(modeBar)) : (show(els.closeT));
   };
   updateChatUI(null);
 
   const apiCall = async (action, extra = {}) => {
     try {
         const r = await fetch(API_URL, { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ action, initData: TG_INIT_DATA, ...extra }) });
-        if (r.status === 403) {
-            const data = await r.json();
-            return data;
-        }
+        if (r.status === 403) return await r.json();
         if (r.status === 401) return { ok: false, error: "auth_failed" };
         return await r.json();
     } catch (e) { console.error(e); return { ok: false, error: "network" }; }
+  };
+
+  // --- WARRANTY & PURCHASES LOGIC ---
+  const loadPurchases = async () => {
+      els.purchasesList.innerHTML = '<div class="chat-placeholder">Loading orders...</div>';
+      const res = await apiCall("user_get_purchases", {});
+      els.purchasesList.innerHTML = '';
+      if(res.ok && res.purchases && res.purchases.length) {
+          res.purchases.sort((a,b) => b.id - a.id).forEach(p => renderPurchaseItem(p));
+      } else {
+          els.purchasesList.innerHTML = '<div class="chat-placeholder">No orders found.</div>';
+      }
+  };
+
+  const renderPurchaseItem = (p) => {
+      const card = document.createElement("div"); card.className = "purchase-card";
+      const dateStr = formatTimestamp(p.created_at);
+      
+      let warrantyBadge = "";
+      let isWarrantyActive = false;
+      
+      if(p.warranty_ends_at) {
+          const expiryDate = new Date(p.warranty_ends_at.replace("Z", "")); // simple fix
+          const now = new Date();
+          isWarrantyActive = expiryDate > now;
+          if(isWarrantyActive) {
+              warrantyBadge = `<span class="badge-warranty active">Warranty Active</span>`;
+          } else {
+              warrantyBadge = `<span class="badge-warranty expired">Warranty Expired</span>`;
+          }
+      } else {
+          warrantyBadge = `<span class="badge-warranty expired">No Warranty</span>`;
+      }
+
+      card.innerHTML = `
+        <div class="pch-header">
+            <span class="pch-id">#${p.id}</span>
+            <span class="pch-date">${dateStr}</span>
+        </div>
+        <div class="pch-body">
+            <div class="pch-title">${p.product_name}</div>
+            <div class="pch-info">Total: ${p.total_price} CRD</div>
+            <div style="margin-top:8px;">${warrantyBadge}</div>
+        </div>
+        <div class="pch-actions">
+            <button class="btn-sm ${isWarrantyActive ? 'btn-support-active' : 'btn-support-disabled'}" ${!isWarrantyActive?'disabled':''}>
+                ${isWarrantyActive ? '🛠️ Support / Claim' : '⛔ Support Ended'}
+            </button>
+        </div>
+      `;
+      
+      // CLAIM BUTTON LOGIC
+      if(isWarrantyActive) {
+          card.querySelector("button").onclick = () => claimWarranty(p);
+      }
+
+      els.purchasesList.appendChild(card);
+  };
+
+  const claimWarranty = async (p) => {
+      if(!confirm(`Open a new support ticket for Order #${p.id}?`)) return;
+      const res = await apiCall("user_claim_warranty", { ticket_id: p.id });
+      if(res.ok) {
+          alert("Ticket opened! Switching to chat.");
+          setTab("tickets");
+          userTicketsPoller.bumpFast();
+      } else {
+          alert("Error: " + (res.error === "warranty_expired" ? "Warranty Expired!" : res.error));
+      }
   };
 
   const renderHeader = () => { if(STATE.user) { els.credits.textContent = STATE.user.credits; els.userLine.innerHTML = `User: <b>${STATE.user.username ? "@"+STATE.user.username : "ID "+STATE.user.id}</b>`; }};
@@ -309,9 +390,8 @@ function initUserApp() {
             } else els.mStatus.textContent = "Error: " + res.error;
         } else {
             STATE.user.credits = res.new_balance; els.credits.textContent = STATE.user.credits;
-            STATE.tickets.push(res.ticket); renderTickets(); selTicket(res.ticket.id);
             els.mStatus.className = "status-message status-ok"; els.mStatus.textContent = "Success!";
-            setTimeout(() => { closeModal(); setTab(false); STATE.buying = false; }, 1000);
+            setTimeout(() => { closeModal(); setTab("tickets"); STATE.buying = false; }, 1000);
             updateActivity(); userTicketsPoller.bumpFast();
         }
     } catch { STATE.buying = false; els.mBuy.disabled = false; els.mStatus.textContent = "Network error."; }
@@ -319,9 +399,9 @@ function initUserApp() {
 
   const renderTickets = () => {
     els.chatList.innerHTML = "";
-    if(!STATE.tickets.length) return (els.chatList.innerHTML = '<div style="padding:20px;text-align:center;color:#555;">No tickets found.</div>');
+    if(!STATE.tickets.length) return (els.chatList.innerHTML = '<div style="padding:20px;text-align:center;color:#555;">No open tickets.</div>');
     
-    STATE.tickets.sort((a,b) => (a.status===b.status ? b.id-a.id : (a.status==='open'?-1:1))).forEach(t => {
+    STATE.tickets.sort((a,b) => b.id-a.id).forEach(t => {
         const item = document.createElement("div"); item.className = "chat-item " + (t.id === STATE.selTicketId ? "active":"");
         item.dataset.ticketId = t.id;
         let unread = (t.id !== STATE.selTicketId) ? calculateUserUnread(t) : 0;
@@ -360,7 +440,7 @@ function initUserApp() {
         const res = await apiCall("user_send_message", { ticket_id: STATE.selTicketId, text, reply_to: userMode.type==="reply"?userMode.msgId:null });
         if(res.ok && res.ticket) {
             const idx = STATE.tickets.findIndex(x=>x.id===res.ticket.id);
-            if(idx>=0) STATE.tickets[idx] = res.ticket; else STATE.tickets.push(res.ticket);
+            if(idx>=0) STATE.tickets[idx] = res.ticket;
             renderTickets(); 
             const t = res.ticket;
             const seen = getSeenConfig(t);
@@ -386,23 +466,11 @@ function initUserApp() {
           if(res.ok) {
               const idx = STATE.tickets.findIndex(x=>x.id===STATE.selTicketId);
               if(idx>=0) { STATE.tickets[idx] = res.ticket || {...STATE.tickets[idx], status:'closed'}; }
-              renderTickets(); selTicket(STATE.selTicketId); // Refresh view to show closed state
+              renderTickets(); selTicket(STATE.selTicketId); 
           }
       };
       els.canConf.onclick = () => hide(els.confirm);
       els.confirm.onclick = (e) => { if(e.target===els.confirm) hide(els.confirm); }
-  });
-
-  els.reopenT?.addEventListener("click", async () => {
-      if(!STATE.selTicketId) return;
-      els.reopenT.textContent = "..."; els.reopenT.disabled = true;
-      const res = await apiCall("user_reopen_ticket", {ticket_id: STATE.selTicketId});
-      els.reopenT.textContent = "Reopen"; els.reopenT.disabled = false;
-      if(res.ok && res.ticket) {
-           const idx = STATE.tickets.findIndex(x=>x.id===STATE.selTicketId);
-           if(idx>=0) STATE.tickets[idx] = res.ticket;
-           renderTickets(); selTicket(res.ticket.id);
-      }
   });
 
   const userTicketsPoller = createSmartPoll(async () => {
@@ -427,18 +495,16 @@ function initUserApp() {
      }
   }, () => els.ticketsTab.classList.contains("active"));
 
-  // INIT SI GESTIONARE ERORI
+  // INIT
   (async () => {
      tg.ready(); tg.expand();
      const unsafe = tg.initDataUnsafe?.user;
      STATE.user = { id: unsafe?.id, username: unsafe?.username||"user", credits: 0 };
      renderHeader();
-     
      const res = await apiCall("init", {});
-     
      if(res.ok) {
         STATE.user.credits = res.user.credits; STATE.shop = res.shop; STATE.tickets = res.tickets||[];
-        renderHeader(); renderCats(STATE.shop); renderTickets(); setTab(true);
+        renderHeader(); renderCats(STATE.shop); renderTickets(); setTab("shop");
      } else {
         if (res.error === "access_denied_link_required") {
             if(els.mainWrapper) els.mainWrapper.style.display = "none";
