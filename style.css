@@ -1,11 +1,11 @@
 :root {
-  --bg-app: #0e0f11; --bg-surface: #16171a; --bg-surface-hover: #1e2024; --bg-input: #232529;
-  --accent: #ff1843; --accent-hover: #ff335c; --accent-glow: rgba(255, 24, 67, 0.45);
-  --text-primary: #ffffff; --text-secondary: #9ca3af; --text-muted: #6b7280;
-  --success: #10b981; --danger: #ef4444;
-  --radius-xl: 24px; --radius-lg: 16px; --radius-md: 12px; --radius-sm: 8px;
-  --font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  --shadow-card: 0 4px 20px rgba(0,0,0,0.4);
+  --bg-app: #0e0f11; --bg-surface: #16171a; --bg-surface-hover: #1e2024; --bg-input: #232529;
+  --accent: #ff1843; --accent-hover: #ff335c; --accent-glow: rgba(255, 24, 67, 0.45);
+  --text-primary: #ffffff; --text-secondary: #9ca3af; --text-muted: #6b7280;
+  --success: #10b981; --danger: #ef4444;
+  --radius-xl: 24px; --radius-lg: 16px; --radius-md: 12px; --radius-sm: 8px;
+  --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  --shadow-card: 0 4px 20px rgba(0,0,0,0.4);
 }
 *, *::before, *::after { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; font-family: var(--font-family); background-color: var(--bg-app); color: var(--text-primary); background-image: radial-gradient(circle at 50% -10%, #2a1216 0%, var(--bg-app) 50%); -webkit-font-smoothing: antialiased; }
@@ -148,7 +148,7 @@ html, body { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden;
 .btn-danger-ghost { background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); } .btn-danger-ghost:hover { background: rgba(239, 68, 68, 0.25); border-color: var(--danger); }
 .btn-success-ghost { background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.3); } .btn-success-ghost:hover { background: rgba(16, 185, 129, 0.25); border-color: var(--success); }
 
-/* --- NEW STYLES FOR PURCHASES --- */
+/* --- PURCHASES --- */
 .purchase-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 16px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 10px; }
 .pch-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px; }
 .pch-id { font-size: 11px; font-weight: 700; color: var(--text-muted); background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px; }
