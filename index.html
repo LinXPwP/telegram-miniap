@@ -2,47 +2,53 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>MiniApp Shop & Chat</title>
+  <title>RedGen MiniApp</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
   <link rel="stylesheet" href="style.css" />
 </head>
 <body data-page="user">
   <div class="app-wrapper" id="mainAppWrapper">
+    
     <div id="shopHeader" class="header-bar">
       <div class="header-left">
         <button class="btn-icon-back" id="shopBackBtn" style="display: none;">
              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-             <span class="back-btn-text"></span>
+             <span class="back-btn-text">Back</span>
         </button>
         <div class="brand-logo" id="headerTitle">
-            <img src="logo.png" class="header-logo-img" alt="R">
-            <span class="brand-text-suffix">3DG3N</span>
+            <span class="brand-text-prefix">RED</span><span class="brand-text-suffix">GEN</span>
         </div>
       </div>
       <div class="header-right">
         <button class="credits-pill-btn" id="creditsBtn">
-          <span class="label">CRD:</span><span class="value" id="creditsValue">0</span><span class="add-icon">+</span>
+          <span class="label">CRD:</span><span class="value" id="creditsValue">0</span>
         </button>
         <button class="btn-icon" id="goToGenBtn" aria-label="Generator">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10H12V2z"></path><path d="M12 2a10 10 0 0 1 10 10"></path><path d="M12 12 2.1 12.05"></path></svg>
         </button>
         <button class="btn-icon" id="goToTicketsBtn" aria-label="Tickets">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
         </button>
       </div>
     </div>
+    
     <div class="user-info-bar" id="userLine"></div>
 
     <main class="main-content">
+      
       <div id="shopTab" class="tab-section active">
         <div id="viewCategories" class="shop-view active-view">
-          <div class="hero-banner"><h1>Discover</h1><p>Choose a category to start.</p></div>
+          <div class="hero-header">
+              <h1>Digital Store</h1>
+              <p>Premium accounts & services.</p>
+          </div>
           <div id="categoriesGrid" class="visual-grid"></div>
-          <div class="shop-footer-note">RedGen Visual v3.0</div>
         </div>
         <div id="viewProducts" class="shop-view">
            <div id="productsGrid" class="visual-grid"></div>
@@ -51,62 +57,60 @@
       </div>
 
       <div id="generatorTab" class="tab-section">
-        <div class="gen-layout-v2">
+        <div class="gen-dashboard">
             
-            <div class="gen-header-v2">
-                <div class="gen-title-row">
-                    <div class="netflix-n-badge">N</div>
-                    <div class="gen-texts">
-                        <h2>Netflix Premium</h2>
-                        <span class="vip-badge">VIP ONLY</span>
-                    </div>
+            <div class="gen-header-card">
+                <div class="netflix-logo-box">N</div>
+                <div class="gen-header-text">
+                    <h2>Netflix Premium</h2>
+                    <span class="badge-vip">VIP ACCESS ONLY</span>
                 </div>
             </div>
 
-            <div class="gen-controls">
-                <div id="genStatusArea" class="status-msg-v2" style="display:none;"></div>
-                <button class="btn-gen-main" id="btnGenAction">
-                    <span class="btn-txt">GENERATE ACCOUNT</span>
-                    <span class="btn-spinner"></span>
+            <div class="gen-action-container">
+                <button class="btn-generate-big" id="btnGenAction">
+                    GENERATE ACCOUNT
                 </button>
+                <div id="genStatusArea" class="status-msg" style="display:none;"></div>
             </div>
 
-            <div id="genResultCard" class="result-panel-v2" style="display: none;">
+            <div id="genResultCard" class="result-dashboard-card" style="display: none;">
                 
-                <div class="result-top-row">
-                    <div class="res-info-block">
+                <div class="stats-row">
+                    <div class="stat-box">
                         <label>PLAN TYPE</label>
-                        <div class="res-value" id="resPlan">Premium Ultra HD</div>
+                        <div class="stat-value" id="resPlan">Standard</div>
                     </div>
-                    <div class="res-info-block right">
+                    <div class="stat-box right">
                         <label>REGION</label>
-                        <div class="res-value" id="resCountry">🇺🇸 United States</div>
+                        <div class="stat-value" id="resCountry">DE DE</div>
                     </div>
                 </div>
 
-                <div class="res-field-group">
+                <div class="field-group">
                     <label>LOGIN EMAIL</label>
-                    <div class="input-with-copy">
-                        <input type="text" id="resEmail" readonly value="waiting..." />
-                        <button class="mini-copy-btn" id="btnCopyEmail">COPY</button>
+                    <div class="input-row">
+                        <input type="text" id="resEmail" readonly value="loading..." class="mono-input" />
+                        <button class="btn-copy-small" id="btnCopyEmail">COPY</button>
                     </div>
                 </div>
 
-                <div class="res-field-group">
+                <div class="field-group">
                     <label>COOKIE (JSON)</label>
-                    <div class="textarea-wrapper">
-                        <textarea id="resCookieArea" readonly placeholder="Cookie data will appear here..."></textarea>
+                    <div class="code-editor-box">
+                        <textarea id="resCookieArea" readonly spellcheck="false"></textarea>
                     </div>
-                    <button class="btn-copy-full" id="btnCopyCookie">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                        COPY COOKIE DATA
-                    </button>
                 </div>
+
+                <button class="btn-copy-full" id="btnCopyCookie">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    COPY COOKIE DATA
+                </button>
 
             </div>
 
-            <div class="gen-spacer"></div>
-            <button class="btn-text-simple" id="backFromGenBtn">Back to Shop</button>
+            <div class="spacer"></div>
+            <button class="btn-back-link" id="backFromGenBtn">Back to Shop</button>
         </div>
       </div>
 
@@ -125,21 +129,20 @@
               </div>
             </div>
             <div class="chat-viewport" id="chatMessages">
-              <div class="chat-placeholder"><div class="icon">💬</div><p>Open menu and select a ticket.</p></div>
+              <div class="chat-placeholder"><div class="icon">💬</div><p>Select a ticket to chat.</p></div>
             </div>
             <div class="chat-footer chat-input">
               <div class="input-wrapper">
                 <input id="chatInput" type="text" placeholder="Type a message..." autocomplete="off" disabled />
-                <button id="chatSendBtn" class="btn-send" disabled>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                </button>
+                <button id="chatSendBtn" class="btn-send" disabled>➤</button>
               </div>
-              <button class="btn-block-back" id="backToShopBtn"><span style="margin-right: 6px;">&larr;</span> Back to Shop</button>
+              <button class="btn-block-back" id="backToShopBtn">Back to Shop</button>
             </div>
           </div>
         </div>
         <div class="tickets-backdrop" id="ticketsBackdrop"></div>
       </div>
+
     </main>
 
     <div id="productPanel" class="modal-overlay">
@@ -151,7 +154,7 @@
                 <div class="modal-img-placeholder" id="panelImgPlaceholder">🎁</div>
             </div>
             <div class="modal-header-compact">
-                <h2 id="panelName">Product Name</h2>
+                <h2 id="panelName">Product</h2>
                 <div class="modal-price" id="panelPrice">0 CRD</div>
             </div>
         </div>
@@ -170,73 +173,37 @@
       </div>
     </div>
 
-    <div id="confirmActionModal" class="modal-overlay">
-      <div class="modal-card" style="text-align: center;">
-        <div class="modal-header"><h2 style="font-size:18px; margin-bottom:5px;">Confirmation</h2></div>
-        <div class="modal-body"><p class="modal-desc">Are you sure you want to close this ticket?</p></div>
-        <div class="modal-footer modal-actions-grid">
-          <button class="btn-secondary" id="confirmCancelBtn">Cancel</button>
-          <button class="btn-primary btn-danger-solid" id="confirmOkBtn">Close Ticket</button>
+    <div id="onlyTelegramError" class="access-error-screen" style="display: none;">
+        <div class="error-card">
+            <h2>Restricted Access</h2>
+            <p>Please open this MiniApp inside Telegram.</p>
         </div>
-      </div>
     </div>
 
+    <div id="linkAccountError" class="access-error-screen" style="display: none;">
+        <div class="error-card">
+            <h2>Connection Required</h2>
+            <p>You must link your Discord account to access the shop.</p>
+            <div class="instructions-list">
+                 <div class="instruction-step">1. Join Discord Server</div>
+                 <div class="instruction-step">2. Type <code>/linkaccount</code></div>
+            </div>
+            <a href="https://discord.gg/gc2VGGakQM" target="_blank" class="btn-modern">Join Discord</a>
+        </div>
+    </div>
+    
     <div id="creditsModal" class="modal-overlay">
         <div class="modal-card">
             <button class="modal-close" id="closeCreditsModalBtn">&times;</button>
-            <div class="modal-header"><h2 style="color: var(--accent);">Add Funds</h2></div>
-            <div class="modal-body" style="text-align: center; padding: 0 10px;">
-                <p class="modal-desc" style="font-size: 14px; color: #ccc;">Follow these steps to buy credits:</p>
-                <div class="instructions-list">
-                    <div class="instruction-step"><span class="step-num">1</span><span>Join our Discord Server.</span></div>
-                    <div class="instruction-step"><span class="step-num">2</span><span>Open a support ticket.</span></div>
-                    <div class="instruction-step"><span class="step-num">3</span><span>Or contact owner <b>"LinX"</b>.</span></div>
-                </div>
-                <a href="https://discord.gg/gc2VGGakQM" target="_blank" class="btn-modern btn-discord-solid">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;"><path d="M18.8943 4.34399C17.5183 3.71467 16.057 3.256 14.5317 3C14.3396 3.33067 14.127 3.77867 13.9829 4.11467C12.353 3.88133 10.7329 3.88133 9.13096 4.11467C8.98696 3.77867 8.76696 3.33067 8.58296 3C7.05096 3.256 5.58963 3.71467 4.21363 4.34399C1.43963 8.44533 0.690294 12.448 1.0543 16.3973C2.90696 17.752 4.6983 18.5733 6.4583 19.1147C6.8903 18.5307 7.28296 17.912 7.62696 17.2613C6.98696 17.0213 6.37896 16.7333 5.80296 16.4027C5.95496 16.2907 6.10696 16.1707 6.25096 16.0507C9.57896 17.5867 13.563 17.5867 16.859 16.0507C17.003 16.1787 17.155 16.2907 17.307 16.4027C16.731 16.7333 16.123 17.0213 15.483 17.2613C15.835 17.912 16.227 18.5307 16.659 19.1147C18.419 18.5733 20.2103 17.752 22.063 16.3973C22.463 12.16 21.463 8.21867 18.8943 4.34399ZM8.05896 13.5013C7.06696 13.5013 6.25096 12.5893 6.25096 11.4773C6.25096 10.3653 7.03496 9.45333 8.05896 9.45333C9.09096 9.45333 9.90696 10.3653 9.89096 11.4773C9.89096 12.5893 9.08296 13.5013 8.05896 13.5013ZM15.059 13.5013C14.067 13.5013 13.251 12.5893 13.251 11.4773C13.251 10.3653 14.035 9.45333 15.059 9.45333C16.091 9.45333 16.907 10.3653 16.891 11.4773C16.891 12.5893 16.091 13.5013 15.059 13.5013Z"></path></svg>
-                    <span>Join Discord</span>
-                </a>
+            <h2>Add Funds</h2>
+            <div class="modal-body" style="text-align:center;">
+                <p>Join our Discord to purchase credits.</p>
+                <a href="https://discord.gg/gc2VGGakQM" target="_blank" class="btn-modern">Join Discord</a>
             </div>
         </div>
     </div>
+
   </div> 
-  <div id="onlyTelegramError" class="access-error-screen" style="display: none;">
-    <div class="error-card">
-        <div class="lock-icon-wrapper"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg><div class="lock-glow"></div></div>
-        <h2>Restricted Access</h2>
-        <p>This application runs exclusively within the Telegram ecosystem.</p>
-        <div class="error-actions-modern">
-            <a href="https://t.me/r3dtest_bot" class="btn-modern btn-tg-gradient"><span>Open Bot</span></a>
-        </div>
-    </div>
-  </div>
-
-  <div id="linkAccountError" class="access-error-screen" style="display: none;">
-    <div class="error-card">
-        <div class="lock-icon-wrapper">
-             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
-             <div class="lock-glow" style="background: radial-gradient(circle, rgba(88, 101, 242, 0.4) 0%, transparent 70%);"></div>
-        </div>
-        <h2>Connection Required</h2>
-        <p>To access this shop, you must link your Discord account.</p>
-        
-        <div class="instructions-list" style="margin-bottom:20px; text-align:left;">
-             <div class="instruction-step" style="border:none; background:rgba(255,255,255,0.05);">
-                <span class="step-num" style="background:#5865F2;">1</span>
-                <span>Join our Discord Server.</span>
-             </div>
-             <div class="instruction-step" style="border:none; background:rgba(255,255,255,0.05);">
-                <span class="step-num" style="background:#5865F2;">2</span>
-                <span>Type command <code style="background:#000;padding:2px 5px;border-radius:4px;color:#fff;">/linkaccount</code></span>
-             </div>
-        </div>
-
-        <div class="error-actions-modern">
-            <a href="https://discord.gg/gc2VGGakQM" target="_blank" class="btn-modern btn-discord-solid"><span>Join Discord</span></a>
-        </div>
-    </div>
-  </div>
-
   <script src="app.js"></script>
 </body>
 </html>
