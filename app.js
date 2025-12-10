@@ -1,4 +1,4 @@
-// app.js - FIXED: Handles Access Denied Screen Properly + Netflix Generator
+// app.js - FIXED: Handles Access Denied Screen Properly
 
 const API_URL = "https://api.redgen.vip/";
 const $ = (id) => document.getElementById(id);
@@ -78,8 +78,8 @@ function renderDiscordMessages(msgs, { container, canReply, onReply, onJumpTo, s
   if (!container) return;
   const wasNearBottom = container.scrollHeight - (container.scrollTop + container.clientHeight) < 150;
   if (!msgs?.length) {
-     if (!container.querySelector('.chat-placeholder')) container.innerHTML = `<div class="chat-placeholder"><div class="icon">💬</div><p>Start conversation...</p></div>`;
-     return;
+      if (!container.querySelector('.chat-placeholder')) container.innerHTML = `<div class="chat-placeholder"><div class="icon">💬</div><p>Start conversation...</p></div>`;
+      return;
   }
   container.querySelector('.chat-placeholder')?.remove();
   
@@ -142,67 +142,65 @@ function renderDiscordMessages(msgs, { container, canReply, onReply, onJumpTo, s
 function initUserApp() {
   const tg = window.Telegram?.WebApp;
   if (!tg?.initData) {
-     hide($("mainAppWrapper")); show($("onlyTelegramError"));
-     return console.warn("Access Denied: Not in Telegram.");
+      hide($("mainAppWrapper")); show($("onlyTelegramError"));
+      return console.warn("Access Denied: Not in Telegram.");
   }
 
   const TG_INIT_DATA = tg.initData;
-  let STATE = { user: null, shop: null, tickets: [], selTicketId: null, sending: false, buying: false };
+  let STATE = { user: null, shop: null, tickets: [], selTicketId: null, sending: false, buying: false, generating: false };
   let SELECTED_PRODUCT = null, SELECTED_VARIANT = null;
   let userMode = { type: null, msgId: null, txt: "", sender: "" };
   
   // Elements
   const els = {
-     mainWrapper: $("mainAppWrapper"),
-     linkError: $("linkAccountError"),
-     credits: $("creditsValue"), creditsBtn: $("creditsBtn"), userLine: $("userLine"),
-     catGrid: $("categoriesGrid"), prodGrid: $("productsGrid"), 
-     viewCat: $("viewCategories"), viewProd: $("viewProducts"),
-     backBtn: $("shopBackBtn"), title: $("headerTitle"), emptyMsg: $("emptyProductsMsg"),
-     modal: $("productPanel"), mName: $("panelName"), mDesc: $("panelDesc"), mPrice: $("panelPrice"),
-     mTypes: $("panelTypesContainer"), mTypesGrid: $("panelTypesGrid"), mBuy: $("panelBuyBtn"),
-     mClose: $("panelCloseBtn"), mStatus: $("panelStatus"), mImg: $("panelImg"), mPlace: $("panelImgPlaceholder"),
-     chatList: $("chatList"), tTitle: $("ticketTitle"), msgs: $("chatMessages"), 
-     input: $("chatInput"), send: $("chatSendBtn"), 
-     closeT: $("userTicketCloseBtn"), reopenT: $("userTicketReopenBtn"), 
-     menu: $("ticketsMenuToggle"), backdrop: $("ticketsBackdrop"),
-     shopTab: $("shopTab"), ticketsTab: $("ticketsTab"), toolsTab: $("toolsTab"), // ADDED
-     shopHead: $("shopHeader"),
-     goT: $("goToTicketsBtn"), goTools: $("goToToolsBtn"), backShop: $("backToShopBtn"), backShopFromTools: $("backToShopFromTools"), // ADDED
-     inputCont: $(".chat-input"),
-     confirm: $("confirmActionModal"), okConf: $("confirmOkBtn"), canConf: $("confirmCancelBtn"),
-     creditsM: $("creditsModal"), closeCred: $("closeCreditsModalBtn"),
-     // NETFLIX GENERATOR
-     btnGenNetflix: $("btnGenerateNetflix"), netflixOut: $("netflixOutputArea"), netflixRes: $("netflixResultText"), netflixErr: $("netflixErrorMsg"), netflixErrText: $("netflixErrorText"), copyCookies: $("copyCookiesBtn"), netflixDetails: $("netflixAccountDetails")
+      mainWrapper: $("mainAppWrapper"),
+      linkError: $("linkAccountError"),
+      credits: $("creditsValue"), creditsBtn: $("creditsBtn"), userLine: $("userLine"),
+      catGrid: $("categoriesGrid"), prodGrid: $("productsGrid"), 
+      viewCat: $("viewCategories"), viewProd: $("viewProducts"),
+      backBtn: $("shopBackBtn"), title: $("headerTitle"), emptyMsg: $("emptyProductsMsg"),
+      modal: $("productPanel"), mName: $("panelName"), mDesc: $("panelDesc"), mPrice: $("panelPrice"),
+      mTypes: $("panelTypesContainer"), mTypesGrid: $("panelTypesGrid"), mBuy: $("panelBuyBtn"),
+      mClose: $("panelCloseBtn"), mStatus: $("panelStatus"), mImg: $("panelImg"), mPlace: $("panelImgPlaceholder"),
+      chatList: $("chatList"), tTitle: $("ticketTitle"), msgs: $("chatMessages"), 
+      input: $("chatInput"), send: $("chatSendBtn"), 
+      closeT: $("userTicketCloseBtn"), reopenT: $("userTicketReopenBtn"), 
+      menu: $("ticketsMenuToggle"), backdrop: $("ticketsBackdrop"),
+      shopTab: $("shopTab"), ticketsTab: $("ticketsTab"), genTab: $("generatorTab"), // New Tab
+      shopHead: $("shopHeader"),
+      goT: $("goToTicketsBtn"), goGen: $("goToGenBtn"), backShop: $("backToShopBtn"), backGen: $("backFromGenBtn"), inputCont: $(".chat-input"),
+      confirm: $("confirmActionModal"), okConf: $("confirmOkBtn"), canConf: $("confirmCancelBtn"),
+      creditsM: $("creditsModal"), closeCred: $("closeCreditsModalBtn"),
+      // Generator Elements
+      genBtnAction: $("btnGenAction"), genResult: $("genResultCard"), genStatus: $("genStatusPill"),
+      resPlan: $("resPlan"), resCountry: $("resCountry"), resEmail: $("resEmail"), resCookieArea: $("resCookieArea"), btnCopy: $("btnCopyCookie")
   };
 
   const setTab = (tabName) => {
-    // Reset all tabs
+    // Reset Views
     els.shopTab.classList.remove("active");
     els.ticketsTab.classList.remove("active");
-    els.toolsTab.classList.remove("active");
-    els.ticketsTab.classList.remove("tickets-drawer-open"); // Close drawer if open
+    els.genTab.classList.remove("active");
+    userTicketsPoller.stop();
 
     if(tabName === 'shop') {
         els.shopTab.classList.add("active");
         show(els.shopHead);
-        userTicketsPoller.stop();
-    } else if (tabName === 'tickets') {
+    } else if(tabName === 'tickets') {
         els.ticketsTab.classList.add("active");
         hide(els.shopHead);
-        updateActivity();
+        updateActivity(); 
         userTicketsPoller.start();
-    } else if (tabName === 'tools') {
-        els.toolsTab.classList.add("active");
+    } else if(tabName === 'generator') {
+        els.genTab.classList.add("active");
         hide(els.shopHead);
-        userTicketsPoller.stop();
     }
   };
 
   els.goT?.addEventListener("click", () => setTab('tickets'));
-  els.goTools?.addEventListener("click", () => setTab('tools'));
   els.backShop?.addEventListener("click", () => setTab('shop'));
-  els.backShopFromTools?.addEventListener("click", () => setTab('shop'));
+  els.goGen?.addEventListener("click", () => setTab('generator'));
+  els.backGen?.addEventListener("click", () => setTab('shop'));
 
   els.creditsBtn?.addEventListener("click", () => show(els.creditsM));
   els.closeCred?.addEventListener("click", () => hide(els.creditsM));
@@ -232,9 +230,10 @@ function initUserApp() {
     try {
         const r = await fetch(API_URL, { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ action, initData: TG_INIT_DATA, ...extra }) });
         
+        // Daca serverul raspunde cu 403, cel mai probabil este eroarea de link
         if (r.status === 403) {
             const data = await r.json();
-            return data; 
+            return data; // Returnam eroarea ca sa o putem procesa
         }
         if (r.status === 401) return { ok: false, error: "auth_failed" };
         
@@ -242,68 +241,66 @@ function initUserApp() {
     } catch (e) { console.error(e); return { ok: false, error: "network" }; }
   };
 
-  // --- NETFLIX GENERATOR LOGIC ---
-  els.btnGenNetflix?.addEventListener("click", async () => {
-      if(els.btnGenNetflix.classList.contains("loading")) return;
+  // --- GENERATOR LOGIC ---
+  const handleNetflixGenerate = async () => {
+    if(STATE.generating) return;
+    STATE.generating = true;
+    
+    // UI Loading
+    els.genBtnAction.classList.add("loading");
+    els.genBtnAction.querySelector(".btn-text").textContent = "GENERATING...";
+    hide(els.genResult);
+    hide(els.genStatus);
 
-      // Reset UI
-      hide(els.netflixOut); hide(els.netflixErr); hide(els.netflixDetails);
-      els.btnGenNetflix.classList.add("loading");
-      
-      try {
-          const res = await apiCall("generate_netflix", {});
-          
-          if (res.ok && res.cookies) {
-              // SUCCESS - Parse Details
-              const details = res.details || {};
-              const plan = details.plan || "Premium";
-              const country = details.country || "Unknown";
-              const email = details.email || "Hidden";
+    try {
+        const res = await apiCall("generate_netflix");
+        
+        if (res.ok && res.cookies) {
+             // Success
+             els.resPlan.textContent = res.details?.plan || "Premium";
+             els.resCountry.textContent = res.details?.country || "Global";
+             els.resEmail.textContent = res.details?.email || "********@gmail.com";
+             els.resCookieArea.value = res.cookies;
+             
+             show(els.genResult);
+             els.genStatus.textContent = "Success";
+             els.genStatus.className = "status-pill status-success";
+             show(els.genStatus);
+        } else {
+             // Error Handling
+             els.genStatus.className = "status-pill status-error";
+             show(els.genStatus);
+             
+             if (res.error === "missing_role") {
+                 els.genStatus.innerHTML = "VIP Role Required. <a href='https://discord.gg/gc2VGGakQM' style='color:#fff;text-decoration:underline'>Join Discord</a>";
+             } else if (res.error === "out_of_stock") {
+                 els.genStatus.textContent = "Stock Empty. Try later.";
+             } else {
+                 els.genStatus.textContent = "Error: " + (res.error || "Unknown");
+             }
+        }
+    } catch (e) {
+        els.genStatus.textContent = "Network Error";
+        els.genStatus.className = "status-pill status-error";
+        show(els.genStatus);
+    } finally {
+        STATE.generating = false;
+        els.genBtnAction.classList.remove("loading");
+        els.genBtnAction.querySelector(".btn-text").textContent = "GENERATE ACCESS";
+    }
+  };
 
-              // Generate Details HTML
-              els.netflixDetails.innerHTML = `
-                  <div class="acc-detail-item">
-                      <span class="acc-label">PLAN</span>
-                      <span class="acc-value val-plan">${plan}</span>
-                  </div>
-                  <div class="acc-detail-item">
-                      <span class="acc-label">COUNTRY</span>
-                      <span class="acc-value">${country}</span>
-                  </div>
-                  <div class="acc-detail-item full-row">
-                      <span class="acc-label">EMAIL</span>
-                      <span class="acc-value val-email">${email}</span>
-                  </div>
-              `;
-              
-              show(els.netflixDetails, 'grid');
-              els.netflixRes.value = res.cookies;
-              show(els.netflixOut);
-              smartScrollToBottom(els.toolsTab, true);
-          } else {
-              // ERROR HANDLING
-              show(els.netflixErr);
-              if (res.error === "missing_role" || res.required_role === "1406925140985643011") {
-                   els.netflixErrText.innerHTML = `Access Denied. You need the <b>VIP Role</b> <span style="font-size:10px;opacity:0.7;">(ID: 1406925140985643011)</span> linked to your account to use this generator.`;
-              } else {
-                   els.netflixErrText.textContent = res.error || "Unknown error occurred.";
-              }
-          }
-      } catch (e) {
-          show(els.netflixErr); els.netflixErrText.textContent = "Network error. Try again.";
-      } finally {
-          els.btnGenNetflix.classList.remove("loading");
-      }
+  els.genBtnAction?.addEventListener("click", handleNetflixGenerate);
+  els.btnCopy?.addEventListener("click", () => {
+      els.resCookieArea.style.display = 'block';
+      els.resCookieArea.select();
+      document.execCommand('copy');
+      els.resCookieArea.style.display = 'none';
+      const originalText = els.btnCopy.innerHTML;
+      els.btnCopy.innerHTML = "✓ Copied!";
+      setTimeout(() => els.btnCopy.innerHTML = originalText, 2000);
   });
-
-  els.copyCookies?.addEventListener("click", () => {
-      els.netflixRes.select();
-      document.execCommand("copy");
-      const originalText = els.copyCookies.textContent;
-      els.copyCookies.textContent = "Copied!";
-      setTimeout(() => els.copyCookies.textContent = originalText, 1500);
-  });
-  // ------------------------------
+  // -----------------------
 
   const renderHeader = () => { if(STATE.user) { els.credits.textContent = STATE.user.credits; els.userLine.innerHTML = `User: <b>${STATE.user.username ? "@"+STATE.user.username : "ID "+STATE.user.id}</b>`; }};
 
@@ -495,14 +492,14 @@ function initUserApp() {
          if(STATE.selTicketId) {
              const t = STATE.tickets.find(x=>x.id===STATE.selTicketId);
              if(t) {
-                 const unread = calculateUserUnread(t);
-                 if(unread>0) { 
-                     apiCall("mark_seen", {ticket_id:t.id}); 
-                     if(t.messages.length) t.last_read_user=t.messages[t.messages.length-1].id; 
-                 }
-                 const seen = getSeenConfig(t);
-                 renderDiscordMessages(t.messages, {container: els.msgs, ticket:t, canReply:t.status==="open", onReply:setReply, seenConfig: seen });
-                 updateChatUI(t);
+                const unread = calculateUserUnread(t);
+                if(unread>0) { 
+                    apiCall("mark_seen", {ticket_id:t.id}); 
+                    if(t.messages.length) t.last_read_user=t.messages[t.messages.length-1].id; 
+                }
+                const seen = getSeenConfig(t);
+                renderDiscordMessages(t.messages, {container: els.msgs, ticket:t, canReply:t.status==="open", onReply:setReply, seenConfig: seen });
+                updateChatUI(t);
              }
          }
          renderTickets();
@@ -511,25 +508,30 @@ function initUserApp() {
 
   // INIT SI GESTIONARE ERORI
   (async () => {
-     tg.ready(); tg.expand();
-     const unsafe = tg.initDataUnsafe?.user;
-     STATE.user = { id: unsafe?.id, username: unsafe?.username||"user", credits: 0 };
-     renderHeader();
-     
-     const res = await apiCall("init", {});
-     
-     if(res.ok) {
+      tg.ready(); tg.expand();
+      const unsafe = tg.initDataUnsafe?.user;
+      STATE.user = { id: unsafe?.id, username: unsafe?.username||"user", credits: 0 };
+      renderHeader();
+      
+      const res = await apiCall("init", {});
+      
+      if(res.ok) {
         // Daca totul e ok, afisam magazinul
         STATE.user.credits = res.user.credits; STATE.shop = res.shop; STATE.tickets = res.tickets||[];
         renderHeader(); renderCats(STATE.shop); renderTickets(); setTab('shop');
-     } else {
+      } else {
+        // --- AICI ESTE FIX-UL PENTRU ECRANUL DE DISCORD ---
         if (res.error === "access_denied_link_required") {
+            // Ascundem COMPLET interfata principala
             if(els.mainWrapper) els.mainWrapper.style.display = "none";
+            // Afisam ecranul de eroare specific
             if(els.linkError) els.linkError.style.display = "flex";
             return;
         }
+
+        // Alte erori (afisate in header)
         els.userLine.innerHTML = `<span style="color:red">Error: ${res.error||"Auth"}</span>`; show(els.userLine);
-     }
+      }
   })();
 }
 
