@@ -147,3 +147,19 @@ html, body { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden;
 .btn-sm { padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
 .btn-danger-ghost { background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); } .btn-danger-ghost:hover { background: rgba(239, 68, 68, 0.25); border-color: var(--danger); }
 .btn-success-ghost { background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.3); } .btn-success-ghost:hover { background: rgba(16, 185, 129, 0.25); border-color: var(--success); }
+
+/* --- NEW STYLES FOR PURCHASES --- */
+.purchase-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 16px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 10px; }
+.pch-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px; }
+.pch-id { font-size: 11px; font-weight: 700; color: var(--text-muted); background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px; }
+.pch-date { font-size: 11px; color: var(--text-muted); }
+.pch-body { flex: 1; }
+.pch-title { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+.pch-info { font-size: 12px; color: var(--accent); font-weight: 700; }
+.pch-actions { display: flex; justify-content: flex-end; margin-top: 4px; }
+.badge-warranty { font-size: 10px; font-weight: 700; padding: 4px 8px; border-radius: 6px; text-transform: uppercase; display: inline-block; }
+.badge-warranty.active { background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.3); }
+.badge-warranty.expired { background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); }
+.btn-support-active { background: var(--bg-surface); border: 1px solid var(--accent); color: var(--accent); }
+.btn-support-active:hover { background: var(--accent); color: #fff; }
+.btn-support-disabled { background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid rgba(255,255,255,0.05); cursor: not-allowed; opacity: 0.7; }
