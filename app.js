@@ -1,6 +1,6 @@
-// app.js - FIXED: Warranty Date Logic (Timezone Fix)
+// app.js - FIXED: Claim Modal & Purchases Filter
 
-const API_URL = "https://api.redgen.vip/"; // Sau URL-ul tau de tunel/domeniu
+const API_URL = "https://api.redgen.vip/";
 const $ = (id) => document.getElementById(id);
 const show = (el, d = 'flex') => { if(el) el.style.display = d; };
 const hide = (el) => { if(el) el.style.display = 'none'; };
@@ -35,7 +35,7 @@ function createSmartPoll(fetchFn, isEnabledFn) {
 // 2. UTILS
 const formatTimestamp = (ts) => {
     if (!ts) return ""; 
-    const d = new Date(ts); // Browser handles UTC automatically if 'Z' is present
+    const d = new Date(ts);
     return isNaN(d.getTime()) ? "" : `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}, ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
 };
 
@@ -150,6 +150,7 @@ function initUserApp() {
   let STATE = { user: null, shop: null, tickets: [], selTicketId: null, sending: false, buying: false };
   let SELECTED_PRODUCT = null, SELECTED_VARIANT = null;
   let userMode = { type: null, msgId: null, txt: "", sender: "" };
+  let CLAIM_TARGET_ID = null; // Store ID for modal
   
   const els = {
      mainWrapper: $("mainAppWrapper"),
@@ -171,11 +172,12 @@ function initUserApp() {
      inputCont: $("chatFooter"), 
      confirm: $("confirmActionModal"), okConf: $("confirmOkBtn"), canConf: $("confirmCancelBtn"),
      creditsM: $("creditsModal"), closeCred: $("closeCreditsModalBtn"),
-     purchasesList: $("purchasesList")
+     purchasesList: $("purchasesList"),
+     // CLAIM MODAL ELS
+     claimM: $("claimWarrantyModal"), claimIn: $("claimReasonInput"), claimSub: $("claimSubmitBtn"), claimCan: $("claimCancelBtn")
   };
 
   const setTab = (tabName) => {
-    // Hide all
     els.shopTab.classList.remove("active");
     els.ticketsTab.classList.remove("active");
     if(els.purchasesTab) els.purchasesTab.classList.remove("active");
@@ -193,7 +195,7 @@ function initUserApp() {
     } else if (tabName === "purchases") {
         els.purchasesTab.classList.add("active");
         hide(els.shopHead);
-        loadPurchases(); // Fetch orders
+        loadPurchases(); 
     }
   };
 
@@ -256,13 +258,10 @@ function initUserApp() {
       
       let warrantyBadge = "";
       let isWarrantyActive = false;
-      let warrantyMsg = "";
       
       if(p.warranty_ends_at) {
-          // FIX: Do NOT remove "Z". Allow 'new Date()' to handle UTC correctly.
           const expiryDate = new Date(p.warranty_ends_at); 
           const now = new Date();
-          
           isWarrantyActive = expiryDate.getTime() > now.getTime();
           
           if(isWarrantyActive) {
@@ -296,18 +295,39 @@ function initUserApp() {
       // CLAIM BUTTON LOGIC
       const btn = card.querySelector("button");
       if(isWarrantyActive) {
-          btn.onclick = () => claimWarranty(p);
+          btn.onclick = () => openClaimModal(p);
       } else {
           btn.disabled = true;
       }
-
       els.purchasesList.appendChild(card);
   };
 
-  const claimWarranty = async (p) => {
-      if(!confirm(`Open a new support ticket for Order #${p.id}?`)) return;
-      const res = await apiCall("user_claim_warranty", { ticket_id: p.id });
+  // NEW: Open Claim Modal instead of direct alert
+  const openClaimModal = (p) => {
+      CLAIM_TARGET_ID = p.id;
+      els.claimIn.value = ""; // Clear previous input
+      show(els.claimM);
+  };
+
+  // Handle Modal Actions
+  els.claimCan.onclick = () => { hide(els.claimM); CLAIM_TARGET_ID = null; };
+  els.claimM.onclick = (e) => { if(e.target===els.claimM) { hide(els.claimM); CLAIM_TARGET_ID = null; }};
+
+  els.claimSub.onclick = async () => {
+      if(!CLAIM_TARGET_ID) return;
+      const reason = els.claimIn.value.trim();
+      if(!reason) return alert("Please describe the issue.");
+      
+      els.claimSub.textContent = "Sending...";
+      els.claimSub.disabled = true;
+      
+      const res = await apiCall("user_claim_warranty", { ticket_id: CLAIM_TARGET_ID, reason: reason });
+      
+      els.claimSub.textContent = "Submit Claim";
+      els.claimSub.disabled = false;
+      
       if(res.ok) {
+          hide(els.claimM);
           alert("Ticket opened! Switching to chat.");
           setTab("tickets");
           userTicketsPoller.bumpFast();
