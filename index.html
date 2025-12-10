@@ -113,6 +113,22 @@
       </div>
     </div>
 
+    <div id="claimWarrantyModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header"><h2 style="color: var(--accent);">Claim Warranty</h2></div>
+            <div class="modal-body">
+                <p class="modal-desc" style="margin-bottom:12px;">Please describe the issue with your product to open a support ticket:</p>
+                <div class="input-wrapper" style="border-radius:12px; padding:10px; background:rgba(0,0,0,0.2);">
+                    <textarea id="claimReasonInput" rows="4" style="width:100%; background:transparent; border:none; color:#fff; resize:none; font-family:inherit; outline:none;" placeholder="E.g. The account is invalid..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer modal-actions-grid" style="margin-top:20px;">
+                <button class="btn-secondary" id="claimCancelBtn">Cancel</button>
+                <button class="btn-primary" id="claimSubmitBtn">Submit Claim</button>
+            </div>
+        </div>
+    </div>
+
     <div id="creditsModal" class="modal-overlay">
         <div class="modal-card">
             <button class="modal-close" id="closeCreditsModalBtn">&times;</button>
