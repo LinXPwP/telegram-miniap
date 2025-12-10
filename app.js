@@ -1,4 +1,4 @@
-// app.js - FIXED: Warranty Logic & Purchases List
+// app.js - FIXED: Warranty Logic (UTC) & Purchases List
 
 const API_URL = "https://api.redgen.vip/";
 const $ = (id) => document.getElementById(id);
@@ -162,9 +162,9 @@ function initUserApp() {
      input: $("chatInput"), send: $("chatSendBtn"), 
      closeT: $("userTicketCloseBtn"), reopenT: $("userTicketReopenBtn"), 
      menu: $("ticketsMenuToggle"), backdrop: $("ticketsBackdrop"),
-     shopTab: $("shopTab"), ticketsTab: $("ticketsTab"), purchasesTab: $("purchasesTab"), // New
+     shopTab: $("shopTab"), ticketsTab: $("ticketsTab"), purchasesTab: $("purchasesTab"), 
      shopHead: $("shopHeader"),
-     goT: $("goToTicketsBtn"), goPurch: $("goToPurchasesBtn"), backShop: $("backToShopBtn"), backPurch: $("backFromPurchases"), // New Buttons
+     goT: $("goToTicketsBtn"), goPurch: $("goToPurchasesBtn"), backShop: $("backToShopBtn"), backPurch: $("backFromPurchases"), 
      inputCont: $("chatFooter"), 
      confirm: $("confirmActionModal"), okConf: $("confirmOkBtn"), canConf: $("confirmCancelBtn"),
      creditsM: $("creditsModal"), closeCred: $("closeCreditsModalBtn"),
@@ -172,7 +172,6 @@ function initUserApp() {
   };
 
   const setTab = (tabName) => {
-    // Hide all
     els.shopTab.classList.remove("active");
     els.ticketsTab.classList.remove("active");
     if(els.purchasesTab) els.purchasesTab.classList.remove("active");
@@ -190,7 +189,7 @@ function initUserApp() {
     } else if (tabName === "purchases") {
         els.purchasesTab.classList.add("active");
         hide(els.shopHead);
-        loadPurchases(); // Fetch orders
+        loadPurchases(); 
     }
   };
 
@@ -255,9 +254,11 @@ function initUserApp() {
       let isWarrantyActive = false;
       
       if(p.warranty_ends_at) {
-          const expiryDate = new Date(p.warranty_ends_at.replace("Z", "")); // simple fix
+          // --- FIX: USE UTC TIME CORRECTLY ---
+          const expiryDate = new Date(p.warranty_ends_at); 
           const now = new Date();
           isWarrantyActive = expiryDate > now;
+          
           if(isWarrantyActive) {
               warrantyBadge = `<span class="badge-warranty active">Warranty Active</span>`;
           } else {
@@ -284,7 +285,6 @@ function initUserApp() {
         </div>
       `;
       
-      // CLAIM BUTTON LOGIC
       if(isWarrantyActive) {
           card.querySelector("button").onclick = () => claimWarranty(p);
       }
