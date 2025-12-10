@@ -173,7 +173,7 @@ function initUserApp() {
      confirm: $("confirmActionModal"), okConf: $("confirmOkBtn"), canConf: $("confirmCancelBtn"),
      creditsM: $("creditsModal"), closeCred: $("closeCreditsModalBtn"),
      // NETFLIX GENERATOR
-     btnGenNetflix: $("btnGenerateNetflix"), netflixOut: $("netflixOutputArea"), netflixRes: $("netflixResultText"), netflixErr: $("netflixErrorMsg"), netflixErrText: $("netflixErrorText"), copyCookies: $("copyCookiesBtn")
+     btnGenNetflix: $("btnGenerateNetflix"), netflixOut: $("netflixOutputArea"), netflixRes: $("netflixResultText"), netflixErr: $("netflixErrorMsg"), netflixErrText: $("netflixErrorText"), copyCookies: $("copyCookiesBtn"), netflixDetails: $("netflixAccountDetails")
   };
 
   const setTab = (tabName) => {
@@ -247,14 +247,36 @@ function initUserApp() {
       if(els.btnGenNetflix.classList.contains("loading")) return;
 
       // Reset UI
-      hide(els.netflixOut); hide(els.netflixErr);
+      hide(els.netflixOut); hide(els.netflixErr); hide(els.netflixDetails);
       els.btnGenNetflix.classList.add("loading");
       
       try {
           const res = await apiCall("generate_netflix", {});
           
           if (res.ok && res.cookies) {
-              // SUCCESS
+              // SUCCESS - Parse Details
+              const details = res.details || {};
+              const plan = details.plan || "Premium";
+              const country = details.country || "Unknown";
+              const email = details.email || "Hidden";
+
+              // Generate Details HTML
+              els.netflixDetails.innerHTML = `
+                  <div class="acc-detail-item">
+                      <span class="acc-label">PLAN</span>
+                      <span class="acc-value val-plan">${plan}</span>
+                  </div>
+                  <div class="acc-detail-item">
+                      <span class="acc-label">COUNTRY</span>
+                      <span class="acc-value">${country}</span>
+                  </div>
+                  <div class="acc-detail-item full-row">
+                      <span class="acc-label">EMAIL</span>
+                      <span class="acc-value val-email">${email}</span>
+                  </div>
+              `;
+              
+              show(els.netflixDetails, 'grid');
               els.netflixRes.value = res.cookies;
               show(els.netflixOut);
               smartScrollToBottom(els.toolsTab, true);
