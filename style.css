@@ -862,3 +862,48 @@ html, body {
 }
 .gen-error-box svg { flex-shrink: 0; margin-top: 2px; color: var(--danger); }
 .gen-error-box b { color: #fff; }
+
+/* ACCOUNT DETAILS GRID */
+.account-details-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+    animation: fadeIn 0.4s ease-out;
+}
+
+.acc-detail-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.full-row {
+    grid-column: span 2;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 10px;
+    margin-top: 2px;
+}
+
+.acc-label {
+    font-size: 10px;
+    color: #888;
+    font-weight: 700;
+    margin-bottom: 4px;
+    letter-spacing: 0.5px;
+}
+
+.acc-value {
+    font-size: 13px;
+    color: #fff;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.val-plan { color: var(--success); }
+.val-email { font-family: var(--font-mono); font-size: 12px; color: #ddd; }
