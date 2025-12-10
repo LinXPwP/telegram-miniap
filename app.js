@@ -1,4 +1,4 @@
-// app.js - FIXED: Handles Access Denied Screen Properly
+// app.js - FIXED: Handles Reply Bar & Delete Actions
 
 const API_URL = "https://api.redgen.vip/";
 const $ = (id) => document.getElementById(id);
@@ -48,14 +48,12 @@ const smartScrollToBottom = (el, force) => {
 };
 const getImageUrl = (s) => s?.trim() ? s : null;
 
-// --- FIXED HELPER: Get Seen Config ---
 function getSeenConfig(t) {
     if (!t || !t.messages) return null;
     const userMsgs = t.messages.filter(m => m.from === 'user' && !m.deleted);
     if (userMsgs.length === 0) return null;
     
     const lastUserM = userMsgs[userMsgs.length - 1];
-    
     const lastReadAdmin = Number(t.last_read_admin || 0);
     const lastUserMsgId = Number(lastUserM.id);
 
@@ -65,7 +63,6 @@ function getSeenConfig(t) {
     return null;
 }
 
-// --- FIXED HELPER: Calculate Unread ---
 function calculateUserUnread(ticket) {
     if (!ticket || !ticket.messages) return 0;
     const lastReadId = Number(ticket.last_read_user || 0);
@@ -153,8 +150,8 @@ function initUserApp() {
   
   // Elements
   const els = {
-     mainWrapper: $("mainAppWrapper"), // IMPORTANT REFERINTA
-     linkError: $("linkAccountError"), // IMPORTANT REFERINTA ECRAN EROARE
+     mainWrapper: $("mainAppWrapper"),
+     linkError: $("linkAccountError"),
      credits: $("creditsValue"), creditsBtn: $("creditsBtn"), userLine: $("userLine"),
      catGrid: $("categoriesGrid"), prodGrid: $("productsGrid"), 
      viewCat: $("viewCategories"), viewProd: $("viewProducts"),
@@ -167,7 +164,8 @@ function initUserApp() {
      closeT: $("userTicketCloseBtn"), reopenT: $("userTicketReopenBtn"), 
      menu: $("ticketsMenuToggle"), backdrop: $("ticketsBackdrop"),
      shopTab: $("shopTab"), ticketsTab: $("ticketsTab"), shopHead: $("shopHeader"),
-     goT: $("goToTicketsBtn"), backShop: $("backToShopBtn"), inputCont: $(".chat-input"),
+     goT: $("goToTicketsBtn"), backShop: $("backToShopBtn"), 
+     inputCont: $("chatFooter"), // FIXED: Selects by ID now
      confirm: $("confirmActionModal"), okConf: $("confirmOkBtn"), canConf: $("confirmCancelBtn"),
      creditsM: $("creditsModal"), closeCred: $("closeCreditsModalBtn")
   };
@@ -183,15 +181,25 @@ function initUserApp() {
   els.closeCred?.addEventListener("click", () => hide(els.creditsM));
   els.creditsM?.addEventListener("click", (e) => { if(e.target===els.creditsM) hide(els.creditsM); });
 
-  const modeBar = document.createElement("div"); modeBar.className = "chat-mode-bar"; modeBar.style.display = 'none';
-  modeBar.innerHTML = `<span class="chat-mode-text"></span><button>Cancel</button>`;
-  modeBar.querySelector("button").onclick = () => { userMode = {type:null}; hide(modeBar); };
-  els.inputCont?.prepend(modeBar);
+  // REPLAY BAR LOGIC
+  const modeBar = document.createElement("div"); 
+  modeBar.className = "chat-mode-bar"; 
+  modeBar.style.display = 'none'; // Initially hidden
+  modeBar.innerHTML = `<span class="chat-mode-text"></span><button style="color:var(--text-muted);border:1px solid var(--text-muted);padding:2px 8px;">Cancel</button>`;
+  
+  modeBar.querySelector("button").onclick = () => { 
+      userMode = {type:null}; 
+      hide(modeBar); 
+  };
+
+  // PREPEND TO FOOTER (FIXED)
+  if(els.inputCont) els.inputCont.prepend(modeBar);
 
   const setReply = (msg) => {
     userMode = { type: "reply", msgId: msg.id, txt: (msg.text||"").slice(0,50), sender: msg.sender||"User" };
     modeBar.querySelector("span").textContent = `Replying to ${userMode.sender}: "${userMode.txt}..."`;
-    show(modeBar); els.input.focus();
+    show(modeBar, 'flex'); // Force flex display
+    els.input.focus();
   };
 
   const updateChatUI = (t) => {
@@ -206,14 +214,11 @@ function initUserApp() {
   const apiCall = async (action, extra = {}) => {
     try {
         const r = await fetch(API_URL, { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ action, initData: TG_INIT_DATA, ...extra }) });
-        
-        // Daca serverul raspunde cu 403, cel mai probabil este eroarea de link
         if (r.status === 403) {
             const data = await r.json();
-            return data; // Returnam eroarea ca sa o putem procesa
+            return data;
         }
         if (r.status === 401) return { ok: false, error: "auth_failed" };
-        
         return await r.json();
     } catch (e) { console.error(e); return { ok: false, error: "network" }; }
   };
@@ -381,7 +386,7 @@ function initUserApp() {
           if(res.ok) {
               const idx = STATE.tickets.findIndex(x=>x.id===STATE.selTicketId);
               if(idx>=0) { STATE.tickets[idx] = res.ticket || {...STATE.tickets[idx], status:'closed'}; }
-              renderTickets(); updateChatUI(STATE.tickets[idx]);
+              renderTickets(); selTicket(STATE.selTicketId); // Refresh view to show closed state
           }
       };
       els.canConf.onclick = () => hide(els.confirm);
@@ -432,20 +437,14 @@ function initUserApp() {
      const res = await apiCall("init", {});
      
      if(res.ok) {
-        // Daca totul e ok, afisam magazinul
         STATE.user.credits = res.user.credits; STATE.shop = res.shop; STATE.tickets = res.tickets||[];
         renderHeader(); renderCats(STATE.shop); renderTickets(); setTab(true);
      } else {
-        // --- AICI ESTE FIX-UL PENTRU ECRANUL DE DISCORD ---
         if (res.error === "access_denied_link_required") {
-            // Ascundem COMPLET interfata principala
             if(els.mainWrapper) els.mainWrapper.style.display = "none";
-            // Afisam ecranul de eroare specific
             if(els.linkError) els.linkError.style.display = "flex";
             return;
         }
-
-        // Alte erori (afisate in header)
         els.userLine.innerHTML = `<span style="color:red">Error: ${res.error||"Auth"}</span>`; show(els.userLine);
      }
   })();
