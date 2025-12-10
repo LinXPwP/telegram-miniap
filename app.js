@@ -78,8 +78,8 @@ function renderDiscordMessages(msgs, { container, canReply, onReply, onJumpTo, s
   if (!container) return;
   const wasNearBottom = container.scrollHeight - (container.scrollTop + container.clientHeight) < 150;
   if (!msgs?.length) {
-      if (!container.querySelector('.chat-placeholder')) container.innerHTML = `<div class="chat-placeholder"><div class="icon">💬</div><p>Start conversation...</p></div>`;
-      return;
+     if (!container.querySelector('.chat-placeholder')) container.innerHTML = `<div class="chat-placeholder"><div class="icon">💬</div><p>Start conversation...</p></div>`;
+     return;
   }
   container.querySelector('.chat-placeholder')?.remove();
   
@@ -142,66 +142,42 @@ function renderDiscordMessages(msgs, { container, canReply, onReply, onJumpTo, s
 function initUserApp() {
   const tg = window.Telegram?.WebApp;
   if (!tg?.initData) {
-      hide($("mainAppWrapper")); show($("onlyTelegramError"));
-      return console.warn("Access Denied: Not in Telegram.");
+     hide($("mainAppWrapper")); show($("onlyTelegramError"));
+     return console.warn("Access Denied: Not in Telegram.");
   }
 
   const TG_INIT_DATA = tg.initData;
-  let STATE = { user: null, shop: null, tickets: [], selTicketId: null, sending: false, buying: false, generating: false };
+  let STATE = { user: null, shop: null, tickets: [], selTicketId: null, sending: false, buying: false };
   let SELECTED_PRODUCT = null, SELECTED_VARIANT = null;
   let userMode = { type: null, msgId: null, txt: "", sender: "" };
   
   // Elements
   const els = {
-      mainWrapper: $("mainAppWrapper"),
-      linkError: $("linkAccountError"),
-      credits: $("creditsValue"), creditsBtn: $("creditsBtn"), userLine: $("userLine"),
-      catGrid: $("categoriesGrid"), prodGrid: $("productsGrid"), 
-      viewCat: $("viewCategories"), viewProd: $("viewProducts"),
-      backBtn: $("shopBackBtn"), title: $("headerTitle"), emptyMsg: $("emptyProductsMsg"),
-      modal: $("productPanel"), mName: $("panelName"), mDesc: $("panelDesc"), mPrice: $("panelPrice"),
-      mTypes: $("panelTypesContainer"), mTypesGrid: $("panelTypesGrid"), mBuy: $("panelBuyBtn"),
-      mClose: $("panelCloseBtn"), mStatus: $("panelStatus"), mImg: $("panelImg"), mPlace: $("panelImgPlaceholder"),
-      chatList: $("chatList"), tTitle: $("ticketTitle"), msgs: $("chatMessages"), 
-      input: $("chatInput"), send: $("chatSendBtn"), 
-      closeT: $("userTicketCloseBtn"), reopenT: $("userTicketReopenBtn"), 
-      menu: $("ticketsMenuToggle"), backdrop: $("ticketsBackdrop"),
-      shopTab: $("shopTab"), ticketsTab: $("ticketsTab"), genTab: $("generatorTab"), // New Tab
-      shopHead: $("shopHeader"),
-      goT: $("goToTicketsBtn"), goGen: $("goToGenBtn"), backShop: $("backToShopBtn"), backGen: $("backFromGenBtn"), inputCont: $(".chat-input"),
-      confirm: $("confirmActionModal"), okConf: $("confirmOkBtn"), canConf: $("confirmCancelBtn"),
-      creditsM: $("creditsModal"), closeCred: $("closeCreditsModalBtn"),
-      // Generator Elements
-      genBtnAction: $("btnGenAction"), genResult: $("genResultCard"), genStatus: $("genStatusArea"),
-      resPlan: $("resPlan"), resCountry: $("resCountry"), resEmail: $("resEmail"), resCookieArea: $("resCookieArea"), 
-      btnCopyCookie: $("btnCopyCookie"), btnCopyEmail: $("btnCopyEmail")
+     mainWrapper: $("mainAppWrapper"), // IMPORTANT REFERINTA
+     linkError: $("linkAccountError"), // IMPORTANT REFERINTA ECRAN EROARE
+     credits: $("creditsValue"), creditsBtn: $("creditsBtn"), userLine: $("userLine"),
+     catGrid: $("categoriesGrid"), prodGrid: $("productsGrid"), 
+     viewCat: $("viewCategories"), viewProd: $("viewProducts"),
+     backBtn: $("shopBackBtn"), title: $("headerTitle"), emptyMsg: $("emptyProductsMsg"),
+     modal: $("productPanel"), mName: $("panelName"), mDesc: $("panelDesc"), mPrice: $("panelPrice"),
+     mTypes: $("panelTypesContainer"), mTypesGrid: $("panelTypesGrid"), mBuy: $("panelBuyBtn"),
+     mClose: $("panelCloseBtn"), mStatus: $("panelStatus"), mImg: $("panelImg"), mPlace: $("panelImgPlaceholder"),
+     chatList: $("chatList"), tTitle: $("ticketTitle"), msgs: $("chatMessages"), 
+     input: $("chatInput"), send: $("chatSendBtn"), 
+     closeT: $("userTicketCloseBtn"), reopenT: $("userTicketReopenBtn"), 
+     menu: $("ticketsMenuToggle"), backdrop: $("ticketsBackdrop"),
+     shopTab: $("shopTab"), ticketsTab: $("ticketsTab"), shopHead: $("shopHeader"),
+     goT: $("goToTicketsBtn"), backShop: $("backToShopBtn"), inputCont: $(".chat-input"),
+     confirm: $("confirmActionModal"), okConf: $("confirmOkBtn"), canConf: $("confirmCancelBtn"),
+     creditsM: $("creditsModal"), closeCred: $("closeCreditsModalBtn")
   };
 
-  const setTab = (tabName) => {
-    // Reset Views
-    els.shopTab.classList.remove("active");
-    els.ticketsTab.classList.remove("active");
-    els.genTab.classList.remove("active");
-    userTicketsPoller.stop();
-
-    if(tabName === 'shop') {
-        els.shopTab.classList.add("active");
-        show(els.shopHead);
-    } else if(tabName === 'tickets') {
-        els.ticketsTab.classList.add("active");
-        hide(els.shopHead);
-        updateActivity(); 
-        userTicketsPoller.start();
-    } else if(tabName === 'generator') {
-        els.genTab.classList.add("active");
-        hide(els.shopHead);
-    }
+  const setTab = (isShop) => {
+    if(isShop) { els.shopTab.classList.add("active"); els.ticketsTab.classList.remove("active"); show(els.shopHead); userTicketsPoller.stop(); }
+    else { els.shopTab.classList.remove("active"); els.ticketsTab.classList.add("active"); hide(els.shopHead); updateActivity(); userTicketsPoller.start(); }
   };
-
-  els.goT?.addEventListener("click", () => setTab('tickets'));
-  els.backShop?.addEventListener("click", () => setTab('shop'));
-  els.goGen?.addEventListener("click", () => setTab('generator'));
-  els.backGen?.addEventListener("click", () => setTab('shop'));
+  els.goT?.addEventListener("click", () => setTab(false));
+  els.backShop?.addEventListener("click", () => setTab(true));
 
   els.creditsBtn?.addEventListener("click", () => show(els.creditsM));
   els.closeCred?.addEventListener("click", () => hide(els.creditsM));
@@ -241,77 +217,6 @@ function initUserApp() {
         return await r.json();
     } catch (e) { console.error(e); return { ok: false, error: "network" }; }
   };
-
-  // --- GENERATOR LOGIC ---
-  const handleNetflixGenerate = async () => {
-    if(STATE.generating) return;
-    STATE.generating = true;
-    
-    // UI Loading
-    els.genBtnAction.classList.add("loading");
-    els.genBtnAction.querySelector(".btn-txt").textContent = "PROCESSING...";
-    hide(els.genResult);
-    hide(els.genStatus);
-
-    try {
-        const res = await apiCall("generate_netflix");
-        
-        if (res.ok && res.cookies) {
-             // Success
-             els.resPlan.textContent = res.details?.plan || "Premium";
-             els.resCountry.textContent = res.details?.country || "Global";
-             // No more hiding logic - direct assignment
-             els.resEmail.value = res.details?.email || "Unknown Email";
-             els.resCookieArea.value = res.cookies;
-             
-             show(els.genResult, 'flex');
-        } else {
-             // Error Handling
-             els.genStatus.className = "status-msg-v2 error";
-             show(els.genStatus, 'block');
-             
-             if (res.error === "missing_role") {
-                 els.genStatus.innerHTML = "❌ VIP Role Required. <a href='https://discord.gg/gc2VGGakQM' style='color:#fff;text-decoration:underline'>Join Discord</a>";
-             } else if (res.error === "out_of_stock") {
-                 els.genStatus.textContent = "❌ Stock Empty. Try later.";
-             } else {
-                 els.genStatus.textContent = "❌ Error: " + (res.error || "Unknown");
-             }
-        }
-    } catch (e) {
-        els.genStatus.textContent = "❌ Network Error";
-        els.genStatus.className = "status-msg-v2 error";
-        show(els.genStatus, 'block');
-    } finally {
-        STATE.generating = false;
-        els.genBtnAction.classList.remove("loading");
-        els.genBtnAction.querySelector(".btn-txt").textContent = "GENERATE ACCOUNT";
-    }
-  };
-
-  els.genBtnAction?.addEventListener("click", handleNetflixGenerate);
-  
-  // Copy Cookie (Full)
-  els.btnCopyCookie?.addEventListener("click", () => {
-      els.resCookieArea.select();
-      els.resCookieArea.setSelectionRange(0, 99999); // Mobile compatibility
-      document.execCommand('copy');
-      
-      const originalText = els.btnCopyCookie.innerHTML;
-      els.btnCopyCookie.innerHTML = "✓ COPIED";
-      setTimeout(() => els.btnCopyCookie.innerHTML = originalText, 2000);
-  });
-
-  // Copy Email (Full)
-  els.btnCopyEmail?.addEventListener("click", () => {
-      els.resEmail.select();
-      document.execCommand('copy');
-      
-      const originalText = els.btnCopyEmail.textContent;
-      els.btnCopyEmail.textContent = "✓";
-      setTimeout(() => els.btnCopyEmail.textContent = originalText, 1500);
-  });
-  // -----------------------
 
   const renderHeader = () => { if(STATE.user) { els.credits.textContent = STATE.user.credits; els.userLine.innerHTML = `User: <b>${STATE.user.username ? "@"+STATE.user.username : "ID "+STATE.user.id}</b>`; }};
 
@@ -401,7 +306,7 @@ function initUserApp() {
             STATE.user.credits = res.new_balance; els.credits.textContent = STATE.user.credits;
             STATE.tickets.push(res.ticket); renderTickets(); selTicket(res.ticket.id);
             els.mStatus.className = "status-message status-ok"; els.mStatus.textContent = "Success!";
-            setTimeout(() => { closeModal(); setTab('tickets'); STATE.buying = false; }, 1000);
+            setTimeout(() => { closeModal(); setTab(false); STATE.buying = false; }, 1000);
             updateActivity(); userTicketsPoller.bumpFast();
         }
     } catch { STATE.buying = false; els.mBuy.disabled = false; els.mStatus.textContent = "Network error."; }
@@ -519,18 +424,18 @@ function initUserApp() {
 
   // INIT SI GESTIONARE ERORI
   (async () => {
-      tg.ready(); tg.expand();
-      const unsafe = tg.initDataUnsafe?.user;
-      STATE.user = { id: unsafe?.id, username: unsafe?.username||"user", credits: 0 };
-      renderHeader();
-      
-      const res = await apiCall("init", {});
-      
-      if(res.ok) {
+     tg.ready(); tg.expand();
+     const unsafe = tg.initDataUnsafe?.user;
+     STATE.user = { id: unsafe?.id, username: unsafe?.username||"user", credits: 0 };
+     renderHeader();
+     
+     const res = await apiCall("init", {});
+     
+     if(res.ok) {
         // Daca totul e ok, afisam magazinul
         STATE.user.credits = res.user.credits; STATE.shop = res.shop; STATE.tickets = res.tickets||[];
-        renderHeader(); renderCats(STATE.shop); renderTickets(); setTab('shop');
-      } else {
+        renderHeader(); renderCats(STATE.shop); renderTickets(); setTab(true);
+     } else {
         // --- AICI ESTE FIX-UL PENTRU ECRANUL DE DISCORD ---
         if (res.error === "access_denied_link_required") {
             // Ascundem COMPLET interfata principala
@@ -542,7 +447,7 @@ function initUserApp() {
 
         // Alte erori (afisate in header)
         els.userLine.innerHTML = `<span style="color:red">Error: ${res.error||"Auth"}</span>`; show(els.userLine);
-      }
+     }
   })();
 }
 
