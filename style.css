@@ -134,9 +134,8 @@ html, body { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden;
 .type-info { display: flex; flex-direction: column; } .type-name { font-size: 13px; font-weight: 600; color: #fff; } .type-meta { display: flex; align-items: center; gap: 10px; }
 .type-price-pill { font-size: 11px; font-weight: 700; color: #fff; background: rgba(255, 255, 255, 0.1); padding: 3px 8px; border-radius: 6px; } .type-card.active .type-price-pill { background: var(--accent); }
 .type-radio-circle { width: 18px; height: 18px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.2); position: relative; } .type-card.active .type-radio-circle { border-color: var(--accent); }
-.type-card.active .type-radio-circle::after { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 8px; height: 8px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 8px var(--accent-glow); }
 .status-message { font-size: 12px; text-align: center; min-height: 16px; margin-bottom: 12px; } .status-error { color: var(--danger); } .status-ok { color: var(--success); }
-.modal-footer { flex-shrink: 0; }
+.modal-footer { flex-shrink: 0; margin-top: auto; }
 .btn-primary { background: linear-gradient(135deg, var(--accent), #d6002a); color: #fff; font-weight: 600; border: none; padding: 14px; border-radius: 16px; font-size: 14px; cursor: pointer; box-shadow: 0 0 15px var(--accent-glow); width: 100%; transition: transform 0.1s; } .btn-primary:active { transform: scale(0.98); }
 .instructions-list { text-align: left; margin: 20px 0; display: flex; flex-direction: column; gap: 12px; }
 .instruction-step { background: rgba(255,255,255,0.03); padding: 10px; border-radius: 12px; display: flex; align-items: center; gap: 12px; font-size: 13px; border: 1px solid rgba(255,255,255,0.05); }
@@ -165,9 +164,9 @@ html, body { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden;
 .btn-support-disabled { background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid rgba(255,255,255,0.05); cursor: not-allowed; opacity: 0.7; }
 
 /* --- CREDITS WIZARD STYLES --- */
-.wiz-step { display: flex; flex-direction: column; gap: 15px; animation: fadeIn 0.3s; }
+.wiz-step { display: flex; flex-direction: column; gap: 15px; animation: fadeIn 0.3s; flex: 1; min-height: 0; }
 .wiz-desc { font-size: 14px; color: #ccc; margin: 0; text-align: center; }
-.pkg-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 10px 0; }
+.pkg-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 10px 0; flex-shrink: 0; }
 .pkg-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px 6px; text-align: center; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; }
 .pkg-card:hover { background: rgba(255,255,255,0.08); transform: translateY(-2px); }
 .pkg-card.active { border-color: var(--accent); background: rgba(255, 24, 67, 0.08); box-shadow: 0 4px 12px rgba(255,24,67,0.2); }
@@ -175,7 +174,7 @@ html, body { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden;
 .pkg-price { font-weight: 800; font-size: 16px; color: var(--accent); margin-bottom: 4px; }
 .pkg-bonus { font-size: 10px; color: var(--success); font-weight: 600; background: rgba(16,185,129,0.1); display: inline-block; padding: 2px 5px; border-radius: 4px; }
 
-.custom-amt-wrapper { background: rgba(0,0,0,0.2); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 10px; }
+.custom-amt-wrapper { background: rgba(0,0,0,0.2); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 10px; flex-shrink: 0; }
 .custom-label { font-size: 11px; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; font-weight: 700; }
 .input-group-modern { display: flex; align-items: center; background: rgba(0,0,0,0.3); border-radius: 8px; padding: 0 10px; border: 1px solid transparent; transition: 0.2s; }
 .input-group-modern:focus-within { border-color: var(--accent); }
@@ -183,24 +182,26 @@ html, body { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden;
 #customAmtInput { background: transparent; border: none; color: #fff; font-size: 14px; padding: 10px; width: 100%; outline: none; font-weight: 600; font-family: inherit; }
 .calc-res { font-size: 12px; color: var(--accent); font-weight: 700; white-space: nowrap; }
 
-.method-grid { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
+.method-grid { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; flex-shrink: 0; }
 .method-card { display: flex; align-items: center; gap: 12px; padding: 14px; background: rgba(255,255,255,0.04); border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); cursor: pointer; transition: 0.2s; }
 .method-card:hover { background: rgba(255,255,255,0.08); transform: translateX(4px); }
 .method-icon { font-size: 20px; }
 
-.payment-summary { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px; font-weight: 700; font-size: 14px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05); }
+.payment-summary { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px; font-weight: 700; font-size: 14px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05); flex-shrink: 0; }
 #sumCredits { color: var(--accent); }
 
 .info-block { display: flex; flex-direction: column; gap: 10px; }
 .info-label { font-size: 13px; color: #ccc; }
 .copy-box { display: flex; align-items: center; justify-content: space-between; background: #000; padding: 12px; border-radius: 8px; font-family: monospace; font-size: 12px; border: 1px solid rgba(255,255,255,0.1); color: #e2e8f0; word-break: break-all; }
-.btn-icon-copy { background: transparent; border: none; cursor: pointer; color: var(--text-secondary); padding: 4px; transition: 0.2s; font-size: 16px; margin-left: 8px; }
+/* Fixed width for copy button to prevent jumping */
+.btn-icon-copy { background: transparent; border: none; cursor: pointer; color: var(--text-secondary); padding: 4px; transition: 0.2s; font-size: 16px; margin-left: 8px; width: 30px; text-align: center; }
 .btn-icon-copy:hover { color: #fff; transform: scale(1.1); }
 .warning-box { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #fca5a5; padding: 10px; border-radius: 8px; font-size: 12px; line-height: 1.4; display: flex; align-items: center; gap: 8px; }
-.warning-box.sm { padding: 8px; font-size: 11px; margin-bottom: 8px; }
-.wiz-actions { display: flex; gap: 10px; margin-top: 10px; }
+.wiz-actions-footer { margin-top: auto; padding-top: 15px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.full-width { width: 100%; }
 
-.file-upload-area { display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px dashed rgba(255,255,255,0.15); border-radius: 12px; padding: 20px; cursor: pointer; transition: 0.2s; background: rgba(0,0,0,0.2); }
+.file-upload-area { display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px dashed rgba(255,255,255,0.15); border-radius: 12px; padding: 20px; cursor: pointer; transition: 0.2s; background: rgba(0,0,0,0.2); margin-top: 10px; flex-shrink: 0; }
 .file-upload-area:hover { border-color: var(--accent); background: rgba(255, 24, 67, 0.05); }
 .upload-icon { font-size: 24px; margin-bottom: 8px; }
 .upload-text { font-size: 12px; color: var(--text-secondary); text-align: center; }
