@@ -131,19 +131,78 @@
     </div>
 
     <div id="creditsModal" class="modal-overlay">
-        <div class="modal-card">
+        <div class="modal-card" style="min-height: 450px;">
             <button class="modal-close" id="closeCreditsModalBtn">&times;</button>
             <div class="modal-header"><h2 style="color: var(--accent);">Add Funds</h2></div>
-            <div class="modal-body" style="text-align: center; padding: 0 10px;">
-                <p class="modal-desc" style="font-size: 14px; color: #ccc;">Follow these steps to buy credits:</p>
-                <div class="instructions-list">
-                    <div class="instruction-step"><span class="step-num">1</span><span>Join our Discord Server.</span></div>
-                    <div class="instruction-step"><span class="step-num">2</span><span>Open a support ticket.</span></div>
-                    <div class="instruction-step"><span class="step-num">3</span><span>Or contact owner <b>"LinX"</b>.</span></div>
+            
+            <div class="modal-body" style="padding: 0 5px; display: flex; flex-direction: column;">
+                
+                <div id="stepSelectPackage">
+                    <p class="modal-desc" style="margin-bottom: 10px; font-size: 13px;">Select a credit package:</p>
+                    <div class="packages-grid">
+                        <div class="pack-card" data-credits="110" data-cost="5" data-bonus="10">
+                            <div class="pack-creds">110 CRD</div>
+                            <div class="pack-bonus">+10 Bonus</div>
+                            <div class="pack-price">$5.00</div>
+                        </div>
+                        <div class="pack-card" data-credits="240" data-cost="10" data-bonus="40">
+                            <div class="pack-creds">240 CRD</div>
+                            <div class="pack-bonus">+40 Bonus</div>
+                            <div class="pack-price">$10.00</div>
+                        </div>
+                        <div class="pack-card best-value" data-credits="500" data-cost="20" data-bonus="100">
+                            <div class="badge-best">Best Value</div>
+                            <div class="pack-creds">500 CRD</div>
+                            <div class="pack-bonus">+100 Bonus</div>
+                            <div class="pack-price">$20.00</div>
+                        </div>
+                    </div>
+
+                    <div class="custom-input-section">
+                        <div class="desc-label" style="margin-top: 15px;">Or Custom Amount ($1 = 20 Credits)</div>
+                        <div class="input-wrapper" style="border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2);">
+                            <input type="number" id="customCreditsInput" placeholder="Enter credits amount..." style="width:100%; background:transparent; border:none; color:#fff; font-size:14px; outline:none; font-family:inherit;">
+                        </div>
+                        <div id="customCalcPreview" style="font-size: 12px; color: var(--accent); margin-top: 5px; min-height: 18px;"></div>
+                    </div>
                 </div>
-                <a href="https://discord.gg/gc2VGGakQM" target="_blank" class="btn-modern btn-discord-solid">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;"><path d="M18.8943 4.34399C17.5183 3.71467 16.057 3.256 14.5317 3C14.3396 3.33067 14.127 3.77867 13.9829 4.11467C12.353 3.88133 10.7329 3.88133 9.13096 4.11467C8.98696 3.77867 8.76696 3.33067 8.58296 3C7.05096 3.256 5.58963 3.71467 4.21363 4.34399C1.43963 8.44533 0.690294 12.448 1.0543 16.3973C2.90696 17.752 4.6983 18.5733 6.4583 19.1147C6.8903 18.5307 7.28296 17.912 7.62696 17.2613C6.98696 17.0213 6.37896 16.7333 5.80296 16.4027C5.95496 16.2907 6.10696 16.1707 6.25096 16.0507C9.57896 17.5867 13.563 17.5867 16.859 16.0507C17.003 16.1787 17.155 16.2907 17.307 16.4027C16.731 16.7333 16.123 17.0213 15.483 17.2613C15.835 17.912 16.227 18.5307 16.659 19.1147C18.419 18.5733 20.2103 17.752 22.063 16.3973C22.463 12.16 21.463 8.21867 18.8943 4.34399ZM8.05896 13.5013C7.06696 13.5013 6.25096 12.5893 6.25096 11.4773C6.25096 10.3653 7.03496 9.45333 8.05896 9.45333C9.09096 9.45333 9.90696 10.3653 9.89096 11.4773C9.89096 12.5893 9.08296 13.5013 8.05896 13.5013ZM15.059 13.5013C14.067 13.5013 13.251 12.5893 13.251 11.4773C13.251 10.3653 14.035 9.45333 15.059 9.45333C16.091 9.45333 16.907 10.3653 16.891 11.4773C16.891 12.5893 16.091 13.5013 15.059 13.5013Z"></path></svg><span>Join Discord</span>
-                </a>
+
+                <div id="stepSelectMethod" style="display:none;">
+                    <p class="modal-desc" style="margin-bottom: 10px;">Selected: <b id="summaryCredits" style="color:#fff;">0</b> Credits for <b id="summaryCost" style="color:var(--accent);">$0.00</b></p>
+                    <div class="desc-label">Choose Payment Method:</div>
+                    <div class="methods-list" id="methodsList">
+                        </div>
+                </div>
+
+                <div id="stepConfirmDeposit" style="display:none;">
+                    <div class="payment-details-box">
+                        <div style="font-size:13px; color:#aaa; margin-bottom:5px;">Send <b id="finalCost" style="color:#fff;">$0.00</b> via <span id="finalMethodName"></span></div>
+                        
+                        <div id="paymentAddressBox" class="address-box">
+                            <span id="paymentAddressText">...</span>
+                            <button class="copy-btn" id="copyAddressBtn">📋</button>
+                        </div>
+
+                        <div id="paymentWarning" class="warning-box" style="display:none;">
+                            ⚠️ <b>PayPal Warning:</b> You MUST send as <u>Friends & Family</u>. If not available in your country or sent as Goods & Services, funds may be lost!
+                        </div>
+
+                        <p class="modal-desc" style="font-size: 12px; margin-top: 15px;">
+                            1. Send the exact amount.<br>
+                            2. Take a screenshot of the payment.<br>
+                            3. Click "I Sent Payment" below.<br>
+                            4. An admin will verify within 24h.
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+                <div class="modal-actions-grid">
+                    <button class="btn-secondary" id="depositBackBtn" style="display:none;">Back</button>
+                    <button class="btn-primary" id="depositNextBtn">Next Step</button>
+                </div>
             </div>
         </div>
     </div>
