@@ -163,3 +163,27 @@ html, body { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden;
 .btn-support-active { background: var(--bg-surface); border: 1px solid var(--accent); color: var(--accent); }
 .btn-support-active:hover { background: var(--accent); color: #fff; }
 .btn-support-disabled { background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid rgba(255,255,255,0.05); cursor: not-allowed; opacity: 0.7; }
+
+/* --- DEPOSIT WIZARD (NEW) --- */
+.packages-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
+.pack-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 12px 6px; text-align: center; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; }
+.pack-card:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.15); transform: translateY(-2px); }
+.pack-card.active { border-color: var(--accent); background: rgba(255,24,67,0.1); }
+.pack-card.best-value { border-color: rgba(255,215,0, 0.3); }
+.badge-best { position: absolute; top: 0; left: 0; right: 0; background: linear-gradient(90deg, #FFD700, #FFA500); color: #000; font-size: 9px; font-weight: 800; text-transform: uppercase; padding: 2px 0; }
+.pack-creds { font-weight: 800; font-size: 14px; color: #fff; margin-top: 8px; }
+.pack-bonus { font-size: 10px; color: var(--success); font-weight: 600; margin: 4px 0; }
+.pack-price { font-size: 13px; color: var(--text-muted); font-weight: 600; }
+
+.methods-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.method-row { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); cursor: pointer; transition: 0.2s; }
+.method-row:hover { background: rgba(255,255,255,0.06); }
+.method-row.active { border-color: var(--accent); background: rgba(255,24,67,0.05); }
+.method-icon { width: 32px; height: 32px; background: #eee; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; color: #333; }
+.method-name { font-weight: 600; font-size: 14px; color: #fff; }
+
+.payment-details-box { background: rgba(0,0,0,0.3); border-radius: 12px; padding: 16px; margin-top: 10px; text-align: center; }
+.address-box { background: rgba(255,255,255,0.05); border: 1px dashed rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; margin: 10px 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.address-box span { font-family: monospace; font-size: 12px; color: var(--text-secondary); word-break: break-all; }
+.copy-btn { background: transparent; border: none; color: #fff; cursor: pointer; opacity: 0.7; padding: 4px; } .copy-btn:hover { opacity: 1; transform: scale(1.1); }
+.warning-box { background: rgba(239, 68, 68, 0.15); border: 1px solid var(--danger); border-radius: 8px; padding: 10px; font-size: 12px; color: #fff; text-align: left; margin-top: 10px; line-height: 1.4; }
