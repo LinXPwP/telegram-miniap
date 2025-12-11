@@ -1,4 +1,4 @@
-// app.js - UPDATED: Credits Wizard & Payment Flow
+// app.js - UPDATED: Payment Flow Fixes (No Warning, Compact Copy)
 
 const API_URL = "https://api.redgen.vip/";
 const $ = (id) => document.getElementById(id);
@@ -70,11 +70,18 @@ const smartScrollToBottom = (el, force) => {
     if (force || (el.scrollHeight - (el.scrollTop + el.clientHeight) < 150)) requestAnimationFrame(() => el.scrollTop = el.scrollHeight);
 };
 const getImageUrl = (s) => s?.trim() ? s : null;
+
+// UPDATED COPY FUNCTION: No text change, just icon
 const copyToClipboard = (text, btn) => {
     navigator.clipboard.writeText(text).then(() => {
-        const orig = btn.innerHTML;
-        btn.innerHTML = "✓ Copied";
-        setTimeout(() => btn.innerHTML = orig, 1500);
+        const originalIcon = "📋";
+        const successIcon = "✔";
+        btn.innerHTML = successIcon;
+        btn.style.color = "#10b981"; // Green color
+        setTimeout(() => {
+            btn.innerHTML = originalIcon;
+            btn.style.color = ""; // Reset color
+        }, 1500);
     });
 };
 
@@ -278,8 +285,8 @@ function initUserApp() {
           `;
           card.onclick = () => {
               WIZ.amount = pkg.price;
-              WIZ.credits = pkg.credits + pkg.bonus; // Including bonus in logic if selected from preset
-              els.custIn.value = ""; els.custRes.textContent = "0 Credits"; // Clear custom
+              WIZ.credits = pkg.credits + pkg.bonus; 
+              els.custIn.value = ""; els.custRes.textContent = "0 Credits"; 
               Array.from(els.pkgGrid.children).forEach(c => c.classList.remove("active"));
               card.classList.add("active");
           };
@@ -287,10 +294,9 @@ function initUserApp() {
       });
   };
 
-  // Custom Input Logic
   els.custIn.addEventListener("input", (e) => {
     const val = parseFloat(e.target.value);
-    Array.from(els.pkgGrid.children).forEach(c => c.classList.remove("active")); // Deselect presets
+    Array.from(els.pkgGrid.children).forEach(c => c.classList.remove("active")); 
     if(val && val > 0) {
         WIZ.amount = val;
         WIZ.credits = val * CREDIT_RATE;
@@ -345,13 +351,8 @@ function initUserApp() {
       els.wStatus.className = "status-message";
       WIZ.file = null; els.proofTxt.textContent = "Click to upload payment screenshot";
 
-      // Check user payment history (simulated as false if data missing)
-      const hasHistory = STATE.user && STATE.user.has_successful_payments; 
-      if(!hasHistory) {
-          show(els.proofSec);
-      } else {
-          hide(els.proofSec);
-      }
+      // ALWAYS SHOW PROOF SECTION FOR NOW (Simplified based on request, no warning text)
+      show(els.proofSec);
   };
 
   els.proofIn.addEventListener("change", (e) => {
@@ -362,10 +363,9 @@ function initUserApp() {
   });
 
   els.wSubmit.onclick = async () => {
-      // Validation
-      const hasHistory = STATE.user && STATE.user.has_successful_payments;
-      if(!hasHistory && !WIZ.file) {
-          els.wStatus.textContent = "Screenshot proof is required for your first payment.";
+      // Basic check
+      if(!WIZ.file) {
+          els.wStatus.textContent = "Screenshot proof is required.";
           els.wStatus.className = "status-message status-error";
           return;
       }
@@ -373,20 +373,7 @@ function initUserApp() {
       els.wSubmit.textContent = "Sending...";
       els.wSubmit.disabled = true;
 
-      // Prepare Data (Placeholder API Call)
-      // Since bot.py is not updated yet, this will likely just hit the server. 
-      // We will simulate success for UI demo if server fails or send dummy request.
-      
-      // In a real scenario, we'd use FormData if uploading file
-      /* const fd = new FormData();
-      fd.append("action", "user_request_credits");
-      fd.append("amount", WIZ.amount);
-      fd.append("method", WIZ.method);
-      if(WIZ.file) fd.append("proof", WIZ.file);
-      fd.append("initData", TG_INIT_DATA);
-      */
-
-      // Simulation for now until backend is ready
+      // Simulate sending
       setTimeout(() => {
           showStep(4);
           els.wSubmit.textContent = "I Sent the Payment";
@@ -428,7 +415,7 @@ function initUserApp() {
     } catch (e) { console.error(e); return { ok: false, error: "network" }; }
   };
 
-  // --- WARRANTY & PURCHASES LOGIC ---
+  // --- PURCHASES LOGIC ---
   const loadPurchases = async () => {
       els.purchasesList.innerHTML = '<div class="chat-placeholder">Loading orders...</div>';
       const res = await apiCall("user_get_purchases", {});
@@ -480,7 +467,6 @@ function initUserApp() {
         </div>
       `;
       
-      // CLAIM BUTTON LOGIC
       const btn = card.querySelector("button");
       if(isWarrantyActive) {
           btn.onclick = () => openClaimModal(p);
@@ -490,16 +476,14 @@ function initUserApp() {
       els.purchasesList.appendChild(card);
   };
 
-  // Open Claim Modal
   const openClaimModal = (p) => {
       CLAIM_TARGET_ID = p.id;
-      els.claimIn.value = ""; // Clear previous input
-      els.claimStatus.textContent = ""; // Clear errors
+      els.claimIn.value = ""; 
+      els.claimStatus.textContent = ""; 
       els.claimStatus.className = "status-message";
       show(els.claimM);
   };
 
-  // Handle Modal Actions
   els.claimCan.onclick = () => { hide(els.claimM); CLAIM_TARGET_ID = null; };
   els.claimM.onclick = (e) => { if(e.target===els.claimM) { hide(els.claimM); CLAIM_TARGET_ID = null; }};
 
@@ -507,7 +491,6 @@ function initUserApp() {
       if(!CLAIM_TARGET_ID) return;
       const reason = els.claimIn.value.trim();
       
-      // ERROR HANDLING: IN-MODAL
       if(!reason) {
           els.claimStatus.textContent = "Please describe the issue.";
           els.claimStatus.className = "status-message status-error";
@@ -524,11 +507,9 @@ function initUserApp() {
       
       if(res.ok) {
           hide(els.claimM);
-          // SUCCESS: NO ALERT, JUST SWITCH
           setTab("tickets");
           userTicketsPoller.bumpFast();
       } else {
-          // ERROR HANDLING: IN-MODAL
           els.claimStatus.textContent = "Error: " + (res.error === "warranty_expired" ? "Warranty Expired!" : res.error);
           els.claimStatus.className = "status-message status-error";
       }
@@ -729,14 +710,13 @@ function initUserApp() {
   (async () => {
       tg.ready(); tg.expand();
       const unsafe = tg.initDataUnsafe?.user;
-      STATE.user = { id: unsafe?.id, username: unsafe?.username||"user", credits: 0, has_successful_payments: false }; // Added placeholder flag
+      STATE.user = { id: unsafe?.id, username: unsafe?.username||"user", credits: 0, has_successful_payments: false }; 
       renderHeader();
       const res = await apiCall("init", {});
       if(res.ok) {
         STATE.user.credits = res.user.credits; 
         STATE.shop = res.shop; 
         STATE.tickets = res.tickets||[];
-        // NOTE: If init returns user history, set it here:
         if(res.user.has_successful_payments !== undefined) STATE.user.has_successful_payments = res.user.has_successful_payments;
         
         renderHeader(); renderCats(STATE.shop); renderTickets(); setTab("shop");
