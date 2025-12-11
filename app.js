@@ -1,6 +1,9 @@
-// app.js - UPDATED: Payment Flow Fixes (No Warning, Compact Copy)
+// app.js - FIXED: Real Payment Submission & Proof Upload
 
 const API_URL = "https://api.redgen.vip/";
+// Folosim un key public pentru demo sau cel din admin panel pentru consistenta
+const IMGBB_API_KEY = "8b7eef65280614c71acd1e1ce317aa64"; 
+
 const $ = (id) => document.getElementById(id);
 const show = (el, d = 'flex') => { if(el) el.style.display = d; };
 const hide = (el) => { if(el) el.style.display = 'none'; };
@@ -71,7 +74,6 @@ const smartScrollToBottom = (el, force) => {
 };
 const getImageUrl = (s) => s?.trim() ? s : null;
 
-// UPDATED COPY FUNCTION: No text change, just icon
 const copyToClipboard = (text, btn) => {
     navigator.clipboard.writeText(text).then(() => {
         const originalIcon = "📋";
@@ -351,7 +353,7 @@ function initUserApp() {
       els.wStatus.className = "status-message";
       WIZ.file = null; els.proofTxt.textContent = "Click to upload payment screenshot";
 
-      // ALWAYS SHOW PROOF SECTION FOR NOW (Simplified based on request, no warning text)
+      // ALWAYS SHOW PROOF SECTION FOR NOW
       show(els.proofSec);
   };
 
@@ -362,23 +364,85 @@ function initUserApp() {
       }
   });
 
+  // --- UPLOAD HELPER FUNCTION ---
+  const uploadProofToImgBB = async (file) => {
+      const formData = new FormData();
+      formData.append("image", file);
+      formData.append("key", IMGBB_API_KEY);
+
+      try {
+          const res = await fetch("https://api.imgbb.com/1/upload", {
+              method: "POST",
+              body: formData
+          });
+          const data = await res.json();
+          if (data && data.data && data.data.url) {
+              return data.data.url;
+          } else {
+              throw new Error("Upload Failed");
+          }
+      } catch (e) {
+          console.error("Upload Error:", e);
+          return null;
+      }
+  };
+
+  // --- SUBMIT REAL PAYMENT ---
   els.wSubmit.onclick = async () => {
-      // Basic check
-      if(!WIZ.file) {
+      // 1. Validation
+      const hasHistory = STATE.user && STATE.user.has_successful_payments;
+      if(!hasHistory && !WIZ.file) {
           els.wStatus.textContent = "Screenshot proof is required.";
           els.wStatus.className = "status-message status-error";
           return;
       }
 
-      els.wSubmit.textContent = "Sending...";
+      els.wSubmit.textContent = "Processing...";
       els.wSubmit.disabled = true;
+      els.wStatus.textContent = "Uploading proof...";
+      els.wStatus.className = "status-message";
 
-      // Simulate sending
-      setTimeout(() => {
-          showStep(4);
-          els.wSubmit.textContent = "I Sent the Payment";
+      // 2. Upload Proof if exists
+      let proofUrl = "";
+      if (WIZ.file) {
+          proofUrl = await uploadProofToImgBB(WIZ.file);
+          if (!proofUrl) {
+              els.wSubmit.textContent = "Try Again";
+              els.wSubmit.disabled = false;
+              els.wStatus.textContent = "Failed to upload image. Please try again.";
+              els.wStatus.className = "status-message status-error";
+              return;
+          }
+      }
+
+      els.wStatus.textContent = "Sending request...";
+
+      // 3. Send to Backend
+      const payload = {
+          amount: WIZ.amount,
+          method: WIZ.method,
+          proof_url: proofUrl
+      };
+
+      try {
+          const res = await apiCall("user_request_credits", payload);
+          
+          if (res.ok) {
+              showStep(4);
+              els.wSubmit.textContent = "I Sent the Payment"; // Reset text
+              els.wSubmit.disabled = false;
+          } else {
+              els.wStatus.textContent = "Error: " + (res.error || "Server error");
+              els.wStatus.className = "status-message status-error";
+              els.wSubmit.textContent = "Try Again";
+              els.wSubmit.disabled = false;
+          }
+      } catch (e) {
+          els.wStatus.textContent = "Network Error.";
+          els.wStatus.className = "status-message status-error";
+          els.wSubmit.textContent = "Try Again";
           els.wSubmit.disabled = false;
-      }, 1500);
+      }
   };
 
   // --- REST OF APP LOGIC ---
