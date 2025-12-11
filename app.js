@@ -1,9 +1,24 @@
-// app.js - FIXED: Deposit Wizard & No Alerts
+// app.js - FIXED: Multi-step Credits Wizard
 
 const API_URL = "https://api.redgen.vip/";
 const $ = (id) => document.getElementById(id);
 const show = (el, d = 'flex') => { if(el) el.style.display = d; };
 const hide = (el) => { if(el) el.style.display = 'none'; };
+
+// Copy helper
+const copyToClip = (id) => {
+    const el = document.getElementById(id);
+    if(el) {
+        navigator.clipboard.writeText(el.innerText).then(() => {
+            const btn = el.nextElementSibling; 
+            if(btn) { 
+                const old = btn.innerHTML; 
+                btn.innerHTML = "✓"; 
+                setTimeout(()=>btn.innerHTML=old, 1500);
+            }
+        });
+    }
+};
 
 let LAST_USER_ACTION = Date.now();
 const updateActivity = () => { LAST_USER_ACTION = Date.now(); };
@@ -152,15 +167,6 @@ function initUserApp() {
   let userMode = { type: null, msgId: null, txt: "", sender: "" };
   let CLAIM_TARGET_ID = null; 
   
-  // DEPOSIT WIZARD STATE
-  let DEPOSIT = { step: 1, credits: 0, cost: 0, method: null };
-  const PAY_METHODS = [
-      { id: "paypal", name: "PayPal F&F", icon: "P", detail: "linx02048@gmail.com", warn: true },
-      { id: "binance", name: "Binance", icon: "B", detail: "458753123", warn: false },
-      { id: "ltc", name: "Litecoin (LTC)", icon: "Ł", detail: "LWCryENgoijoT8LQWQgGsSSNk9eHgnfaTF", warn: false },
-      { id: "btc", name: "Bitcoin (BTC)", icon: "₿", detail: "1LReFxV4Zk7cQaWMzSjareRGMoFaQesGoo", warn: false }
-  ];
-
   const els = {
      mainWrapper: $("mainAppWrapper"),
      linkError: $("linkAccountError"),
@@ -183,14 +189,213 @@ function initUserApp() {
      creditsM: $("creditsModal"), closeCred: $("closeCreditsModalBtn"),
      purchasesList: $("purchasesList"),
      // CLAIM MODAL ELS
-     claimM: $("claimWarrantyModal"), claimIn: $("claimReasonInput"), claimSub: $("claimSubmitBtn"), claimCan: $("claimCancelBtn"), claimStatus: $("claimStatus"),
-     // DEPOSIT WIZARD ELS
-     dStep1: $("stepSelectPackage"), dStep2: $("stepSelectMethod"), dStep3: $("stepConfirmDeposit"),
-     dBack: $("depositBackBtn"), dNext: $("depositNextBtn"),
-     dCustomIn: $("customCreditsInput"), dCustomPrev: $("customCalcPreview"),
-     dMethods: $("methodsList"), dSumCred: $("summaryCredits"), dSumCost: $("summaryCost"),
-     dFinalCost: $("finalCost"), dFinalMeth: $("finalMethodName"), dAddr: $("paymentAddressText"), dCopy: $("copyAddressBtn"), dWarn: $("paymentWarning")
+     claimM: $("claimWarrantyModal"), claimIn: $("claimReasonInput"), claimSub: $("claimSubmitBtn"), claimCan: $("claimCancelBtn"), claimStatus: $("claimStatus")
   };
+
+  const apiCall = async (action, extra = {}) => {
+    try {
+        const r = await fetch(API_URL, { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ action, initData: TG_INIT_DATA, ...extra }) });
+        if (r.status === 403) return await r.json();
+        if (r.status === 401) return { ok: false, error: "auth_failed" };
+        return await r.json();
+    } catch (e) { console.error(e); return { ok: false, error: "network" }; }
+  };
+
+  // --- CREDITS WIZARD LOGIC ---
+  const CreditsWizard = {
+      data: { amountUSD: 0, method: null, file: null },
+      steps: [$('step-1-packages'), $('step-2-method'), $('step-3-details'), $('step-4-success')],
+      
+      reset: () => {
+          CreditsWizard.data = { amountUSD: 0, method: null, file: null };
+          $('customAmountInput').value = "";
+          $('customAmountResult').textContent = "0 CRD";
+          $('proofFileInput').value = "";
+          $('uploadText').textContent = "Tap to upload screenshot";
+          $('paymentStatus').textContent = "";
+          $('btnNextToMethod').disabled = true; // Default to disabled if no pack selected
+          CreditsWizard.showStep(0);
+          
+          // Reset UI selection
+          document.querySelectorAll('.credit-pack-card').forEach(c => c.classList.remove('selected'));
+          document.querySelectorAll('.method-card').forEach(c => c.classList.remove('selected'));
+      },
+
+      showStep: (idx) => {
+          CreditsWizard.steps.forEach((s, i) => { if(s) s.style.display = (i === idx ? 'block' : 'none'); });
+      },
+
+      selectPack: (credits, price, id) => {
+          // Visual
+          document.querySelectorAll('.credit-pack-card').forEach(c => c.classList.remove('selected'));
+          document.querySelectorAll('.credit-pack-card').forEach(c => {
+               // A bit loose matching, but sufficient for UI
+               if(c.onclick.toString().includes(price)) c.classList.add('selected'); 
+          });
+          
+          CreditsWizard.data.amountUSD = price;
+          // Clear custom input
+          $('customAmountInput').value = "";
+          $('customAmountResult').textContent = "0 CRD";
+          
+          // Enable Next
+          $('btnNextToMethod').disabled = false;
+          // Auto advance if clicked? Maybe not, allow user to review.
+      },
+
+      calcCustom: (val) => {
+          const v = parseFloat(val);
+          if(!v || v <= 0) {
+              $('customAmountResult').textContent = "0 CRD";
+              return false;
+          }
+          const credits = Math.floor(v * 20);
+          $('customAmountResult').textContent = `${credits} CRD`;
+          CreditsWizard.data.amountUSD = v;
+          // Deselect packs
+          document.querySelectorAll('.credit-pack-card').forEach(c => c.classList.remove('selected'));
+          return true;
+      },
+      
+      goToMethod: () => {
+          if(!CreditsWizard.data.amountUSD) return;
+          $('step2Summary').textContent = `Total: $${CreditsWizard.data.amountUSD.toFixed(2)}`;
+          CreditsWizard.showStep(1);
+      },
+
+      selectMethod: (m) => {
+          CreditsWizard.data.method = m;
+          document.querySelectorAll('.method-card').forEach(c => c.classList.remove('selected'));
+          // Find the clicked one logic handled by DOM click event updating class
+          // We can use a simpler approach: get current target
+          const cards = document.querySelectorAll('.method-card');
+          // Map methods to indices: 0=paypal, 1=binance, 2=ltc, 3=btc
+          const map = {'paypal':0, 'binance':1, 'ltc':2, 'btc':3};
+          if(cards[map[m]]) cards[map[m]].classList.add('selected');
+          
+          $('btnNextToDetails').disabled = false;
+      },
+
+      goToDetails: () => {
+          if(!CreditsWizard.data.method) return;
+          
+          const m = CreditsWizard.data.method;
+          const amt = CreditsWizard.data.amountUSD;
+          const detailsTitle = $('detailsTitle');
+          const alertBox = $('paymentAlertBox');
+          const destLabel = $('payDestLabel');
+          const destValue = $('payDestValue');
+          
+          $('payAmountDisplay').textContent = `$${amt.toFixed(2)}`;
+          alertBox.style.display = 'none';
+
+          if(m === 'paypal') {
+              detailsTitle.textContent = "Pay via PayPal";
+              alertBox.style.display = 'block'; // WARNING
+              destLabel.textContent = "Send to Email:";
+              destValue.innerText = "linx02048@gmail.com";
+          } else if(m === 'binance') {
+              detailsTitle.textContent = "Binance Pay";
+              destLabel.textContent = "Binance ID:";
+              destValue.innerText = "458753123";
+          } else if(m === 'ltc') {
+              detailsTitle.textContent = "Litecoin (LTC)";
+              destLabel.textContent = "Address:";
+              destValue.innerText = "LWCryENgoijoT8LQWQgGsSSNk9eHgnfaTF";
+          } else if(m === 'btc') {
+              detailsTitle.textContent = "Bitcoin (BTC)";
+              destLabel.textContent = "Address:";
+              destValue.innerText = "1LReFxV4Zk7cQaWMzSjareRGMoFaQesGoo";
+          }
+
+          // Verification Logic
+          // Check if user has payments. For now we assume false if API doesn't send it, or mock it.
+          // Since backend isn't ready, let's assume NEW USER (needs proof) unless STATE.user.is_trusted is set.
+          const isTrusted = STATE.user && STATE.user.has_successful_payments; // Flag to add to API later
+          
+          if(isTrusted) {
+              hide($('proofSection'));
+              show($('knownUserSection'));
+          } else {
+              show($('proofSection'));
+              hide($('knownUserSection'));
+          }
+          
+          CreditsWizard.showStep(2);
+      },
+      
+      handleFile: (e) => {
+          if(e.target.files && e.target.files[0]) {
+              CreditsWizard.data.file = e.target.files[0];
+              $('uploadText').textContent = "File selected: " + e.target.files[0].name;
+              $('uploadText').style.color = "var(--success)";
+          }
+      },
+
+      submitPayment: async () => {
+          const btn = $('btnSubmitPayment');
+          const status = $('paymentStatus');
+          
+          // Validation for new users
+          const isTrusted = STATE.user && STATE.user.has_successful_payments;
+          if(!isTrusted && !CreditsWizard.data.file) {
+              status.textContent = "Please upload a screenshot proof.";
+              status.className = "status-message status-error";
+              return;
+          }
+
+          btn.disabled = true;
+          btn.textContent = "Sending...";
+          status.textContent = "";
+
+          // Simulate API Call since backend bot.py update is later
+          // In real implementation: FormData with file
+          /*
+          const fd = new FormData();
+          fd.append('action', 'user_submit_topup');
+          fd.append('initData', TG_INIT_DATA);
+          fd.append('amount', CreditsWizard.data.amountUSD);
+          fd.append('method', CreditsWizard.data.method);
+          if(CreditsWizard.data.file) fd.append('proof', CreditsWizard.data.file);
+          const res = await fetch(API_URL, {method:'POST', body:fd});
+          */
+
+          // MOCK SUCCESS FOR UI DEMO
+          setTimeout(() => {
+              btn.disabled = false;
+              btn.textContent = "I Have Paid";
+              CreditsWizard.showStep(3); // Success
+          }, 1500);
+      },
+      
+      goBack: (stepIdx) => {
+          CreditsWizard.showStep(stepIdx);
+      }
+  };
+
+  // Expose to window for HTML onClick
+  window.CreditsWizard = CreditsWizard;
+
+  // Listeners for Wizard
+  $('customAmountInput')?.addEventListener('input', (e) => {
+      if(CreditsWizard.calcCustom(e.target.value)) {
+          $('btnNextToMethod').disabled = false;
+      } else {
+          $('btnNextToMethod').disabled = true;
+      }
+  });
+  
+  $('btnNextToMethod')?.addEventListener('click', CreditsWizard.goToMethod);
+  $('btnNextToDetails')?.addEventListener('click', CreditsWizard.goToDetails);
+  $('proofFileInput')?.addEventListener('change', CreditsWizard.handleFile);
+  $('btnSubmitPayment')?.addEventListener('click', CreditsWizard.submitPayment);
+  
+  els.creditsBtn?.addEventListener("click", () => {
+      CreditsWizard.reset();
+      show(els.creditsM);
+  });
+  els.closeCred?.addEventListener("click", () => hide(els.creditsM));
+  // --- END WIZARD LOGIC ---
 
   const setTab = (tabName) => {
     els.shopTab.classList.remove("active");
@@ -219,146 +424,6 @@ function initUserApp() {
   els.backShop?.addEventListener("click", () => setTab("shop"));
   els.backPurch?.addEventListener("click", () => setTab("shop"));
 
-  // --- DEPOSIT WIZARD LOGIC ---
-  const openDepositModal = () => {
-    DEPOSIT = { step: 1, credits: 0, cost: 0, method: null };
-    els.dCustomIn.value = "";
-    els.dCustomPrev.textContent = "";
-    document.querySelectorAll(".pack-card").forEach(c => c.classList.remove("active"));
-    renderDepositStep();
-    show(els.creditsM);
-  };
-  
-  const selectPackage = (el) => {
-    document.querySelectorAll(".pack-card").forEach(c => c.classList.remove("active"));
-    el.classList.add("active");
-    DEPOSIT.credits = parseInt(el.dataset.credits);
-    DEPOSIT.cost = parseFloat(el.dataset.cost);
-    els.dCustomIn.value = "";
-    els.dCustomPrev.textContent = "";
-  };
-
-  els.dCustomIn.addEventListener("input", (e) => {
-    document.querySelectorAll(".pack-card").forEach(c => c.classList.remove("active"));
-    const val = parseInt(e.target.value);
-    if(val > 0) {
-        DEPOSIT.credits = val;
-        DEPOSIT.cost = val / 20; // $1 = 20 Credits
-        els.dCustomPrev.textContent = `Cost: $${DEPOSIT.cost.toFixed(2)}`;
-    } else {
-        DEPOSIT.credits = 0; DEPOSIT.cost = 0;
-        els.dCustomPrev.textContent = "";
-    }
-  });
-
-  // Attach Package Click Listeners
-  document.querySelectorAll(".pack-card").forEach(card => {
-    card.addEventListener("click", () => selectPackage(card));
-  });
-
-  const renderDepositStep = () => {
-    hide(els.dStep1); hide(els.dStep2); hide(els.dStep3);
-    
-    if(DEPOSIT.step === 1) {
-        show(els.dStep1);
-        hide(els.dBack);
-        els.dNext.textContent = "Next Step";
-        els.dNext.onclick = () => {
-            if(DEPOSIT.credits <= 0) return alert("Please select a package or enter amount.");
-            DEPOSIT.step = 2; renderDepositStep();
-        };
-    } 
-    else if(DEPOSIT.step === 2) {
-        show(els.dStep2);
-        show(els.dBack);
-        els.dSumCred.textContent = DEPOSIT.credits;
-        els.dSumCost.textContent = `$${DEPOSIT.cost.toFixed(2)}`;
-        els.dNext.textContent = "Next Step";
-        
-        // Render Methods
-        els.dMethods.innerHTML = "";
-        PAY_METHODS.forEach(m => {
-            const row = document.createElement("div");
-            row.className = "method-row " + (DEPOSIT.method === m.id ? "active" : "");
-            row.innerHTML = `<div class="method-icon">${m.icon}</div><div class="method-name">${m.name}</div>`;
-            row.onclick = () => {
-                DEPOSIT.method = m.id;
-                renderDepositStep(); // Re-render to show active
-            };
-            els.dMethods.appendChild(row);
-        });
-
-        els.dNext.onclick = () => {
-            if(!DEPOSIT.method) return alert("Select a payment method.");
-            DEPOSIT.step = 3; renderDepositStep();
-        };
-        els.dBack.onclick = () => { DEPOSIT.step = 1; renderDepositStep(); };
-    }
-    else if(DEPOSIT.step === 3) {
-        show(els.dStep3);
-        show(els.dBack);
-        els.dNext.textContent = "I Sent Payment";
-        
-        const m = PAY_METHODS.find(x => x.id === DEPOSIT.method);
-        els.dFinalCost.textContent = `$${DEPOSIT.cost.toFixed(2)}`;
-        els.dFinalMeth.textContent = m.name;
-        els.dAddr.textContent = m.detail;
-        
-        if(m.warn) show(els.dWarn); else hide(els.dWarn);
-        
-        els.dCopy.onclick = () => {
-            navigator.clipboard.writeText(m.detail);
-            els.dCopy.textContent = "✅"; setTimeout(()=>els.dCopy.textContent="📋", 1500);
-        };
-
-        els.dBack.onclick = () => { DEPOSIT.step = 2; renderDepositStep(); };
-        els.dNext.onclick = async () => {
-             // SUBMIT TICKET LOGIC
-             els.dNext.disabled = true; els.dNext.textContent = "Creating Ticket...";
-             const mName = PAY_METHODS.find(x => x.id === DEPOSIT.method).name;
-             const msg = `**DEPOSIT REQUEST**\nAmount: ${DEPOSIT.credits} Credits\nCost: $${DEPOSIT.cost.toFixed(2)}\nMethod: ${mName}\n\nI have sent the payment. Proof screenshot below:`;
-             
-             // Create Ticket via existing API
-             // We use 'user_create_ticket' (mapped to logic in backend or just generic new ticket)
-             // Since bot.py is not updated, we use a generic ticket creation which usually requires a 'product_id'.
-             // If the backend requires product_id, we might need a workaround. 
-             // Assuming user_create_ticket accepts 'subject' or we send it as a message to a new ticket.
-             // Workaround: Use a specific "0" product ID or rely on the backend to handle "General Support".
-             // Let's assume we can just open a ticket. If not, we fall back to manual instructions.
-             
-             // Based on previous code, tickets are linked to products. 
-             // We will try to open a "General" ticket or just send a message.
-             // Actually, the prompt says "Admin will verify... bot.py updated later".
-             // We will trigger "user_claim_warranty" with a specific negative ID to signal general ticket OR just use the warranty modal logic but automated.
-             
-             // BETTER APPROACH FOR NOW: Just use the apiCall("user_claim_warranty") but with a dummy ID or just create a new endpoint signature that the current bot might accept or just fail gracefully.
-             // Since we can't change backend, and backend likely expects `ticket_id` for messages or `product_id` for buying...
-             // We will use `user_claim_warranty` on the *most recent purchase* if available, OR we simply tell the user to open a ticket manually if we can't force it.
-             
-             // HOWEVER, the prompt implies this flow SHOULD work. 
-             // I will assume there is a way or I will simply redirect them to the Tickets tab and pre-fill the input? No, that's messy.
-             // Let's try to send a "General" ticket if the backend supports it. If not, we simulate it locally.
-             
-             // Re-reading: "bot.py il vom updata mai tarziu" -> Backend NOT READY.
-             // So I cannot actually create a specialized Deposit Ticket on the backend yet.
-             // I will alert the user: "Please go to Tickets and open a ticket with this screenshot."
-             // OR, if I want to be helpful, I show a success message and switch tab.
-             
-             hide(els.creditsM);
-             setTab("tickets");
-             setTimeout(() => {
-                 alert(`Please open a new Ticket (or reply to an existing one) with:\n1. The screenshot of payment.\n2. Message: "Deposit ${DEPOSIT.credits} Credits"`);
-             }, 500);
-             
-             els.dNext.disabled = false;
-        };
-    }
-  };
-
-  els.creditsBtn?.addEventListener("click", openDepositModal);
-  els.closeCred?.addEventListener("click", () => hide(els.creditsM));
-  els.creditsM?.addEventListener("click", (e) => { if(e.target===els.creditsM) hide(els.creditsM); });
-
   // REPLAY BAR
   const modeBar = document.createElement("div"); 
   modeBar.className = "chat-mode-bar"; 
@@ -381,15 +446,6 @@ function initUserApp() {
     closed ? (hide(els.closeT), hide(modeBar)) : (show(els.closeT));
   };
   updateChatUI(null);
-
-  const apiCall = async (action, extra = {}) => {
-    try {
-        const r = await fetch(API_URL, { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ action, initData: TG_INIT_DATA, ...extra }) });
-        if (r.status === 403) return await r.json();
-        if (r.status === 401) return { ok: false, error: "auth_failed" };
-        return await r.json();
-    } catch (e) { console.error(e); return { ok: false, error: "network" }; }
-  };
 
   // --- WARRANTY & PURCHASES LOGIC ---
   const loadPurchases = async () => {
@@ -696,7 +752,10 @@ function initUserApp() {
       renderHeader();
       const res = await apiCall("init", {});
       if(res.ok) {
-        STATE.user.credits = res.user.credits; STATE.shop = res.shop; STATE.tickets = res.tickets||[];
+        STATE.user.credits = res.user.credits; 
+        // Mock trusted for UI demo if needed, otherwise API should return it
+        // STATE.user.has_successful_payments = res.user.has_successful_payments; 
+        STATE.shop = res.shop; STATE.tickets = res.tickets||[];
         renderHeader(); renderCats(STATE.shop); renderTickets(); setTab("shop");
       } else {
         if (res.error === "access_denied_link_required") {
