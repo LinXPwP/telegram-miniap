@@ -1,28 +1,33 @@
-// app.js - FIXED: Multi-step Credits Wizard
+// app.js - UPDATED: Credits Wizard & Payment Flow
 
 const API_URL = "https://api.redgen.vip/";
 const $ = (id) => document.getElementById(id);
 const show = (el, d = 'flex') => { if(el) el.style.display = d; };
 const hide = (el) => { if(el) el.style.display = 'none'; };
 
-// Copy helper
-const copyToClip = (id) => {
-    const el = document.getElementById(id);
-    if(el) {
-        navigator.clipboard.writeText(el.innerText).then(() => {
-            const btn = el.nextElementSibling; 
-            if(btn) { 
-                const old = btn.innerHTML; 
-                btn.innerHTML = "✓"; 
-                setTimeout(()=>btn.innerHTML=old, 1500);
-            }
-        });
-    }
-};
-
 let LAST_USER_ACTION = Date.now();
 const updateActivity = () => { LAST_USER_ACTION = Date.now(); };
 ['mousemove', 'keydown', 'touchstart', 'scroll', 'click'].forEach(e => document.addEventListener(e, updateActivity, { passive: true }));
+
+// --- CONFIGURATION ---
+const PACKAGES = [
+    { credits: 110, price: 5, bonus: 10 },
+    { credits: 240, price: 10, bonus: 40 },
+    { credits: 500, price: 20, bonus: 100 }
+];
+const CREDIT_RATE = 20; // 1 USD = 20 CRD
+
+const PAY_METHODS = {
+    paypal: { 
+        name: "PayPal F&F", 
+        icon: "🅿️", 
+        detail: "linx02048@gmail.com", 
+        warning: "MUST be Friends & Family. If not available in your country, choose another method or you risk losing money." 
+    },
+    binance: { name: "Binance Pay", icon: "🔶", detail: "458753123" },
+    ltc: { name: "Litecoin (LTC)", icon: "Ł", detail: "LWCryENgoijoT8LQWQgGsSSNk9eHgnfaTF" },
+    btc: { name: "Bitcoin (BTC)", icon: "₿", detail: "1LReFxV4Zk7cQaWMzSjareRGMoFaQesGoo" }
+};
 
 // 1. SMART POLLING
 function createSmartPoll(fetchFn, isEnabledFn) {
@@ -65,6 +70,13 @@ const smartScrollToBottom = (el, force) => {
     if (force || (el.scrollHeight - (el.scrollTop + el.clientHeight) < 150)) requestAnimationFrame(() => el.scrollTop = el.scrollHeight);
 };
 const getImageUrl = (s) => s?.trim() ? s : null;
+const copyToClipboard = (text, btn) => {
+    navigator.clipboard.writeText(text).then(() => {
+        const orig = btn.innerHTML;
+        btn.innerHTML = "✓ Copied";
+        setTimeout(() => btn.innerHTML = orig, 1500);
+    });
+};
 
 function getSeenConfig(t) {
     if (!t || !t.messages) return null;
@@ -167,6 +179,9 @@ function initUserApp() {
   let userMode = { type: null, msgId: null, txt: "", sender: "" };
   let CLAIM_TARGET_ID = null; 
   
+  // WIZARD STATE
+  let WIZ = { step: 1, amount: 0, credits: 0, method: null, file: null };
+
   const els = {
      mainWrapper: $("mainAppWrapper"),
      linkError: $("linkAccountError"),
@@ -189,213 +204,14 @@ function initUserApp() {
      creditsM: $("creditsModal"), closeCred: $("closeCreditsModalBtn"),
      purchasesList: $("purchasesList"),
      // CLAIM MODAL ELS
-     claimM: $("claimWarrantyModal"), claimIn: $("claimReasonInput"), claimSub: $("claimSubmitBtn"), claimCan: $("claimCancelBtn"), claimStatus: $("claimStatus")
+     claimM: $("claimWarrantyModal"), claimIn: $("claimReasonInput"), claimSub: $("claimSubmitBtn"), claimCan: $("claimCancelBtn"), claimStatus: $("claimStatus"),
+     // WIZARD ELS
+     wStep1: $("step-packages"), wStep2: $("step-method"), wStep3: $("step-details"), wStep4: $("step-success"),
+     pkgGrid: $("pkgGrid"), custIn: $("customAmtInput"), custRes: $("customCalcRes"),
+     wNext1: $("wizNext1"), wBack2: $("wizBack2"), wBack3: $("wizBack3"), wSubmit: $("wizSubmit"), wClose: $("wizCloseFinal"),
+     mGrid: $("methodGrid"), payBox: $("paymentDetailsBox"), sumTot: $("sumTotal"), sumCred: $("sumCredits"),
+     wStatus: $("wizStatus"), proofSec: $("proofSection"), proofIn: $("proofFileInput"), proofTxt: $("uploadText")
   };
-
-  const apiCall = async (action, extra = {}) => {
-    try {
-        const r = await fetch(API_URL, { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ action, initData: TG_INIT_DATA, ...extra }) });
-        if (r.status === 403) return await r.json();
-        if (r.status === 401) return { ok: false, error: "auth_failed" };
-        return await r.json();
-    } catch (e) { console.error(e); return { ok: false, error: "network" }; }
-  };
-
-  // --- CREDITS WIZARD LOGIC ---
-  const CreditsWizard = {
-      data: { amountUSD: 0, method: null, file: null },
-      steps: [$('step-1-packages'), $('step-2-method'), $('step-3-details'), $('step-4-success')],
-      
-      reset: () => {
-          CreditsWizard.data = { amountUSD: 0, method: null, file: null };
-          $('customAmountInput').value = "";
-          $('customAmountResult').textContent = "0 CRD";
-          $('proofFileInput').value = "";
-          $('uploadText').textContent = "Tap to upload screenshot";
-          $('paymentStatus').textContent = "";
-          $('btnNextToMethod').disabled = true; // Default to disabled if no pack selected
-          CreditsWizard.showStep(0);
-          
-          // Reset UI selection
-          document.querySelectorAll('.credit-pack-card').forEach(c => c.classList.remove('selected'));
-          document.querySelectorAll('.method-card').forEach(c => c.classList.remove('selected'));
-      },
-
-      showStep: (idx) => {
-          CreditsWizard.steps.forEach((s, i) => { if(s) s.style.display = (i === idx ? 'block' : 'none'); });
-      },
-
-      selectPack: (credits, price, id) => {
-          // Visual
-          document.querySelectorAll('.credit-pack-card').forEach(c => c.classList.remove('selected'));
-          document.querySelectorAll('.credit-pack-card').forEach(c => {
-               // A bit loose matching, but sufficient for UI
-               if(c.onclick.toString().includes(price)) c.classList.add('selected'); 
-          });
-          
-          CreditsWizard.data.amountUSD = price;
-          // Clear custom input
-          $('customAmountInput').value = "";
-          $('customAmountResult').textContent = "0 CRD";
-          
-          // Enable Next
-          $('btnNextToMethod').disabled = false;
-          // Auto advance if clicked? Maybe not, allow user to review.
-      },
-
-      calcCustom: (val) => {
-          const v = parseFloat(val);
-          if(!v || v <= 0) {
-              $('customAmountResult').textContent = "0 CRD";
-              return false;
-          }
-          const credits = Math.floor(v * 20);
-          $('customAmountResult').textContent = `${credits} CRD`;
-          CreditsWizard.data.amountUSD = v;
-          // Deselect packs
-          document.querySelectorAll('.credit-pack-card').forEach(c => c.classList.remove('selected'));
-          return true;
-      },
-      
-      goToMethod: () => {
-          if(!CreditsWizard.data.amountUSD) return;
-          $('step2Summary').textContent = `Total: $${CreditsWizard.data.amountUSD.toFixed(2)}`;
-          CreditsWizard.showStep(1);
-      },
-
-      selectMethod: (m) => {
-          CreditsWizard.data.method = m;
-          document.querySelectorAll('.method-card').forEach(c => c.classList.remove('selected'));
-          // Find the clicked one logic handled by DOM click event updating class
-          // We can use a simpler approach: get current target
-          const cards = document.querySelectorAll('.method-card');
-          // Map methods to indices: 0=paypal, 1=binance, 2=ltc, 3=btc
-          const map = {'paypal':0, 'binance':1, 'ltc':2, 'btc':3};
-          if(cards[map[m]]) cards[map[m]].classList.add('selected');
-          
-          $('btnNextToDetails').disabled = false;
-      },
-
-      goToDetails: () => {
-          if(!CreditsWizard.data.method) return;
-          
-          const m = CreditsWizard.data.method;
-          const amt = CreditsWizard.data.amountUSD;
-          const detailsTitle = $('detailsTitle');
-          const alertBox = $('paymentAlertBox');
-          const destLabel = $('payDestLabel');
-          const destValue = $('payDestValue');
-          
-          $('payAmountDisplay').textContent = `$${amt.toFixed(2)}`;
-          alertBox.style.display = 'none';
-
-          if(m === 'paypal') {
-              detailsTitle.textContent = "Pay via PayPal";
-              alertBox.style.display = 'block'; // WARNING
-              destLabel.textContent = "Send to Email:";
-              destValue.innerText = "linx02048@gmail.com";
-          } else if(m === 'binance') {
-              detailsTitle.textContent = "Binance Pay";
-              destLabel.textContent = "Binance ID:";
-              destValue.innerText = "458753123";
-          } else if(m === 'ltc') {
-              detailsTitle.textContent = "Litecoin (LTC)";
-              destLabel.textContent = "Address:";
-              destValue.innerText = "LWCryENgoijoT8LQWQgGsSSNk9eHgnfaTF";
-          } else if(m === 'btc') {
-              detailsTitle.textContent = "Bitcoin (BTC)";
-              destLabel.textContent = "Address:";
-              destValue.innerText = "1LReFxV4Zk7cQaWMzSjareRGMoFaQesGoo";
-          }
-
-          // Verification Logic
-          // Check if user has payments. For now we assume false if API doesn't send it, or mock it.
-          // Since backend isn't ready, let's assume NEW USER (needs proof) unless STATE.user.is_trusted is set.
-          const isTrusted = STATE.user && STATE.user.has_successful_payments; // Flag to add to API later
-          
-          if(isTrusted) {
-              hide($('proofSection'));
-              show($('knownUserSection'));
-          } else {
-              show($('proofSection'));
-              hide($('knownUserSection'));
-          }
-          
-          CreditsWizard.showStep(2);
-      },
-      
-      handleFile: (e) => {
-          if(e.target.files && e.target.files[0]) {
-              CreditsWizard.data.file = e.target.files[0];
-              $('uploadText').textContent = "File selected: " + e.target.files[0].name;
-              $('uploadText').style.color = "var(--success)";
-          }
-      },
-
-      submitPayment: async () => {
-          const btn = $('btnSubmitPayment');
-          const status = $('paymentStatus');
-          
-          // Validation for new users
-          const isTrusted = STATE.user && STATE.user.has_successful_payments;
-          if(!isTrusted && !CreditsWizard.data.file) {
-              status.textContent = "Please upload a screenshot proof.";
-              status.className = "status-message status-error";
-              return;
-          }
-
-          btn.disabled = true;
-          btn.textContent = "Sending...";
-          status.textContent = "";
-
-          // Simulate API Call since backend bot.py update is later
-          // In real implementation: FormData with file
-          /*
-          const fd = new FormData();
-          fd.append('action', 'user_submit_topup');
-          fd.append('initData', TG_INIT_DATA);
-          fd.append('amount', CreditsWizard.data.amountUSD);
-          fd.append('method', CreditsWizard.data.method);
-          if(CreditsWizard.data.file) fd.append('proof', CreditsWizard.data.file);
-          const res = await fetch(API_URL, {method:'POST', body:fd});
-          */
-
-          // MOCK SUCCESS FOR UI DEMO
-          setTimeout(() => {
-              btn.disabled = false;
-              btn.textContent = "I Have Paid";
-              CreditsWizard.showStep(3); // Success
-          }, 1500);
-      },
-      
-      goBack: (stepIdx) => {
-          CreditsWizard.showStep(stepIdx);
-      }
-  };
-
-  // Expose to window for HTML onClick
-  window.CreditsWizard = CreditsWizard;
-
-  // Listeners for Wizard
-  $('customAmountInput')?.addEventListener('input', (e) => {
-      if(CreditsWizard.calcCustom(e.target.value)) {
-          $('btnNextToMethod').disabled = false;
-      } else {
-          $('btnNextToMethod').disabled = true;
-      }
-  });
-  
-  $('btnNextToMethod')?.addEventListener('click', CreditsWizard.goToMethod);
-  $('btnNextToDetails')?.addEventListener('click', CreditsWizard.goToDetails);
-  $('proofFileInput')?.addEventListener('change', CreditsWizard.handleFile);
-  $('btnSubmitPayment')?.addEventListener('click', CreditsWizard.submitPayment);
-  
-  els.creditsBtn?.addEventListener("click", () => {
-      CreditsWizard.reset();
-      show(els.creditsM);
-  });
-  els.closeCred?.addEventListener("click", () => hide(els.creditsM));
-  // --- END WIZARD LOGIC ---
 
   const setTab = (tabName) => {
     els.shopTab.classList.remove("active");
@@ -424,6 +240,162 @@ function initUserApp() {
   els.backShop?.addEventListener("click", () => setTab("shop"));
   els.backPurch?.addEventListener("click", () => setTab("shop"));
 
+  // --- CREDITS WIZARD LOGIC ---
+  els.creditsBtn?.addEventListener("click", () => {
+    resetWizard();
+    show(els.creditsM);
+  });
+  els.closeCred?.addEventListener("click", () => hide(els.creditsM));
+  els.wClose?.addEventListener("click", () => hide(els.creditsM));
+
+  const resetWizard = () => {
+    WIZ = { step: 1, amount: 0, credits: 0, method: null, file: null };
+    showStep(1);
+    els.custIn.value = "";
+    els.custRes.textContent = "0 Credits";
+    renderPackages();
+  };
+
+  const showStep = (step) => {
+      [els.wStep1, els.wStep2, els.wStep3, els.wStep4].forEach(el => hide(el));
+      if(step === 1) show(els.wStep1);
+      if(step === 2) { renderMethods(); show(els.wStep2); }
+      if(step === 3) { renderDetails(); show(els.wStep3); }
+      if(step === 4) show(els.wStep4);
+      WIZ.step = step;
+  };
+
+  const renderPackages = () => {
+      els.pkgGrid.innerHTML = "";
+      PACKAGES.forEach(pkg => {
+          const card = document.createElement("div");
+          card.className = "pkg-card";
+          if(WIZ.amount === pkg.price) card.classList.add("active");
+          card.innerHTML = `
+            <div class="pkg-top">${pkg.credits} CRD</div>
+            <div class="pkg-price">$${pkg.price}</div>
+            <div class="pkg-bonus">+${pkg.bonus} Bonus</div>
+          `;
+          card.onclick = () => {
+              WIZ.amount = pkg.price;
+              WIZ.credits = pkg.credits + pkg.bonus; // Including bonus in logic if selected from preset
+              els.custIn.value = ""; els.custRes.textContent = "0 Credits"; // Clear custom
+              Array.from(els.pkgGrid.children).forEach(c => c.classList.remove("active"));
+              card.classList.add("active");
+          };
+          els.pkgGrid.appendChild(card);
+      });
+  };
+
+  // Custom Input Logic
+  els.custIn.addEventListener("input", (e) => {
+    const val = parseFloat(e.target.value);
+    Array.from(els.pkgGrid.children).forEach(c => c.classList.remove("active")); // Deselect presets
+    if(val && val > 0) {
+        WIZ.amount = val;
+        WIZ.credits = val * CREDIT_RATE;
+        els.custRes.textContent = `${WIZ.credits} Credits`;
+    } else {
+        WIZ.amount = 0; WIZ.credits = 0;
+        els.custRes.textContent = "0 Credits";
+    }
+  });
+
+  els.wNext1.onclick = () => {
+      if(WIZ.amount <= 0) return alert("Please select a package or enter an amount.");
+      showStep(2);
+  };
+  els.wBack2.onclick = () => showStep(1);
+
+  const renderMethods = () => {
+      els.mGrid.innerHTML = "";
+      Object.keys(PAY_METHODS).forEach(key => {
+          const m = PAY_METHODS[key];
+          const div = document.createElement("div");
+          div.className = "method-card";
+          div.innerHTML = `<span class="method-icon">${m.icon}</span><span>${m.name}</span>`;
+          div.onclick = () => {
+              WIZ.method = key;
+              showStep(3);
+          };
+          els.mGrid.appendChild(div);
+      });
+  };
+
+  els.wBack3.onclick = () => showStep(2);
+
+  const renderDetails = () => {
+      const m = PAY_METHODS[WIZ.method];
+      els.sumTot.textContent = `Total: $${WIZ.amount}`;
+      els.sumCred.textContent = `${WIZ.credits} CRD`;
+      
+      let html = `<div class="info-block">
+        <div class="info-label">Send exactly <b>$${WIZ.amount}</b> to:</div>
+        <div class="copy-box">
+            <span>${m.detail}</span>
+            <button class="btn-icon-copy" onclick="copyToClipboard('${m.detail}', this)">📋</button>
+        </div>`;
+      
+      if(m.warning) {
+          html += `<div class="warning-box">${m.warning}</div>`;
+      }
+      html += `</div>`;
+      els.payBox.innerHTML = html;
+      els.wStatus.textContent = "";
+      els.wStatus.className = "status-message";
+      WIZ.file = null; els.proofTxt.textContent = "Click to upload payment screenshot";
+
+      // Check user payment history (simulated as false if data missing)
+      const hasHistory = STATE.user && STATE.user.has_successful_payments; 
+      if(!hasHistory) {
+          show(els.proofSec);
+      } else {
+          hide(els.proofSec);
+      }
+  };
+
+  els.proofIn.addEventListener("change", (e) => {
+      if(e.target.files && e.target.files[0]) {
+          WIZ.file = e.target.files[0];
+          els.proofTxt.textContent = `Selected: ${WIZ.file.name}`;
+      }
+  });
+
+  els.wSubmit.onclick = async () => {
+      // Validation
+      const hasHistory = STATE.user && STATE.user.has_successful_payments;
+      if(!hasHistory && !WIZ.file) {
+          els.wStatus.textContent = "Screenshot proof is required for your first payment.";
+          els.wStatus.className = "status-message status-error";
+          return;
+      }
+
+      els.wSubmit.textContent = "Sending...";
+      els.wSubmit.disabled = true;
+
+      // Prepare Data (Placeholder API Call)
+      // Since bot.py is not updated yet, this will likely just hit the server. 
+      // We will simulate success for UI demo if server fails or send dummy request.
+      
+      // In a real scenario, we'd use FormData if uploading file
+      /* const fd = new FormData();
+      fd.append("action", "user_request_credits");
+      fd.append("amount", WIZ.amount);
+      fd.append("method", WIZ.method);
+      if(WIZ.file) fd.append("proof", WIZ.file);
+      fd.append("initData", TG_INIT_DATA);
+      */
+
+      // Simulation for now until backend is ready
+      setTimeout(() => {
+          showStep(4);
+          els.wSubmit.textContent = "I Sent the Payment";
+          els.wSubmit.disabled = false;
+      }, 1500);
+  };
+
+  // --- REST OF APP LOGIC ---
+
   // REPLAY BAR
   const modeBar = document.createElement("div"); 
   modeBar.className = "chat-mode-bar"; 
@@ -446,6 +418,15 @@ function initUserApp() {
     closed ? (hide(els.closeT), hide(modeBar)) : (show(els.closeT));
   };
   updateChatUI(null);
+
+  const apiCall = async (action, extra = {}) => {
+    try {
+        const r = await fetch(API_URL, { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ action, initData: TG_INIT_DATA, ...extra }) });
+        if (r.status === 403) return await r.json();
+        if (r.status === 401) return { ok: false, error: "auth_failed" };
+        return await r.json();
+    } catch (e) { console.error(e); return { ok: false, error: "network" }; }
+  };
 
   // --- WARRANTY & PURCHASES LOGIC ---
   const loadPurchases = async () => {
@@ -748,14 +729,16 @@ function initUserApp() {
   (async () => {
       tg.ready(); tg.expand();
       const unsafe = tg.initDataUnsafe?.user;
-      STATE.user = { id: unsafe?.id, username: unsafe?.username||"user", credits: 0 };
+      STATE.user = { id: unsafe?.id, username: unsafe?.username||"user", credits: 0, has_successful_payments: false }; // Added placeholder flag
       renderHeader();
       const res = await apiCall("init", {});
       if(res.ok) {
         STATE.user.credits = res.user.credits; 
-        // Mock trusted for UI demo if needed, otherwise API should return it
-        // STATE.user.has_successful_payments = res.user.has_successful_payments; 
-        STATE.shop = res.shop; STATE.tickets = res.tickets||[];
+        STATE.shop = res.shop; 
+        STATE.tickets = res.tickets||[];
+        // NOTE: If init returns user history, set it here:
+        if(res.user.has_successful_payments !== undefined) STATE.user.has_successful_payments = res.user.has_successful_payments;
+        
         renderHeader(); renderCats(STATE.shop); renderTickets(); setTab("shop");
       } else {
         if (res.error === "access_denied_link_required") {
