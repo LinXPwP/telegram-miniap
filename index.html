@@ -131,136 +131,69 @@
     </div>
 
     <div id="creditsModal" class="modal-overlay">
-        <div class="modal-card">
+        <div class="modal-card" id="creditsModalCard">
             <button class="modal-close" id="closeCreditsModalBtn">&times;</button>
-            <div class="modal-header"><h2 style="color: var(--accent);">Add Funds</h2></div>
+            <div class="modal-header"><h2 id="wizTitle" style="color: var(--accent); margin:0;">Add Funds</h2></div>
             
-            <div class="modal-body" style="padding: 0 4px;">
+            <div id="step-packages" class="wiz-step">
+                <p class="wiz-desc">Select a credit package or enter amount:</p>
+                <div class="pkg-grid" id="pkgGrid"></div>
                 
-                <div id="step-1-packages" class="wizard-step">
-                    <p class="modal-desc" style="text-align:center;">Select a credit package or enter custom amount.</p>
-                    <div class="packages-grid">
-                        <div class="credit-pack-card" onclick="CreditsWizard.selectPack(110, 5, 'pkg1')">
-                            <div class="pack-badge">+10 Bonus</div>
-                            <div class="pack-amount">110 CRD</div>
-                            <div class="pack-price">$5.00</div>
-                        </div>
-                        <div class="credit-pack-card popular" onclick="CreditsWizard.selectPack(240, 10, 'pkg2')">
-                            <div class="pack-badge">Best Value</div>
-                            <div class="pack-amount">240 CRD</div>
-                            <div class="pack-price">$10.00</div>
-                        </div>
-                        <div class="credit-pack-card" onclick="CreditsWizard.selectPack(500, 20, 'pkg3')">
-                            <div class="pack-badge">+100 Bonus</div>
-                            <div class="pack-amount">500 CRD</div>
-                            <div class="pack-price">$20.00</div>
-                        </div>
-                    </div>
-                    
-                    <div class="custom-amount-box">
-                        <div class="desc-label">OR Custom Amount ($1 = 20 CRD)</div>
-                        <div class="custom-input-row">
-                            <div class="input-wrapper" style="flex:1;">
-                                <input type="number" id="customAmountInput" placeholder="USD Amount" min="1" step="1">
-                            </div>
-                            <div class="custom-arrow">&rarr;</div>
-                            <div class="custom-result" id="customAmountResult">0 CRD</div>
-                        </div>
-                    </div>
-
-                    <button class="btn-primary full-width" id="btnNextToMethod" style="margin-top:16px;">Next Step</button>
-                </div>
-
-                <div id="step-2-method" class="wizard-step" style="display:none;">
-                    <p class="modal-desc" style="text-align:center;">Select Payment Method</p>
-                    <div class="summary-pill" id="step2Summary">Total: $0.00</div>
-                    
-                    <div class="methods-list">
-                        <div class="method-card" onclick="CreditsWizard.selectMethod('paypal')">
-                            <div class="method-icon" style="color:#003087">P</div>
-                            <div class="method-name">PayPal (F&F Only)</div>
-                            <div class="type-radio-circle"></div>
-                        </div>
-                        <div class="method-card" onclick="CreditsWizard.selectMethod('binance')">
-                            <div class="method-icon" style="color:#F3BA2F">B</div>
-                            <div class="method-name">Binance Pay</div>
-                            <div class="type-radio-circle"></div>
-                        </div>
-                        <div class="method-card" onclick="CreditsWizard.selectMethod('ltc')">
-                            <div class="method-icon" style="color:#345D9D">L</div>
-                            <div class="method-name">Litecoin (LTC)</div>
-                            <div class="type-radio-circle"></div>
-                        </div>
-                        <div class="method-card" onclick="CreditsWizard.selectMethod('btc')">
-                            <div class="method-icon" style="color:#F7931A">₿</div>
-                            <div class="method-name">Bitcoin (BTC)</div>
-                            <div class="type-radio-circle"></div>
-                        </div>
-                    </div>
-
-                    <div class="modal-actions-grid" style="margin-top:20px;">
-                        <button class="btn-secondary" onclick="CreditsWizard.goBack(1)">Back</button>
-                        <button class="btn-primary" id="btnNextToDetails" disabled>Next</button>
+                <div class="custom-amt-wrapper">
+                    <div class="custom-label">Custom Amount ($1 = 20 Credits)</div>
+                    <div class="input-group-modern">
+                        <span class="curr-sign">$</span>
+                        <input type="number" id="customAmtInput" placeholder="Enter USD amount" min="1">
+                        <span class="calc-res" id="customCalcRes">0 Credits</span>
                     </div>
                 </div>
-
-                <div id="step-3-details" class="wizard-step" style="display:none;">
-                    <h3 id="detailsTitle" style="text-align:center; font-size:16px; margin:0 0 10px 0;">Payment Details</h3>
-                    
-                    <div id="paymentAlertBox" class="payment-alert" style="display:none;">
-                        <b>WARNING:</b> You MUST use <b>Friends & Family</b>. If you use Goods & Services, the payment will be rejected and funds may be lost.
-                    </div>
-
-                    <div class="payment-info-box">
-                        <span class="info-label">Send Exactly:</span>
-                        <div class="info-value-big" id="payAmountDisplay">$0.00</div>
-                    </div>
-
-                    <div class="payment-info-box">
-                        <span class="info-label" id="payDestLabel">Email:</span>
-                        <div class="copy-row">
-                            <div class="code-box" id="payDestValue">...</div>
-                            <button class="btn-copy" onclick="copyToClip('payDestValue')">📋</button>
-                        </div>
-                    </div>
-
-                    <div id="proofSection">
-                        <div class="desc-label" style="margin-top:15px; text-align:center;">Verification Required</div>
-                        <p class="modal-desc" style="font-size:12px; text-align:center; margin-bottom:10px;">
-                            Since you have no previous successful payments, please upload a screenshot of the transaction.
-                        </p>
-                        
-                        <label for="proofFileInput" class="file-upload-zone" id="fileUploadZone">
-                            <div class="upload-icon">📷</div>
-                            <span id="uploadText">Tap to upload screenshot</span>
-                        </label>
-                        <input type="file" id="proofFileInput" accept="image/*" style="display:none;">
-                    </div>
-
-                    <div id="knownUserSection" style="display:none; text-align:center; margin-top:15px;">
-                        <p class="modal-desc" style="color:var(--success);">Trusted User Status Active</p>
-                        <p class="modal-desc" style="font-size:12px;">You don't need to upload a screenshot. Just click confirm below.</p>
-                    </div>
-
-                    <div class="status-message" id="paymentStatus"></div>
-
-                    <div class="modal-actions-grid" style="margin-top:20px;">
-                        <button class="btn-secondary" onclick="CreditsWizard.goBack(2)">Back</button>
-                        <button class="btn-primary" id="btnSubmitPayment">I Have Paid</button>
-                    </div>
-                </div>
-
-                <div id="step-4-success" class="wizard-step" style="display:none; text-align:center; padding:20px 0;">
-                    <div style="font-size:50px; margin-bottom:10px;">✅</div>
-                    <h3 style="color:var(--success); margin:0;">Request Sent!</h3>
-                    <p class="modal-desc" style="margin-top:10px;">
-                        An administrator will verify your payment within 24 hours.<br>
-                        Your credits will be added automatically.
-                    </p>
-                    <button class="btn-primary full-width" onclick="document.getElementById('creditsModal').style.display='none'">Close</button>
-                </div>
-
+                <button class="btn-primary full-width" id="wizNext1">Next &rarr;</button>
             </div>
+
+            <div id="step-method" class="wiz-step" style="display:none;">
+                <p class="wiz-desc">Select Payment Method:</p>
+                <div class="method-grid" id="methodGrid"></div>
+                <div class="wiz-actions">
+                    <button class="btn-secondary" id="wizBack2">Back</button>
+                </div>
+            </div>
+
+            <div id="step-details" class="wiz-step" style="display:none;">
+                <div class="payment-summary">
+                    <span id="sumTotal">Total: $0</span>
+                    <span id="sumCredits">0 CRD</span>
+                </div>
+                
+                <div class="payment-box" id="paymentDetailsBox">
+                    </div>
+
+                <div id="proofSection" style="margin-top:15px; display:none;">
+                    <div class="warning-box sm">
+                        ⚠ You have no previous successful payments.
+                    </div>
+                    <label class="file-upload-area">
+                        <input type="file" id="proofFileInput" accept="image/*" hidden>
+                        <div class="upload-icon">📸</div>
+                        <div class="upload-text" id="uploadText">Click to upload payment screenshot</div>
+                    </label>
+                </div>
+
+                <div class="status-message" id="wizStatus"></div>
+                <div class="wiz-actions">
+                    <button class="btn-secondary" id="wizBack3">Back</button>
+                    <button class="btn-primary" id="wizSubmit">I Sent the Payment</button>
+                </div>
+            </div>
+            
+            <div id="step-success" class="wiz-step" style="display:none; text-align:center;">
+                <div class="success-icon-lg">⏳</div>
+                <h3>Request Sent</h3>
+                <p style="color:#ccc; font-size:13px; margin-bottom:20px;">
+                    An administrator will verify your payment and add your credits within 24 hours.
+                </p>
+                <button class="btn-primary full-width" id="wizCloseFinal">Close</button>
+            </div>
+
         </div>
     </div>
   </div> 
