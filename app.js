@@ -231,34 +231,34 @@ function initUserApp() {
   let WIZ = { step: 1, amount: 0, credits: 0, method: null, file: null };
 
   const els = {
-      mainWrapper: $("mainAppWrapper"),
-      linkError: $("linkAccountError"),
-      credits: $("creditsValue"), creditsBtn: $("creditsBtn"), userLine: $("userLine"),
-      catGrid: $("categoriesGrid"), prodGrid: $("productsGrid"), 
-      viewCat: $("viewCategories"), viewProd: $("viewProducts"),
-      backBtn: $("shopBackBtn"), title: $("headerTitle"), emptyMsg: $("emptyProductsMsg"),
-      modal: $("productPanel"), mName: $("panelName"), mDesc: $("panelDesc"), mPrice: $("panelPrice"),
-      mTypes: $("panelTypesContainer"), mTypesGrid: $("panelTypesGrid"), mBuy: $("panelBuyBtn"),
-      mClose: $("panelCloseBtn"), mStatus: $("panelStatus"), mImg: $("panelImg"), mPlace: $("panelImgPlaceholder"),
-      chatList: $("chatList"), tTitle: $("ticketTitle"), msgs: $("chatMessages"), 
-      input: $("chatInput"), send: $("chatSendBtn"), 
-      closeT: $("userTicketCloseBtn"), reopenT: $("userTicketReopenBtn"), 
-      menu: $("ticketsMenuToggle"), backdrop: $("ticketsBackdrop"),
-      shopTab: $("shopTab"), ticketsTab: $("ticketsTab"), purchasesTab: $("purchasesTab"),
-      shopHead: $("shopHeader"),
-      goT: $("goToTicketsBtn"), goPurch: $("goToPurchasesBtn"), backShop: $("backToShopBtn"), backPurch: $("backFromPurchases"),
-      inputCont: $("chatFooter"), 
-      confirm: $("confirmActionModal"), okConf: $("confirmOkBtn"), canConf: $("confirmCancelBtn"),
-      creditsM: $("creditsModal"), closeCred: $("closeCreditsModalBtn"),
-      purchasesList: $("purchasesList"),
-      // CLAIM MODAL ELS
-      claimM: $("claimWarrantyModal"), claimIn: $("claimReasonInput"), claimSub: $("claimSubmitBtn"), claimCan: $("claimCancelBtn"), claimStatus: $("claimStatus"),
-      // WIZARD ELS
-      wStep1: $("step-packages"), wStep2: $("step-method"), wStep3: $("step-details"), wStep4: $("step-success"),
-      pkgGrid: $("pkgGrid"), custIn: $("customAmtInput"), custRes: $("customCalcRes"),
-      wNext1: $("wizNext1"), wBack2: $("wizBack2"), wBack3: $("wizBack3"), wSubmit: $("wizSubmit"), wClose: $("wizCloseFinal"),
-      mGrid: $("methodGrid"), payBox: $("paymentDetailsBox"), sumTot: $("sumTotal"), sumCred: $("sumCredits"),
-      wStatus: $("wizStatus"), proofSec: $("proofSection"), proofIn: $("proofFileInput"), proofTxt: $("uploadText")
+     mainWrapper: $("mainAppWrapper"),
+     linkError: $("linkAccountError"),
+     credits: $("creditsValue"), creditsBtn: $("creditsBtn"), userLine: $("userLine"),
+     catGrid: $("categoriesGrid"), prodGrid: $("productsGrid"), 
+     viewCat: $("viewCategories"), viewProd: $("viewProducts"),
+     backBtn: $("shopBackBtn"), title: $("headerTitle"), emptyMsg: $("emptyProductsMsg"),
+     modal: $("productPanel"), mName: $("panelName"), mDesc: $("panelDesc"), mPrice: $("panelPrice"),
+     mTypes: $("panelTypesContainer"), mTypesGrid: $("panelTypesGrid"), mBuy: $("panelBuyBtn"),
+     mClose: $("panelCloseBtn"), mStatus: $("panelStatus"), mImg: $("panelImg"), mPlace: $("panelImgPlaceholder"),
+     chatList: $("chatList"), tTitle: $("ticketTitle"), msgs: $("chatMessages"), 
+     input: $("chatInput"), send: $("chatSendBtn"), 
+     closeT: $("userTicketCloseBtn"), reopenT: $("userTicketReopenBtn"), 
+     menu: $("ticketsMenuToggle"), backdrop: $("ticketsBackdrop"),
+     shopTab: $("shopTab"), ticketsTab: $("ticketsTab"), purchasesTab: $("purchasesTab"),
+     shopHead: $("shopHeader"),
+     goT: $("goToTicketsBtn"), goPurch: $("goToPurchasesBtn"), backShop: $("backToShopBtn"), backPurch: $("backFromPurchases"),
+     inputCont: $("chatFooter"), 
+     confirm: $("confirmActionModal"), okConf: $("confirmOkBtn"), canConf: $("confirmCancelBtn"),
+     creditsM: $("creditsModal"), closeCred: $("closeCreditsModalBtn"),
+     purchasesList: $("purchasesList"),
+     // CLAIM MODAL ELS
+     claimM: $("claimWarrantyModal"), claimIn: $("claimReasonInput"), claimSub: $("claimSubmitBtn"), claimCan: $("claimCancelBtn"), claimStatus: $("claimStatus"),
+     // WIZARD ELS
+     wStep1: $("step-packages"), wStep2: $("step-method"), wStep3: $("step-details"), wStep4: $("step-success"),
+     pkgGrid: $("pkgGrid"), custIn: $("customAmtInput"), custRes: $("customCalcRes"),
+     wNext1: $("wizNext1"), wBack2: $("wizBack2"), wBack3: $("wizBack3"), wSubmit: $("wizSubmit"), wClose: $("wizCloseFinal"),
+     mGrid: $("methodGrid"), payBox: $("paymentDetailsBox"), sumTot: $("sumTotal"), sumCred: $("sumCredits"),
+     wStatus: $("wizStatus"), proofSec: $("proofSection"), proofIn: $("proofFileInput"), proofTxt: $("uploadText")
   };
 
   const setTab = (tabName) => {
@@ -616,18 +616,16 @@ function initUserApp() {
       }
   };
 
-  // --- UPDATED RENDER HEADER ---
+  // --- MODIFICARE RENDER HEADER PENTRU DISCORD ---
   const renderHeader = () => { 
       if(STATE.user) { 
           els.credits.textContent = STATE.user.credits; 
           
           if (STATE.user.discord_username) {
-              // Dacă avem user de Discord, afișăm iconița și numele
               const discordIcon = `<svg width="16" height="16" viewBox="0 -28.5 256 256" version="1.1" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle; margin-right:4px; fill:#5865F2"><path d="M216.856339,16.5966031 C200.285002,8.84328665 182.566144,3.2084988 164.041564,0 C161.766523,4.11318106 159.108624,9.64549908 157.276099,14.0464379 C137.583995,11.0849896 118.072967,11.0849896 98.7430163,14.0464379 C96.9108417,9.64549908 94.1925838,4.11318106 91.8971895,0 C73.3526068,3.2084988 55.6133949,8.86399117 39.0420583,16.6376612 C5.61752293,66.7837134 -3.43850714,115.355253 2.8817088,162.962251 C22.867127,177.727701 42.1402152,185.186641 61.026733,191.100918 C65.6841757,184.665747 69.8316413,177.854992 73.3421867,170.730248 C66.4913344,168.140226 59.940707,164.918919 53.7371926,161.166346 C55.3787728,159.954605 57.0003889,158.683437 58.5615749,157.370503 C97.6698696,175.460195 140.245841,175.460195 178.96637,157.370503 C180.527556,158.703791 182.169136,159.974959 183.790753,161.166346 C177.586888,164.939274 171.036611,168.140226 164.185759,170.730248 C167.696304,177.854992 171.84377,184.665747 176.501212,191.100918 C195.407684,185.186641 214.680772,177.727701 234.646237,162.962251 C241.673898,111.458284 230.137837,62.6288599 196.853639,12.4496455 L216.856339,16.5966031 Z"></path></svg>`;
               
               els.userLine.innerHTML = `<div style="display:flex;align-items:center;">${discordIcon} <b>${escapeHtml(STATE.user.discord_username)}</b></div>`;
           } else {
-              // Fallback la Telegram dacă nu găsește userul de Discord
               els.userLine.innerHTML = `User: <b>${STATE.user.username ? "@"+escapeHtml(STATE.user.username) : "ID "+STATE.user.id}</b>`; 
           }
       }
@@ -857,12 +855,9 @@ function initUserApp() {
         STATE.shop = res.shop; 
         STATE.tickets = res.tickets||[];
         if(res.user.has_successful_payments !== undefined) STATE.user.has_successful_payments = res.user.has_successful_payments;
+        // UPDATE STATE CU NUMELE DISCORD
+        if(res.user.discord_username) STATE.user.discord_username = res.user.discord_username;
         
-        // Dacă serverul a găsit user de Discord, îl salvăm în STATE
-        if(res.user.discord_username) {
-            STATE.user.discord_username = res.user.discord_username;
-        }
-
         renderHeader(); renderCats(STATE.shop); renderTickets(); setTab("shop");
       } else {
         if (res.error === "access_denied_link_required") {
