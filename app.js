@@ -5,7 +5,7 @@
 const API_URL = "https://api.redgen.vip/";
 
 // ✅ ImgBB key back (NOTE: anything in client JS is public; users can see it in DevTools)
-const IMGBB_API_KEY = "PUT_YOUR_IMGBB_KEY_HERE"; // e.g. "8b7eef65280614c71acd1e1ce317aa64"
+const IMGBB_API_KEY = "8b7eef65280614c71acd1e1ce317aa64"; // e.g. "8b7eef65280614c71acd1e1ce317aa64"
 
 // ---------------------------
 // Helpers
