@@ -1,7 +1,7 @@
-// app.js - FIXED: Security (XSS) + Seen System + Real Payments
+// app.js - FINAL STABLE: XSS Safe + Instant Redirect + Seen Fix + No Polling Errors
 
 const API_URL = "https://api.redgen.vip/";
-// Folosim un key public pentru demo sau cel din admin panel pentru consistenta
+// Cheie publică ImgBB
 const IMGBB_API_KEY = "8b7eef65280614c71acd1e1ce317aa64"; 
 
 const $ = (id) => document.getElementById(id);
@@ -32,15 +32,31 @@ const PAY_METHODS = {
     btc: { name: "Bitcoin (BTC)", icon: "₿", detail: "1LReFxV4Zk7cQaWMzSjareRGMoFaQesGoo" }
 };
 
-// 1. SMART POLLING
+// 1. SMART POLLING (FIXED: Stops if no User)
 function createSmartPoll(fetchFn, isEnabledFn) {
   let timeoutId, active = false, isRunning = false;
   const tick = async () => {
     if (!active) return;
+    
+    // Logic: Dacă tab-ul e ascuns -> 60s, Inactiv > 45s -> 10s, Activ -> 3s
     let delay = document.hidden ? 60000 : (Date.now() - LAST_USER_ACTION > 45000 ? 10000 : 3000);
-    if (isEnabledFn && !isEnabledFn()) { schedule(60000); return; }
-    try { isRunning = true; await fetchFn(); } catch (e) { delay = 10000; } 
-    finally { isRunning = false; schedule(delay); }
+    
+    // Verifică condiția externă (ex: suntem pe tab-ul corect?)
+    if (isEnabledFn && !isEnabledFn()) { 
+        schedule(5000); // Verifică din nou peste 5 secunde
+        return; 
+    }
+
+    try { 
+        isRunning = true; 
+        await fetchFn(); 
+    } catch (e) { 
+        console.warn("Poll warning:", e); 
+        delay = 10000; // La eroare, încetinim polling-ul
+    } finally { 
+        isRunning = false; 
+        schedule(delay); 
+    }
   };
   const schedule = (ms) => { if (active) { clearTimeout(timeoutId); timeoutId = setTimeout(tick, ms); }};
   
@@ -74,7 +90,7 @@ const smartScrollToBottom = (el, force) => {
 };
 const getImageUrl = (s) => s?.trim() ? s : null;
 
-// XSS PROTECTION: Escapes dangerous characters
+// XSS PROTECTION
 const escapeHtml = (unsafe) => {
     if (typeof unsafe !== 'string') return unsafe;
     return unsafe
@@ -90,28 +106,32 @@ const copyToClipboard = (text, btn) => {
         const originalIcon = "📋";
         const successIcon = "✔";
         btn.innerHTML = successIcon;
-        btn.style.color = "#10b981"; // Green color
+        btn.style.color = "#10b981"; 
         setTimeout(() => {
             btn.innerHTML = originalIcon;
-            btn.style.color = ""; // Reset color
+            btn.style.color = ""; 
         }, 1500);
     });
 };
 
-// SEEN LOGIC: Determines if the Admin has read the user's last message
+// SEEN LOGIC FIXED
 function getSeenConfig(t) {
     if (!t || !t.messages) return null;
-    // Filtrăm doar mesajele trimise de User
+    
+    // Luăm mesajele user-ului care nu sunt șterse
     const userMsgs = t.messages.filter(m => m.from === 'user' && !m.deleted);
     if (userMsgs.length === 0) return null;
     
     const lastUserM = userMsgs[userMsgs.length - 1];
-    const lastReadAdmin = Number(t.last_read_admin || 0); // Până unde a citit adminul
+    const lastReadAdmin = Number(t.last_read_admin || 0); 
     const lastUserMsgId = Number(lastUserM.id);
 
-    // Dacă adminul a citit inclusiv ultimul mesaj al userului
+    // Verificăm dacă admin-ul a citit până la ultimul mesaj
     if (lastReadAdmin >= lastUserMsgId) {
-        return { targetId: lastUserM.id, text: `Seen ${t.last_read_admin_at ? timeAgo(t.last_read_admin_at) : ''}` };
+        return { 
+            targetId: lastUserM.id, 
+            text: `Seen ${t.last_read_admin_at ? timeAgo(t.last_read_admin_at) : ''}` 
+        };
     }
     return null;
 }
@@ -169,16 +189,16 @@ function renderDiscordMessages(msgs, { container, canReply, onReply, onJumpTo, s
         row.querySelector('.msg-reply-preview')?.addEventListener('click', (e) => { e.stopPropagation(); onJumpTo?.(e.currentTarget.dataset.jumpId); });
     } else {
          const textEl = row.querySelector('.msg-text');
-         // Compare with safeText to prevent re-rendering if not needed, but ensure safety
          if (textEl && textEl.innerHTML !== safeText) {
              textEl.innerHTML = safeText;
              if(m.deleted) textEl.className = "msg-text msg-text--deleted";
          }
     }
 
+    // SEEN FOOTER LOGIC
     const seenEl = row.querySelector('.seen-footer');
     if (seenEl) {
-        // Show "Seen" only on the specific message ID calculated by getSeenConfig
+        // Comparăm ID-urile ca String pentru siguranță
         if (seenConfig && String(m.id) === String(seenConfig.targetId)) {
             seenEl.textContent = seenConfig.text;
             seenEl.style.display = 'block';
@@ -408,7 +428,6 @@ function initUserApp() {
 
   // --- SUBMIT REAL PAYMENT ---
   els.wSubmit.onclick = async () => {
-      // 1. Validation
       const hasHistory = STATE.user && STATE.user.has_successful_payments;
       if(!hasHistory && !WIZ.file) {
           els.wStatus.textContent = "Screenshot proof is required.";
@@ -421,7 +440,6 @@ function initUserApp() {
       els.wStatus.textContent = "Uploading proof...";
       els.wStatus.className = "status-message";
 
-      // 2. Upload Proof if exists
       let proofUrl = "";
       if (WIZ.file) {
           proofUrl = await uploadProofToImgBB(WIZ.file);
@@ -436,7 +454,6 @@ function initUserApp() {
 
       els.wStatus.textContent = "Sending request...";
 
-      // 3. Send to Backend
       const payload = {
           amount: WIZ.amount,
           method: WIZ.method,
@@ -448,7 +465,7 @@ function initUserApp() {
           
           if (res.ok) {
               showStep(4);
-              els.wSubmit.textContent = "I Sent the Payment"; // Reset text
+              els.wSubmit.textContent = "I Sent the Payment"; 
               els.wSubmit.disabled = false;
           } else {
               els.wStatus.textContent = "Error: " + (res.error || "Server error");
@@ -466,7 +483,6 @@ function initUserApp() {
 
   // --- REST OF APP LOGIC ---
 
-  // REPLAY BAR
   const modeBar = document.createElement("div"); 
   modeBar.className = "chat-mode-bar"; 
   modeBar.style.display = 'none';
@@ -476,7 +492,6 @@ function initUserApp() {
 
   const setReply = (msg) => {
     userMode = { type: "reply", msgId: msg.id, txt: (msg.text||"").slice(0,50), sender: msg.sender||"User" };
-    // SECURITY: XSS Protection for reply preview
     modeBar.querySelector("span").innerHTML = `Replying to ${escapeHtml(userMode.sender)}: "${escapeHtml(userMode.txt)}..."`;
     show(modeBar, 'flex'); els.input.focus();
   };
@@ -499,7 +514,6 @@ function initUserApp() {
     } catch (e) { console.error(e); return { ok: false, error: "network" }; }
   };
 
-  // --- PURCHASES LOGIC ---
   const loadPurchases = async () => {
       els.purchasesList.innerHTML = '<div class="chat-placeholder">Loading orders...</div>';
       const res = await apiCall("user_get_purchases", {});
@@ -534,7 +548,6 @@ function initUserApp() {
           warrantyBadge = `<span class="badge-warranty expired">No Warranty</span>`;
       }
 
-      // SECURITY: XSS Protection for product name
       card.innerHTML = `
         <div class="pch-header">
             <span class="pch-id">#${p.id}</span>
@@ -603,7 +616,6 @@ function initUserApp() {
       }
   };
 
-  // SECURITY: XSS Protection for username
   const renderHeader = () => { if(STATE.user) { els.credits.textContent = STATE.user.credits; els.userLine.innerHTML = `User: <b>${STATE.user.username ? "@"+escapeHtml(STATE.user.username) : "ID "+STATE.user.id}</b>`; }};
 
   const renderCats = (shop) => {
@@ -611,7 +623,6 @@ function initUserApp() {
     shop?.categories?.forEach(cat => {
         const d = document.createElement("div"); d.className = "card-visual";
         const img = getImageUrl(cat.image);
-        // SECURITY: XSS Protection
         d.innerHTML = `<div class="card-img-container">${img ? `<img src="${img}" class="card-img">` : `<div class="img-placeholder">📁</div>`}<div class="card-overlay"><div class="cat-name">${escapeHtml(cat.name)}</div><div class="cat-count">${(cat.products||[]).length} products</div></div></div>`;
         d.onclick = () => {
             els.viewCat.classList.remove("active-view"); els.viewProd.classList.add("active-view"); hide(els.title);
@@ -630,7 +641,6 @@ function initUserApp() {
         const d = document.createElement("div"); d.className = "card-visual";
         const img = getImageUrl(p.image);
         const minP = p.types?.length ? Math.min(...p.types.map(t=>Number(t.price||0))) : p.price;
-        // SECURITY: XSS Protection
         d.innerHTML = `<div class="card-img-container" style="height:140px;aspect-ratio:unset;">${img ? `<img src="${img}" class="card-img">`:`<div class="img-placeholder">🎁</div>`}</div><div class="prod-info"><div class="prod-title">${escapeHtml(p.name)}</div><div class="prod-meta"><div class="prod-price">${p.types?.length ? "From ":""}${minP} CRD</div><div class="prod-btn-mini">&rarr;</div></div></div>`;
         d.onclick = () => openModal(p);
         els.prodGrid.appendChild(d);
@@ -653,7 +663,6 @@ function initUserApp() {
         show(els.mTypes); els.mTypesGrid.innerHTML = "";
         p.types.sort((a,b)=>a.price-b.price).forEach((t, i) => {
             const btn = document.createElement("div"); btn.className = "type-card";
-            // SECURITY: XSS Protection
             btn.innerHTML = `
                 <div class="type-info"><span class="type-name">${escapeHtml(t.name)}</span></div>
                 <div class="type-meta"><span class="type-price-pill">${t.price} CRD</span><div class="type-radio-circle"></div></div>
@@ -675,6 +684,7 @@ function initUserApp() {
   const closeModal = () => { hide(els.modal); STATE.buying = false; };
   els.mClose.onclick = closeModal; els.modal.onclick = (e) => e.target===els.modal && closeModal();
 
+  // --- INSTANT REDIRECT BUY FUNCTION ---
   els.mBuy.onclick = async () => {
     if (!SELECTED_PRODUCT || !STATE.user || STATE.buying) return;
     if (SELECTED_PRODUCT.types?.length && !SELECTED_VARIANT) return (els.mStatus.textContent = "Select a variant!", els.mStatus.className = "status-message status-error");
@@ -694,8 +704,24 @@ function initUserApp() {
         } else {
             STATE.user.credits = res.new_balance; els.credits.textContent = STATE.user.credits;
             els.mStatus.className = "status-message status-ok"; els.mStatus.textContent = "Success!";
-            setTimeout(() => { closeModal(); setTab("tickets"); STATE.buying = false; }, 1000);
-            updateActivity(); userTicketsPoller.bumpFast();
+            
+            // INSTANT REDIRECT LOGIC
+            closeModal();
+            setTab("tickets");
+            
+            // Dacă API-ul returnează tichetul (sau ID-ul), îl selectăm imediat
+            if(res.ticket) {
+                // Adăugăm tichetul nou în lista locală pentru a-l randa imediat
+                STATE.tickets.unshift(res.ticket);
+                renderTickets();
+                selTicket(res.ticket.id);
+            } else if(res.ticket_id) {
+                // Dacă avem doar ID-ul, încercăm să-l selectăm (poate poller-ul l-a prins deja)
+                selTicket(res.ticket_id);
+            }
+            
+            STATE.buying = false;
+            userTicketsPoller.bumpFast(); // Facem refresh în fundal
         }
     } catch { STATE.buying = false; els.mBuy.disabled = false; els.mStatus.textContent = "Network error."; }
   };
@@ -708,7 +734,6 @@ function initUserApp() {
         const item = document.createElement("div"); item.className = "chat-item " + (t.id === STATE.selTicketId ? "active":"");
         item.dataset.ticketId = t.id;
         let unread = (t.id !== STATE.selTicketId) ? calculateUserUnread(t) : 0;
-        // SECURITY: XSS Protection
         const lastMsgRaw = t.messages?.length ? t.messages[t.messages.length-1].text : "New ticket";
         const lastMsgSafe = escapeHtml(lastMsgRaw);
         const prodNameSafe = escapeHtml(t.product_name||"Order");
@@ -730,7 +755,7 @@ function initUserApp() {
     }
     renderTickets();
     if(!t) { els.msgs.innerHTML = ""; updateChatUI(null); return; }
-    // SECURITY: XSS Protection
+    
     els.tTitle.textContent = `${t.product_name} #${t.id}`;
     const seen = getSeenConfig(t);
     renderDiscordMessages(t.messages, { container: els.msgs, ticket: t, canReply: t.status==="open", onReply: setReply, onJumpTo: (mid) => {
@@ -782,7 +807,9 @@ function initUserApp() {
   });
 
   const userTicketsPoller = createSmartPoll(async () => {
+      // PREVENT 400 ERROR: Nu face request dacă nu avem user
       if(!STATE.user) return;
+      
       const res = await apiCall("user_get_tickets", {});
       if(res.ok && res.tickets) {
           STATE.tickets = res.tickets;
