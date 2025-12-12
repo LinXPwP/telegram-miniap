@@ -1,4 +1,4 @@
-// app.js - FIXED: Auto-Redirect to Ticket & XSS Protection
+// app.js - FIXED: No Alerts for Claiming Warranty
 
 const API_URL = "https://api.redgen.vip/";
 const $ = (id) => document.getElementById(id);
@@ -32,7 +32,7 @@ function createSmartPoll(fetchFn, isEnabledFn) {
   };
 }
 
-// 2. UTILS & SECURITY (XSS FIX)
+// 2. UTILS
 const formatTimestamp = (ts) => {
     if (!ts) return ""; 
     const d = new Date(ts);
@@ -49,19 +49,7 @@ const smartScrollToBottom = (el, force) => {
     if (!el) return;
     if (force || (el.scrollHeight - (el.scrollTop + el.clientHeight) < 150)) requestAnimationFrame(() => el.scrollTop = el.scrollHeight);
 };
-
 const getImageUrl = (s) => s?.trim() ? s : null;
-
-// XSS PROTECTION: Escapes dangerous characters
-const escapeHtml = (unsafe) => {
-    if (typeof unsafe !== 'string') return unsafe;
-    return unsafe
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-};
 
 function getSeenConfig(t) {
     if (!t || !t.messages) return null;
@@ -102,25 +90,22 @@ function renderDiscordMessages(msgs, { container, canReply, onReply, onJumpTo, s
     if(!m) return; renderedIds.add(String(m.id));
     let row = container.querySelector(`.msg-row[data-message-id="${m.id}"]`);
     
-    // XSS Fix applied to sender, text, and reply text
-    const safeSender = escapeHtml(m.sender || (m.from === "system" ? "System" : "User"));
-    const safeText = m.deleted ? "Message deleted" : escapeHtml(m.text);
-    
     const replyHtml = m.reply_to && msgMap[m.reply_to] ? `
         <div class="msg-reply-preview" data-jump-id="${msgMap[m.reply_to].id}">
-            <strong style="margin-right:5px;">${escapeHtml(msgMap[m.reply_to].sender||"User")}</strong><span>${escapeHtml((msgMap[m.reply_to].text||"").slice(0,50))}...</span>
+            <strong style="margin-right:5px;">${msgMap[m.reply_to].sender||"User"}</strong><span>${(msgMap[m.reply_to].text||"").slice(0,50)}...</span>
         </div>` : '';
-    
+    const sender = m.sender || (m.from === "system" ? "System" : "User");
+    const content = m.deleted ? "Message deleted" : m.text;
     const btns = (canReply && !m.deleted) ? `<button class="btn-reply-mini" title="Reply">↩ Reply</button>` : '';
 
     const html = `
-        <div class="msg-avatar">${(safeSender||"?")[0].toUpperCase()}</div>
+        <div class="msg-avatar">${(sender||"?")[0].toUpperCase()}</div>
         <div class="msg-content">
             <div class="msg-header-line">
-                <div class="msg-meta-group"><span class="msg-username ${m.from==="admin"?"msg-username--admin":""}">${safeSender}</span><span class="msg-timestamp">${formatTimestamp(m.ts)}</span></div>
+                <div class="msg-meta-group"><span class="msg-username ${m.from==="admin"?"msg-username--admin":""}">${sender}</span><span class="msg-timestamp">${formatTimestamp(m.ts)}</span></div>
                 ${btns}
             </div>
-            <div class="msg-bubble">${replyHtml}<div class="msg-text ${m.deleted?"msg-text--deleted":""}">${safeText}</div></div>
+            <div class="msg-bubble">${replyHtml}<div class="msg-text ${m.deleted?"msg-text--deleted":""}">${content}</div></div>
             <div class="seen-footer"></div>
         </div>`;
 
@@ -131,9 +116,8 @@ function renderDiscordMessages(msgs, { container, canReply, onReply, onJumpTo, s
         row.querySelector('.msg-reply-preview')?.addEventListener('click', (e) => { e.stopPropagation(); onJumpTo?.(e.currentTarget.dataset.jumpId); });
     } else {
          const textEl = row.querySelector('.msg-text');
-         // Check content against sanitized text
-         if (textEl && textEl.innerHTML !== safeText) {
-             textEl.innerHTML = safeText;
+         if (textEl && textEl.textContent !== content) {
+             textEl.textContent = content;
              if(m.deleted) textEl.className = "msg-text msg-text--deleted";
          }
     }
@@ -234,8 +218,7 @@ function initUserApp() {
 
   const setReply = (msg) => {
     userMode = { type: "reply", msgId: msg.id, txt: (msg.text||"").slice(0,50), sender: msg.sender||"User" };
-    // XSS Fix for reply preview
-    modeBar.querySelector("span").innerHTML = `Replying to ${escapeHtml(userMode.sender)}: "${escapeHtml(userMode.txt)}..."`;
+    modeBar.querySelector("span").textContent = `Replying to ${userMode.sender}: "${userMode.txt}..."`;
     show(modeBar, 'flex'); els.input.focus();
   };
 
@@ -292,14 +275,13 @@ function initUserApp() {
           warrantyBadge = `<span class="badge-warranty expired">No Warranty</span>`;
       }
 
-      // XSS Fix: escape p.product_name
       card.innerHTML = `
         <div class="pch-header">
             <span class="pch-id">#${p.id}</span>
             <span class="pch-date">${dateStr}</span>
         </div>
         <div class="pch-body">
-            <div class="pch-title">${escapeHtml(p.product_name)}</div>
+            <div class="pch-title">${p.product_name}</div>
             <div class="pch-info">Total: ${p.total_price} CRD</div>
             <div style="margin-top:8px;">${warrantyBadge}</div>
         </div>
@@ -357,10 +339,6 @@ function initUserApp() {
           // SUCCESS: NO ALERT, JUST SWITCH
           setTab("tickets");
           userTicketsPoller.bumpFast();
-          // Try to switch to that ticket if returned
-          if(res.new_ticket_id || res.ticket?.id) {
-             selTicket(res.new_ticket_id || res.ticket.id);
-          }
       } else {
           // ERROR HANDLING: IN-MODAL
           els.claimStatus.textContent = "Error: " + (res.error === "warranty_expired" ? "Warranty Expired!" : res.error);
@@ -368,16 +346,14 @@ function initUserApp() {
       }
   };
 
-  // XSS Fix for username
-  const renderHeader = () => { if(STATE.user) { els.credits.textContent = STATE.user.credits; els.userLine.innerHTML = `User: <b>${STATE.user.username ? "@"+escapeHtml(STATE.user.username) : "ID "+STATE.user.id}</b>`; }};
+  const renderHeader = () => { if(STATE.user) { els.credits.textContent = STATE.user.credits; els.userLine.innerHTML = `User: <b>${STATE.user.username ? "@"+STATE.user.username : "ID "+STATE.user.id}</b>`; }};
 
   const renderCats = (shop) => {
     els.catGrid.innerHTML = "";
     shop?.categories?.forEach(cat => {
         const d = document.createElement("div"); d.className = "card-visual";
         const img = getImageUrl(cat.image);
-        // XSS Fix: escape cat.name
-        d.innerHTML = `<div class="card-img-container">${img ? `<img src="${img}" class="card-img">` : `<div class="img-placeholder">📁</div>`}<div class="card-overlay"><div class="cat-name">${escapeHtml(cat.name)}</div><div class="cat-count">${(cat.products||[]).length} products</div></div></div>`;
+        d.innerHTML = `<div class="card-img-container">${img ? `<img src="${img}" class="card-img">` : `<div class="img-placeholder">📁</div>`}<div class="card-overlay"><div class="cat-name">${cat.name}</div><div class="cat-count">${(cat.products||[]).length} products</div></div></div>`;
         d.onclick = () => {
             els.viewCat.classList.remove("active-view"); els.viewProd.classList.add("active-view"); hide(els.title);
             show(els.backBtn); els.backBtn.querySelector(".back-btn-text").textContent = cat.name;
@@ -395,8 +371,7 @@ function initUserApp() {
         const d = document.createElement("div"); d.className = "card-visual";
         const img = getImageUrl(p.image);
         const minP = p.types?.length ? Math.min(...p.types.map(t=>Number(t.price||0))) : p.price;
-        // XSS Fix: escape p.name
-        d.innerHTML = `<div class="card-img-container" style="height:140px;aspect-ratio:unset;">${img ? `<img src="${img}" class="card-img">`:`<div class="img-placeholder">🎁</div>`}</div><div class="prod-info"><div class="prod-title">${escapeHtml(p.name)}</div><div class="prod-meta"><div class="prod-price">${p.types?.length ? "From ":""}${minP} CRD</div><div class="prod-btn-mini">&rarr;</div></div></div>`;
+        d.innerHTML = `<div class="card-img-container" style="height:140px;aspect-ratio:unset;">${img ? `<img src="${img}" class="card-img">`:`<div class="img-placeholder">🎁</div>`}</div><div class="prod-info"><div class="prod-title">${p.name}</div><div class="prod-meta"><div class="prod-price">${p.types?.length ? "From ":""}${minP} CRD</div><div class="prod-btn-mini">&rarr;</div></div></div>`;
         d.onclick = () => openModal(p);
         els.prodGrid.appendChild(d);
     });
@@ -418,9 +393,8 @@ function initUserApp() {
         show(els.mTypes); els.mTypesGrid.innerHTML = "";
         p.types.sort((a,b)=>a.price-b.price).forEach((t, i) => {
             const btn = document.createElement("div"); btn.className = "type-card";
-            // XSS Fix: escape t.name
             btn.innerHTML = `
-                <div class="type-info"><span class="type-name">${escapeHtml(t.name)}</span></div>
+                <div class="type-info"><span class="type-name">${t.name}</span></div>
                 <div class="type-meta"><span class="type-price-pill">${t.price} CRD</span><div class="type-radio-circle"></div></div>
             `;
             btn.onclick = () => selVar(t, btn);
@@ -440,7 +414,6 @@ function initUserApp() {
   const closeModal = () => { hide(els.modal); STATE.buying = false; };
   els.mClose.onclick = closeModal; els.modal.onclick = (e) => e.target===els.modal && closeModal();
 
-  // --- MODIFIED BUY FUNCTION: AUTO REDIRECT TO TICKET ---
   els.mBuy.onclick = async () => {
     if (!SELECTED_PRODUCT || !STATE.user || STATE.buying) return;
     if (SELECTED_PRODUCT.types?.length && !SELECTED_VARIANT) return (els.mStatus.textContent = "Select a variant!", els.mStatus.className = "status-message status-error");
@@ -459,38 +432,9 @@ function initUserApp() {
             } else els.mStatus.textContent = "Error: " + res.error;
         } else {
             STATE.user.credits = res.new_balance; els.credits.textContent = STATE.user.credits;
-            els.mStatus.className = "status-message status-ok"; els.mStatus.textContent = "Success! Opening ticket...";
-            
-            updateActivity();
-            
-            // IMMEDIATE FETCH TO FIND NEW TICKET
-            const ticketsRes = await apiCall("user_get_tickets", {});
-            
-            setTimeout(() => { 
-                closeModal(); 
-                
-                if(ticketsRes.ok && ticketsRes.tickets) {
-                    STATE.tickets = ticketsRes.tickets;
-                    renderTickets();
-                    
-                    // Logic to find the correct ticket
-                    let targetTicketId = null;
-                    if(res.ticket_id) {
-                        targetTicketId = res.ticket_id;
-                    } else if(res.ticket && res.ticket.id) {
-                        targetTicketId = res.ticket.id;
-                    } else {
-                        // Fallback: If API didn't return ID, take the one with highest ID (newest)
-                        const newest = STATE.tickets.sort((a,b) => b.id - a.id)[0];
-                        if(newest) targetTicketId = newest.id;
-                    }
-
-                    if(targetTicketId) selTicket(targetTicketId);
-                }
-                
-                setTab("tickets"); 
-                STATE.buying = false; 
-            }, 1000);
+            els.mStatus.className = "status-message status-ok"; els.mStatus.textContent = "Success!";
+            setTimeout(() => { closeModal(); setTab("tickets"); STATE.buying = false; }, 1000);
+            updateActivity(); userTicketsPoller.bumpFast();
         }
     } catch { STATE.buying = false; els.mBuy.disabled = false; els.mStatus.textContent = "Network error."; }
   };
@@ -503,14 +447,8 @@ function initUserApp() {
         const item = document.createElement("div"); item.className = "chat-item " + (t.id === STATE.selTicketId ? "active":"");
         item.dataset.ticketId = t.id;
         let unread = (t.id !== STATE.selTicketId) ? calculateUserUnread(t) : 0;
-        // XSS Fix for last message preview
-        const lastMsgRaw = t.messages?.length ? t.messages[t.messages.length-1].text : "New ticket";
-        const lastMsgSafe = escapeHtml(lastMsgRaw);
-        
-        // XSS Fix for Product Name
-        const prodNameSafe = escapeHtml(t.product_name||"Order");
-
-        item.innerHTML = `<div class="chat-item-header-row"><div class="chat-item-title">${prodNameSafe}</div><div>${unread>0?`<span class="unread-badge">${unread}</span>`:""}<span class="ticket-status-pill ${t.status}">${t.status}</span></div></div><div class="chat-item-line">${lastMsgSafe}</div>`;
+        const lastMsg = t.messages?.length ? t.messages[t.messages.length-1].text : "New ticket";
+        item.innerHTML = `<div class="chat-item-header-row"><div class="chat-item-title">${t.product_name||"Order"}</div><div>${unread>0?`<span class="unread-badge">${unread}</span>`:""}<span class="ticket-status-pill ${t.status}">${t.status}</span></div></div><div class="chat-item-line">${lastMsg}</div>`;
         item.onclick = () => { selTicket(t.id); updateActivity(); els.ticketsTab.classList.remove("tickets-drawer-open"); };
         els.chatList.appendChild(item);
     });
@@ -522,14 +460,12 @@ function initUserApp() {
     if(t) {
        if(calculateUserUnread(t) > 0) { 
            apiCall("mark_seen", {ticket_id: id}); 
-           // Local immediate update to prevent badge flicker
            if(t.messages.length) t.last_read_user = t.messages[t.messages.length-1].id; 
        }
     }
     renderTickets();
     if(!t) { els.msgs.innerHTML = ""; updateChatUI(null); return; }
-    // XSS Fix for Ticket Title
-    els.tTitle.textContent = `${t.product_name || 'Ticket'} #${t.id}`;
+    els.tTitle.textContent = `${t.product_name} #${t.id}`;
     const seen = getSeenConfig(t);
     renderDiscordMessages(t.messages, { container: els.msgs, ticket: t, canReply: t.status==="open", onReply: setReply, onJumpTo: (mid) => {
         const el = els.msgs.querySelector(`.msg-row[data-message-id="${mid}"]`);
@@ -617,7 +553,7 @@ function initUserApp() {
             if(els.linkError) els.linkError.style.display = "flex";
             return;
         }
-        els.userLine.innerHTML = `<span style="color:red">Error: ${escapeHtml(res.error||"Auth")}</span>`; show(els.userLine);
+        els.userLine.innerHTML = `<span style="color:red">Error: ${res.error||"Auth"}</span>`; show(els.userLine);
       }
   })();
 }
