@@ -1,4 +1,4 @@
-// app.js - FINAL STABLE: XSS Safe + Instant Redirect + Seen Fix + Discord UI Updated
+// app.js - FINAL STABLE: XSS Safe + Instant Redirect + Discord Avatar (ImgBB) Support
 
 const API_URL = "https://api.redgen.vip/";
 // Cheie publică ImgBB
@@ -145,7 +145,7 @@ function calculateUserUnread(ticket) {
     return count;
 }
 
-// 3. UI RENDER - UPDATED FOR DISCORD UI
+// 3. UI RENDER - UPDATED FOR DISCORD UI & AVATAR
 function renderDiscordMessages(msgs, { container, canReply, onReply, onJumpTo, seenConfig }) {
   if (!container) return;
   const wasNearBottom = container.scrollHeight - (container.scrollTop + container.clientHeight) < 150;
@@ -158,33 +158,28 @@ function renderDiscordMessages(msgs, { container, canReply, onReply, onJumpTo, s
   const msgMap = Object.fromEntries(msgs.map(m => [m.id, m]));
   const renderedIds = new Set();
   
-  // Avem acces la STATE global? Da, initUserApp îl setează, dar pentru siguranță putem verifica window.APP_STATE dacă e nevoie,
-  // sau pur și simplu ne bazăm că `initUserApp` a rulat.
-  // Totuși, `renderDiscordMessages` e apelată din `selTicket`. Vom folosi STATE-ul din closure dacă e posibil, dar funcția e în afara `initUserApp`.
-  // Pentru simplitate, presupunem că STATE e accesibil sau pasăm user-ul.
-  // Voi folosi o variabilă globală temporară setată de `initUserApp` sau verific DOM-ul.
-  // FIX: Verificăm datele din header dacă există
-  
-  let currentDiscordUser = null;
-  // Încercăm să luăm discord username din DOM dacă a fost setat, sau din variabilă globală (dacă o expunem)
-  // Cea mai sigură metodă: `renderDiscordMessages` primește `currentUser` ca parametru, dar ar trebui modificat peste tot.
-  // ALTERNATIVĂ: Căutăm în `msgs` dacă `m.from === 'user'` și aplicăm logica.
-  
-  // Voi modifica apelul `renderDiscordMessages` să primească user-ul curent în `opts` mai jos.
-  
   msgs.forEach(m => {
     if(!m) return; renderedIds.add(String(m.id));
     let row = container.querySelector(`.msg-row[data-message-id="${m.id}"]`);
     
     // --- MODIFICARE DISCORD USERNAME & ICON ---
     let safeSender = escapeHtml(m.sender || (m.from === "system" ? "System" : "User"));
-    let avatarContent = (safeSender||"?")[0].toUpperCase();
     
-    // Dacă mesajul e de la user și avem un Discord Username setat global
+    // Logică Avatar: 
+    // Default: O literă
+    let avatarContent = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">${(safeSender||"?")[0].toUpperCase()}</div>`;
+    
+    // Dacă mesajul e de la user și avem datele de Discord globale
     if (m.from === 'user' && window.CURRENT_USER_DISCORD) {
-        safeSender = escapeHtml(window.CURRENT_USER_DISCORD);
-        // Setăm iconița Discord SVG
-        avatarContent = DISCORD_SVG_ICON;
+        safeSender = escapeHtml(window.CURRENT_USER_DISCORD.username);
+        
+        if (window.CURRENT_USER_DISCORD.avatar_url) {
+            // Folosim imaginea de pe ImgBB
+            avatarContent = `<img src="${window.CURRENT_USER_DISCORD.avatar_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+        } else {
+            // Fallback la SVG dacă nu are avatar dar are cont
+            avatarContent = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">${DISCORD_SVG_ICON}</div>`;
+        }
     }
     // ------------------------------------------
 
@@ -198,7 +193,7 @@ function renderDiscordMessages(msgs, { container, canReply, onReply, onJumpTo, s
     const btns = (canReply && !m.deleted) ? `<button class="btn-reply-mini" title="Reply">↩ Reply</button>` : '';
 
     const html = `
-        <div class="msg-avatar" style="${m.from==='user'&&window.CURRENT_USER_DISCORD ? 'background:rgba(88,101,242,0.1); display:flex; align-items:center; justify-content:center;' : ''}">${avatarContent}</div>
+        <div class="msg-avatar" style="${m.from==='user'&&window.CURRENT_USER_DISCORD ? 'background:transparent;' : ''}">${avatarContent}</div>
         <div class="msg-content">
             <div class="msg-header-line">
                 <div class="msg-meta-group"><span class="msg-username ${m.from==="admin"?"msg-username--admin":""}">${safeSender}</span><span class="msg-timestamp">${formatTimestamp(m.ts)}</span></div>
@@ -647,11 +642,19 @@ function initUserApp() {
           els.credits.textContent = STATE.user.credits; 
           
           if (STATE.user.discord_username) {
-              const discordIcon = DISCORD_SVG_ICON.replace('width="20" height="20"', 'width="16" height="16" style="vertical-align:middle; margin-right:4px; fill:#5865F2"');
+              // VERIFICARE AVATAR
+              let iconHtml = DISCORD_SVG_ICON.replace('width="20" height="20"', 'width="16" height="16" style="vertical-align:middle; margin-right:4px; fill:#5865F2"');
+              if (STATE.user.discord_avatar) {
+                  iconHtml = `<img src="${STATE.user.discord_avatar}" style="width:16px;height:16px;border-radius:50%;vertical-align:middle;margin-right:4px;object-fit:cover;">`;
+              }
+
+              els.userLine.innerHTML = `<div style="display:flex;align-items:center;">${iconHtml} <b>${escapeHtml(STATE.user.discord_username)}</b></div>`;
               
-              els.userLine.innerHTML = `<div style="display:flex;align-items:center;">${discordIcon} <b>${escapeHtml(STATE.user.discord_username)}</b></div>`;
-              // Setăm o variabilă globală pentru a fi folosită în chat
-              window.CURRENT_USER_DISCORD = STATE.user.discord_username;
+              // Setăm datele globale de Discord pentru chat
+              window.CURRENT_USER_DISCORD = {
+                  username: STATE.user.discord_username,
+                  avatar_url: STATE.user.discord_avatar
+              };
           } else {
               els.userLine.innerHTML = `User: <b>${STATE.user.username ? "@"+escapeHtml(STATE.user.username) : "ID "+STATE.user.id}</b>`; 
               window.CURRENT_USER_DISCORD = null;
@@ -884,8 +887,9 @@ function initUserApp() {
         STATE.shop = res.shop; 
         STATE.tickets = res.tickets||[];
         if(res.user.has_successful_payments !== undefined) STATE.user.has_successful_payments = res.user.has_successful_payments;
-        // UPDATE STATE CU NUMELE DISCORD
+        // UPDATE STATE CU NUMELE DISCORD & AVATAR
         if(res.user.discord_username) STATE.user.discord_username = res.user.discord_username;
+        if(res.user.discord_avatar) STATE.user.discord_avatar = res.user.discord_avatar;
         
         renderHeader(); renderCats(STATE.shop); renderTickets(); setTab("shop");
       } else {
